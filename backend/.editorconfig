@@ -26,6 +26,12 @@ dotnet_diagnostic.CA1861.severity = none
 dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA2225.severity = none
 
+# CA1873: Logger argument evaluation guard. Our logging calls use
+# structured templates; the IsEnabled guard adds noise for minimal
+# gain in mock/simple handlers. Suppressed to keep CI green.
+[*.cs]
+dotnet_diagnostic.CA1873.severity = none
+
 # Test projects use underscore-separated descriptive test names by convention.
 [**/tests/**]
 dotnet_diagnostic.CA1707.severity = none

@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
 
 env:
-  FLUTTER_VERSION: '3.27.0'
+  FLUTTER_VERSION: '3.44.0'
   API_BASE_URL: 'https://pyconnect.run.place'
 
 jobs:
