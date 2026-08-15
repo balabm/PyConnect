@@ -40,9 +40,18 @@ flutter build apk --flavor partner --release   # Partner app
 - **API**: Controllers, SignalR hubs, middleware, rate limiting
 
 ### Mobile Apps (exactly 3)
-1. **Consumer** (`main.dart`, `com.pondyconnect.app`)
-2. **Driver/Captain** (`main_driver.dart`, `com.pondyconnect.driver`)
-3. **Partner** (`main_partner.dart`, `com.pondyconnect.partner`) — adapts to vendor category
+1. **Consumer** (`main.dart`, `com.pondyconnect.app`) — ride-hailing, food, venues, transit, stays
+2. **Driver/Captain** (`main_driver.dart`, `com.pondyconnect.driver`) — ride acceptance, earnings, KYC
+3. **Partner** (`main_partner.dart`, `com.pondyconnect.partner`) — adapts to vendor category (7 types)
+
+A 4th web-only entry point `main_admin.dart` builds the Admin web app (not an Android app).
+
+### Partner App Category-Specific Screens
+- **PubClub**: `drinks_menu_screen.dart`
+- **ScooterRental**: `fleet_management_screen.dart`, `active_rentals_screen.dart`
+- **TaxiOperator**: `taxi_fleet_screen.dart`, `taxi_rides_screen.dart`
+- **LuggageCloak**: `cloak_capacity_screen.dart`
+- **Restaurant/Cafe/Pizzeria**: `vendor_menu_screen.dart`, `kitchen_display_screen.dart`
 
 ### Vendor Categories
 `LuggageCloak=1, ScooterRental=2, TaxiOperator=3, PubClub=4, Restaurant=5, Cafe=6, Pizzeria=7`
@@ -90,15 +99,46 @@ flutter build apk --flavor partner --release   # Partner app
 - EF Core migrations via `dotnet ef database update`
 
 ## Deployment
-- GitHub Actions workflows in `.github/workflows/`
-- Backend deploys to EC2 via Docker
+- **Git repo**: https://github.com/balabm/PyConnect.git (618 files, zero secrets tracked)
+- **GitHub Actions**: 5 workflows in `.github/workflows/` (see CI/CD section below)
+- **GitHub Secrets**: 12/12 configured (see CI/CD section below)
+- Backend deploys to EC2 via Docker (automated via `deploy-backend.yml`)
+- Web apps deploy to EC2 via SCP + Nginx (automated via `deploy-web.yml`)
 - Nginx reverse proxy config in `deploy/nginx.conf` (WebSocket forwarding for `/hubs/`, security headers, rate limiting)
 - Production secrets via environment variables (JWT signing key, DB credentials, Razorpay keys)
 - **See `DEPLOYMENT.md` for the complete step-by-step go-live checklist**
 - `.env.example` in `backend/` provides the template for production env vars
 
-## Known Issues (Deployed Backend)
-The deployed backend at `https://pyconnect.run.place` does NOT have the local fixes. All 90+ fixes need deployment. Key deployed-only issues:
+## CI/CD
+
+### Workflows (5)
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci-backend.yml` | PR + push to main | Build + 288 architecture tests |
+| `ci-mobile.yml` | PR + push to main | Flutter static analysis |
+| `deploy-backend.yml` | Push to main (backend changes) | Docker → Docker Hub → EC2 → health check |
+| `deploy-web.yml` | Push to main (mobile changes) | Flutter web → SCP to EC2 → Nginx reload |
+| `deploy-mobile.yml` | Tag push `v*` | Signed APK + AAB builds → GitHub artifacts |
+
+### GitHub Secrets (12/12 configured)
+`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, `API_BASE_URL`, `KEYSTORE_BASE64`, `KEY_STORE_PASSWORD`, `KEY_PASSWORD`, `KEY_ALIAS`, `GOOGLE_SERVICES_JSON`, `RAZORPAY_KEY_ID`
+
+### Branch Protection (Recommended)
+Require `Backend CI` + `Mobile CI` status checks before merging PRs to `main`.
+
+## Deployment Status
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| Web Admin | ✅ Deployed & Verified | https://pyconnect.run.place/ (200 OK, 2026-08-15) |
+| Web Partner | ✅ Deployed & Verified | https://pyconnect.run.place/partner/ (200 OK, 2026-08-15) |
+| Backend | ⏳ Pending Deployment | 90+ local fixes not yet deployed to EC2 |
+| Mobile APKs | ✅ Built Locally | 76.4 MB each (debug-signed, not yet on Play Store) |
+| Git Repo | ✅ Pushed | https://github.com/balabm/PyConnect.git |
+| GitHub Secrets | ✅ 12/12 Configured | All deployment secrets set |
+
+### Backend — Pending Deployment
+The deployed backend at `https://pyconnect.run.place` does NOT have the local fixes. All 90+ fixes are committed locally and need deployment via `deploy-backend.yml` workflow. Key issues that will be resolved by deployment:
 - Menu delete returns 405
 - OTP not enforced on ride start
 - Driver state stuck after ride completion
@@ -118,10 +158,13 @@ The deployed backend at `https://pyconnect.run.place` does NOT have the local fi
 - Missing Guid.Empty validation on domain entities
 
 ## QA Status (Local)
-- **Build**: 0 errors, 0 warnings
+- **Backend build**: 0 errors, 0 warnings
 - **Architecture tests**: 288/288 pass
 - **API tests**: 84 pass, 76 fail (all due to 429 rate limiting from deployed backend)
-- **Total fixes applied**: 100+ across 4 QA rounds (including final pre-launch audit)
+- **Flutter analyze**: 0 errors (30 info/warnings — pre-existing, non-blocking)
+- **Total fixes applied**: 100+ backend security + 330+ UI fixes across 4 QA rounds
+- **Release APKs**: 3 built (Consumer, Driver, Partner — 76.4 MB each)
+- **Web apps**: Admin + Partner deployed & verified on EC2
 
 ## Pre-Launch Audit Fixes (Round 4)
 - OTP peek endpoint now explicitly blocked in production via `IHostEnvironment.IsDevelopment()` check
@@ -134,6 +177,30 @@ The deployed backend at `https://pyconnect.run.place` does NOT have the local fi
 - Mobile `.env` removed from pubspec assets (no longer bundled in APK)
 - Mobile `.gitignore` updated to exclude `.env` files
 - Nginx config added to repo at `deploy/nginx.conf` with WebSocket forwarding, security headers, and rate limiting
+
+## UI Remediation (Round 5)
+- Added semantic colors to AppTheme: `success` (#22C55E), `danger` (#EF4444), `warning` (#F59E0B), `info` (#3B82F6)
+- Added dark theme constants: `darkBackground` (#0F172A), `darkSurface` (#1E293B)
+- 330+ UI fixes across 67+ files (Consumer 28, Driver 6, Partner 18, Admin 15)
+- Eliminated all hardcoded `Colors.grey` (was 329+ instances, now 0)
+- Replaced `Colors.red/green/amber/blue` with `AppTheme.danger/success/warning/info`
+- Fixed invisible text (dark-on-dark) in admin pagination, partner menu, partner promotions
+- Fixed admin SOS phone button (was no-op, now launches `tel:` URI)
+- All SnackBars now have `backgroundColor`
+- All loading indicators now have visible theme colors
+
+## 3-App Consolidation (Round 5)
+- Removed redundant `vendor` Android flavor (was duplicate of `partner`)
+- Deleted `main_vendor.dart` (identical to `main_partner.dart`)
+- Partner app adapts to vendor category (7 categories with category-specific screens)
+- Web deployment path changed from `/var/www/vendor/` to `/var/www/partner/`
+
+## Git & CI/CD Setup (Round 5)
+- Git repository initialized, 618 files committed to https://github.com/balabm/PyConnect.git
+- Zero secrets tracked (verified: no .env, .pem, .jks, key.properties, google-services.json)
+- 5 CI/CD workflows created (ci-backend, ci-mobile, deploy-backend, deploy-web, deploy-mobile)
+- 12 GitHub secrets configured
+- Web apps deployed to EC2 via SSH/SCP, verified at https://pyconnect.run.place/
 
 ## Testing Notes
 - Integration tests (`PondyConnect.Api.Tests`) hit the deployed backend and may fail with 429 (rate limiting).

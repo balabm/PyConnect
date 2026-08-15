@@ -2,6 +2,27 @@
 
 Step-by-step checklist for deploying PY Connect to production.
 
+---
+
+## Current Deployment Status (2026-08-15)
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| Git Repository | ✅ Initialized & Pushed | https://github.com/balabm/PyConnect.git (618 files) |
+| GitHub Secrets | ✅ 12/12 Configured | All deployment secrets set |
+| Web Admin | ✅ Deployed & Verified | https://pyconnect.run.place/ (200 OK) |
+| Web Partner | ✅ Deployed & Verified | https://pyconnect.run.place/partner/ (200 OK) |
+| Backend | ⏳ Pending Deployment | 90+ local fixes not yet on EC2 |
+| Mobile APKs | ✅ Built Locally | 76.4 MB each (debug-signed, not on Play Store) |
+| Nginx | ✅ Running on EC2 | Reverse proxy + WebSocket + TLS |
+| CI/CD | ✅ 5 Workflows Configured | ci-backend, ci-mobile, deploy-backend, deploy-web, deploy-mobile |
+
+### Next Steps for Full Production
+1. Deploy backend fixes to EC2 (trigger `deploy-backend.yml` or push backend changes to `main`)
+2. Rotate all secrets (JWT key, DB password, SMS key, Razorpay keys) — see Phase 1 below
+3. Upload signed APKs to Play Store (trigger `deploy-mobile.yml` with a `v*` tag)
+4. Configure branch protection on GitHub (require Backend CI + Mobile CI)
+
 ## Prerequisites
 
 - AWS EC2 instance (Ubuntu 22.04+) with SSH access
@@ -290,20 +311,20 @@ All variables must be set in `/opt/pyconnect/.env` on EC2:
 
 Configure these in GitHub repo → Settings → Secrets and variables → Actions:
 
-| Secret | Used By | Description |
-|--------|---------|-------------|
-| `DOCKERHUB_USERNAME` | deploy-backend | Docker Hub username |
-| `DOCKERHUB_TOKEN` | deploy-backend | Docker Hub access token (not password) |
-| `EC2_HOST` | deploy-backend, deploy-web | EC2 public IP |
-| `EC2_USER` | deploy-backend, deploy-web | SSH user (`ubuntu`) |
-| `EC2_SSH_KEY` | deploy-backend, deploy-web | PEM private key content |
-| `KEYSTORE_BASE64` | deploy-mobile | Base64-encoded .jks keystore |
-| `KEY_STORE_PASSWORD` | deploy-mobile | Keystore store password |
-| `KEY_PASSWORD` | deploy-mobile | Key password |
-| `KEY_ALIAS` | deploy-mobile | Key alias |
-| `GOOGLE_SERVICES_JSON` | deploy-mobile | Firebase config content |
-| `API_BASE_URL` | deploy-web, deploy-mobile | `https://pyconnect.run.place` |
-| `RAZORPAY_KEY_ID` | deploy-mobile | Razorpay key ID for mobile |
+| Secret | Used By | Description | Status |
+|--------|---------|-------------|--------|
+| `DOCKERHUB_USERNAME` | deploy-backend | Docker Hub username | ✅ |
+| `DOCKERHUB_TOKEN` | deploy-backend | Docker Hub access token (not password) | ✅ |
+| `EC2_HOST` | deploy-backend, deploy-web | EC2 public IP | ✅ |
+| `EC2_USER` | deploy-backend, deploy-web | SSH user (`ubuntu`) | ✅ |
+| `EC2_SSH_KEY` | deploy-backend, deploy-web | PEM private key content | ✅ |
+| `KEYSTORE_BASE64` | deploy-mobile | Base64-encoded .jks keystore | ✅ |
+| `KEY_STORE_PASSWORD` | deploy-mobile | Keystore store password | ✅ |
+| `KEY_PASSWORD` | deploy-mobile | Key password | ✅ |
+| `KEY_ALIAS` | deploy-mobile | Key alias | ✅ |
+| `GOOGLE_SERVICES_JSON` | deploy-mobile | Firebase config content | ✅ |
+| `API_BASE_URL` | deploy-web, deploy-mobile | `https://pyconnect.run.place` | ✅ |
+| `RAZORPAY_KEY_ID` | deploy-mobile | Razorpay key ID for mobile | ✅ |
 
 ### CI/CD Workflows
 
@@ -325,12 +346,14 @@ Configure in GitHub repo → Settings → Branches → Branch protection rules f
 4. Require linear history
 5. Do NOT require signed commits (unless you set up GPG signing)
 
-### First Push to GitHub
+### First Push to GitHub — ✅ Completed
 
 ```bash
-git remote add origin https://github.com/balabm/py-connect.git
+# Already done:
+git remote add origin https://github.com/balabm/PyConnect.git
 git branch -M main
 git push -u origin main
+# Result: 618 files pushed, zero secrets tracked
 ```
 
 ### Release Workflow
@@ -339,3 +362,51 @@ git push -u origin main
 2. `deploy-mobile.yml` triggers automatically
 3. Download APKs from GitHub Actions artifacts
 4. Upload APKs to Play Store Console
+
+---
+
+## Web App Deployment (Manual)
+
+If you need to deploy web apps manually (outside CI/CD), use these commands:
+
+### Build Web Apps
+```powershell
+cd mobile
+
+# Admin web app
+flutter build web --target lib/main_admin.dart --dart-define=APP_FLAVOR=admin --release
+
+# Save admin build
+Copy-Item -Recurse -Force build/web build/web-admin
+
+# Partner web app
+flutter build web --target lib/main_partner.dart --dart-define=APP_FLAVOR=partner --release --base-href /partner/
+
+# Save partner build
+Copy-Item -Recurse -Force build/web build/web-partner
+```
+
+### Deploy to EC2 via SSH/SCP
+```bash
+PEM=~/path/to/s1bucket.pem
+HOST=ubuntu@16.16.120.192
+
+# Deploy Admin
+ssh -i $PEM $HOST "sudo rm -rf /tmp/admin-web && mkdir -p /tmp/admin-web"
+scp -i $PEM -r mobile/build/web-admin/* $HOST:/tmp/admin-web/
+ssh -i $PEM $HOST "sudo rm -rf /var/www/admin/* && sudo cp -r /tmp/admin-web/* /var/www/admin/ && sudo chown -R www-data:www-data /var/www/admin/ && sudo chmod -R a+rX /var/www/admin/ && rm -rf /tmp/admin-web"
+
+# Deploy Partner
+ssh -i $PEM $HOST "sudo rm -rf /tmp/partner-web && mkdir -p /tmp/partner-web"
+scp -i $PEM -r mobile/build/web-partner/* $HOST:/tmp/partner-web/
+ssh -i $PEM $HOST "sudo rm -rf /var/www/partner/* && sudo cp -r /tmp/partner-web/* /var/www/partner/ && sudo chown -R www-data:www-data /var/www/partner/ && sudo chmod -R a+rX /var/www/partner/ && rm -rf /tmp/partner-web"
+
+# Reload Nginx
+ssh -i $PEM $HOST "sudo systemctl reload nginx"
+```
+
+### Verify
+```bash
+curl -sf https://pyconnect.run.place/ && echo "Admin OK"
+curl -sf https://pyconnect.run.place/partner/ && echo "Partner OK"
+```
