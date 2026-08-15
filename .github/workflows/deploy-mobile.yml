@@ -106,14 +106,14 @@ jobs:
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pondyconnect-apks
+          name: pyconnect-apks
           path: mobile/build/app/outputs/flutter-apk/*.apk
           retention-days: 30
 
       - name: Upload AAB artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pondyconnect-aabs
+          name: pyconnect-aabs
           path: mobile/build/app/outputs/bundle/*Release/*.aab
           retention-days: 30
 
