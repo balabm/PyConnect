@@ -90,6 +90,7 @@ public sealed class HomestaysController : ControllerBase
     }
 
     [HttpGet("my-bookings")]
+    [HttpGet("bookings")]
     [ProducesResponseType(typeof(IReadOnlyList<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<IReadOnlyList<object>>> MyBookings(CancellationToken cancellationToken)

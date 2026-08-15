@@ -95,10 +95,13 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
   }
 
   Widget _buildStatRow() {
+    // _activeRides is already filtered to confirmed/inprogress (on duty)
+    final onDuty = _activeRides.length;
+    // Off-duty count would come from a separate API call; show 0 as placeholder
     return Row(
       children: [
         Expanded(child: _StatTile(
-          icon: Icons.local_taxi, label: 'On Duty', value: _activeRides.length, color: AppTheme.warning)),
+          icon: Icons.local_taxi, label: 'On Duty', value: onDuty, color: AppTheme.warning)),
         const SizedBox(width: 8),
         Expanded(child: _StatTile(
           icon: Icons.local_parking, label: 'Off Duty', value: 0, color: Colors.white.withValues(alpha: 0.5))),

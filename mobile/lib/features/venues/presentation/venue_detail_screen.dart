@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
@@ -24,6 +27,16 @@ class VenueDetailScreen extends ConsumerStatefulWidget {
 class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
   Venue? _venue;
   bool _loadingDetail = false;
+  final _galleryController = PageController();
+  int _galleryPage = 0;
+
+  static const _osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+  @override
+  void dispose() {
+    _galleryController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +88,12 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
         ? venue.imageUrl!
         : _fallbackImageFor(venue.category);
 
+    // Gallery images: use venue image + curated fallbacks
+    final galleryImages = [
+      heroImageUrl,
+      ..._galleryFallbacksFor(venue.category),
+    ];
+
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: _refreshVenue,
@@ -100,11 +119,40 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
-                    AppNetworkImage(
-                      imageUrl: heroImageUrl,
-                      fit: BoxFit.cover,
-                      fallbackIcon: Icons.local_bar_outlined,
+                    PageView.builder(
+                      controller: _galleryController,
+                      itemCount: galleryImages.length,
+                      onPageChanged: (i) => setState(() => _galleryPage = i),
+                      itemBuilder: (context, i) => AppNetworkImage(
+                        imageUrl: galleryImages[i],
+                        fit: BoxFit.cover,
+                        fallbackIcon: Icons.local_bar_outlined,
+                      ),
                     ),
+                    // Gallery page dots
+                    if (galleryImages.length > 1)
+                      Positioned(
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(galleryImages.length, (i) {
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              width: i == _galleryPage ? 24 : 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: i == _galleryPage
+                                    ? AppTheme.emerald
+                                    : Colors.white.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
                     // Gradient overlay for title readability
                     Container(
                       decoration: BoxDecoration(
@@ -358,47 +406,80 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Location snapshot
+                  // Interactive location map
                   FadeSlideIn(
                     delay: const Duration(milliseconds: 590),
-                    child: AppCard(
-                      child: Row(
-                        children: [
-                          Icon(Icons.map_outlined, color: AppTheme.emerald, size: 28),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Location',
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Location',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: SizedBox(
+                            height: 200,
+                            child: FlutterMap(
+                              options: MapOptions(
+                                initialCenter: LatLng(venue.latitude, venue.longitude),
+                                initialZoom: 14,
+                                interactionOptions: const InteractionOptions(
+                                  flags: InteractiveFlag.all,
                                 ),
-                                if (venue.address != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    venue.address!,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              children: [
+                                TileLayer(
+                                  urlTemplate: _osmTiles,
+                                  userAgentPackageName: 'com.pondyconnect.app',
+                                ),
+                                MarkerLayer(
+                                  markers: [
+                                    Marker(
+                                      point: LatLng(venue.latitude, venue.longitude),
+                                      width: 40,
+                                      height: 40,
+                                      child: const Icon(
+                                        Icons.location_on,
+                                        color: AppTheme.emerald,
+                                        size: 40,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.directions, color: AppTheme.emerald),
-                            tooltip: 'Get Directions',
-                            onPressed: () {
-                              AppHaptics.light();
-                              // In production: launch maps app with venue address
-                            },
+                        ),
+                        if (venue.address != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            venue.address!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ],
-                      ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.directions, color: AppTheme.emerald),
+                            label: const Text('Get Directions'),
+                            onPressed: () {
+                              AppHaptics.light();
+                              final url = Uri.parse(
+                                'https://www.openstreetmap.org/directions?from=&to=${venue.latitude}%2C${venue.longitude}',
+                              );
+                              launchUrl(url, mode: LaunchMode.externalApplication);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -453,6 +534,17 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     final catLower = category.toLowerCase();
     return _fallbackImages[catLower] ??
         'https://images.unsplash.com/photo-1600598546430-3a1e4a9e2c8e?w=800';
+  }
+
+  List<String> _galleryFallbacksFor(String category) {
+    final catLower = category.toLowerCase();
+    final base = _fallbackImages[catLower] ??
+        'https://images.unsplash.com/photo-1600598546430-3a1e4a9e2c8e?w=800';
+    return [
+      base,
+      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
+      'https://images.unsplash.com/photo-1572116469696-31de77f4a8d1?w=800',
+    ];
   }
 
   Future<void> _fetchVenueFromApi() async {

@@ -6,6 +6,8 @@ class TicketValidationResult {
     required this.serviceType,
     required this.userName,
     required this.message,
+    this.isDuplicate = false,
+    this.previousScanAt,
   });
 
   factory TicketValidationResult.fromJson(Map<String, dynamic> json) =>
@@ -14,12 +16,16 @@ class TicketValidationResult {
         serviceType: json['serviceType'] as String? ?? '',
         userName: json['userName'] as String? ?? '',
         message: json['message'] as String? ?? '',
+        isDuplicate: json['isDuplicate'] as bool? ?? false,
+        previousScanAt: json['previousScanAt'] as String?,
       );
 
   final bool isValid;
   final String serviceType;
   final String userName;
   final String message;
+  final bool isDuplicate;
+  final String? previousScanAt;
 }
 
 class ScannerApi {

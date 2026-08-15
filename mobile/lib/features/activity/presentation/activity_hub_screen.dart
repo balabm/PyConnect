@@ -173,6 +173,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           amount: (booking['totalAmount'] as num?)?.toDouble(),
           id: (booking['id'] as String?) ?? '',
           isActive: isActive,
+          createdAt: DateTime.tryParse(booking['createdAt'] as String? ?? '') ?? DateTime.now(),
           onTap: () => context.push('/stays'),
           ctaLabel: 'View Stay Pass',
           ctaAction: () => context.push('/stays'),
@@ -205,6 +206,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           amount: (map['totalAmount'] as num?)?.toDouble(),
           id: (map['id'] as String?) ?? '',
           isActive: isActive,
+          createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
           onTap: () => context.push('/food/orders/${map['id']}'),
           ctaLabel: isActive ? 'Track Order' : 'Reorder',
           ctaAction: () => context.push('/food/orders/${map['id']}'),
@@ -235,6 +237,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           amount: (map['totalAmount'] as num?)?.toDouble(),
           id: (map['id'] as String?) ?? '',
           isActive: isActive,
+          createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
           onTap: () => context.push('/rides/${map['id']}'),
           ctaLabel: isActive ? 'Track Ride' : 'View Receipt',
           ctaAction: () => context.push('/rides/${map['id']}/receipt'),
@@ -273,6 +276,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           amount: (map['totalAmount'] as num?)?.toDouble(),
           id: (map['id'] as String?) ?? '',
           isActive: isActive,
+          createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
           onTap: () => context.push('/transit'),
           ctaLabel: 'View Rental QR',
           ctaAction: () => context.push('/transit'),
@@ -280,11 +284,11 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       }
     }
 
-    // Sort: active first, then by most recent (assuming API returns most recent first)
+    // Sort: active first, then chronologically (most recent first)
     items.sort((a, b) {
       if (a.isActive && !b.isActive) return -1;
       if (!a.isActive && b.isActive) return 1;
-      return 0;
+      return b.createdAt.compareTo(a.createdAt);
     });
 
     if (items.isEmpty) {
@@ -328,6 +332,7 @@ class _ActivityItem {
     required this.id,
     required this.isActive,
     required this.onTap,
+    required this.createdAt,
     this.amount,
     this.ctaLabel,
     this.ctaAction,
@@ -343,6 +348,7 @@ class _ActivityItem {
   final double? amount;
   final String? ctaLabel;
   final VoidCallback? ctaAction;
+  final DateTime createdAt;
 }
 
 class _ActivityCard extends StatelessWidget {

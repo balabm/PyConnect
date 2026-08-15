@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
@@ -26,9 +27,75 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
     'https://images.unsplash.com/photo-1600598546430-3a1e4e9d3e2c?w=800',
   ];
 
+  DateTime? _checkInDate;
+  DateTime? _checkOutDate;
+  final _pageController = PageController();
+  int _galleryPage = 0;
+
   String _heroImageFor(String name) {
     final hash = name.hashCode;
     return _heroImages[hash.abs() % _heroImages.length];
+  }
+
+  List<String> _resolveImages(Homestay homestay) {
+    if (homestay.imageUrls != null && homestay.imageUrls!.isNotEmpty) {
+      return homestay.imageUrls!;
+    }
+    return [_heroImageFor(homestay.name)];
+  }
+
+  int get _nights {
+    if (_checkInDate == null || _checkOutDate == null) return 1;
+    return _checkOutDate!.difference(_checkInDate!).inDays.clamp(1, 30);
+  }
+
+  Future<void> _pickCheckIn() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _checkInDate ?? now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      AppHaptics.light();
+      setState(() {
+        _checkInDate = picked;
+        if (_checkOutDate != null && _checkOutDate!.isBefore(picked.add(const Duration(days: 1)))) {
+          _checkOutDate = picked.add(const Duration(days: 1));
+        }
+      });
+    }
+  }
+
+  Future<void> _pickCheckOut() async {
+    if (_checkInDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select check-in date first')),
+      );
+      return;
+    }
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _checkOutDate ?? _checkInDate!.add(const Duration(days: 1)),
+      firstDate: _checkInDate!.add(const Duration(days: 1)),
+      lastDate: _checkInDate!.add(const Duration(days: 30)),
+    );
+    if (picked != null) {
+      AppHaptics.light();
+      setState(() => _checkOutDate = picked);
+    }
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Select date';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -45,21 +112,56 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
           onRetry: () => ref.invalidate(homestayDetailProvider(widget.homestayId)),
         ),
         data: (homestay) {
-          final basePrice = homestay.nightlyRate;
+          final images = _resolveImages(homestay);
+          final basePrice = homestay.nightlyRate * _nights;
           const addOnPricePerDay = 300.0;
-          final addOnTotal = addOnEnabled ? addOnPricePerDay : 0.0;
+          final addOnTotal = addOnEnabled ? addOnPricePerDay * _nights : 0.0;
           final totalPrice = basePrice + addOnTotal;
 
           return CustomScrollView(
             slivers: [
+              // Image Gallery
               SliverAppBar(
                 expandedHeight: 280,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                  background: AppNetworkImage(
-                    imageUrl: _heroImageFor(homestay.name),
-                    fit: BoxFit.cover,
-                    fallbackIcon: Icons.home,
+                  background: Stack(
+                    children: [
+                      PageView.builder(
+                        controller: _pageController,
+                        itemCount: images.length,
+                        onPageChanged: (i) => setState(() => _galleryPage = i),
+                        itemBuilder: (context, i) => AppNetworkImage(
+                          imageUrl: images[i],
+                          fit: BoxFit.cover,
+                          fallbackIcon: Icons.home,
+                        ),
+                      ),
+                      // Page dots
+                      if (images.length > 1)
+                        Positioned(
+                          bottom: 16,
+                          left: 0,
+                          right: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(images.length, (i) {
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                width: i == _galleryPage ? 24 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: i == _galleryPage
+                                      ? AppTheme.emerald
+                                      : Colors.white.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 leading: IconButton(
@@ -76,6 +178,7 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Title + Verified badge
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -150,7 +253,87 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                             height: 1.5,
                             color: Theme.of(context).colorScheme.onSurface),
                       ),
+                      const SizedBox(height: 24),
+
+                      // Check-in / Check-out date pickers
+                      _SectionTitle(icon: Icons.calendar_today, title: 'Select Dates'),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _DateCard(
+                              label: 'Check-in',
+                              date: _formatDate(_checkInDate),
+                              onTap: _pickCheckIn,
+                              icon: Icons.login,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _DateCard(
+                              label: 'Check-out',
+                              date: _formatDate(_checkOutDate),
+                              onTap: _pickCheckOut,
+                              icon: Icons.logout,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_checkInDate != null && _checkOutDate != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '$_nights night${_nights > 1 ? 's' : ''}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.emerald,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
+
+                      // Guest counter
+                      _SectionTitle(icon: Icons.people, title: 'Guests'),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          IconButton.filled(
+                            onPressed: guests > 1
+                                ? () {
+                                    AppHaptics.light();
+                                    ref.read(selectedGuestsProvider.notifier).state = guests - 1;
+                                  }
+                                : null,
+                            icon: const Icon(Icons.remove),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            '$guests guest${guests > 1 ? 's' : ''}',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(width: 16),
+                          IconButton.filled(
+                            onPressed: guests < homestay.maxGuests
+                                ? () {
+                                    AppHaptics.light();
+                                    ref.read(selectedGuestsProvider.notifier).state = guests + 1;
+                                  }
+                                : null,
+                            icon: const Icon(Icons.add),
+                          ),
+                          const Spacer(),
+                          Text(
+                            'Max ${homestay.maxGuests}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Amenities
                       const Text(
                         'Amenities',
                         style: TextStyle(
@@ -165,9 +348,51 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                             _amenityChip(Icons.wifi, 'WiFi'),
                           _amenityChip(Icons.group, 'Up to ${homestay.maxGuests} guests'),
                           _amenityChip(Icons.bed, 'Private room'),
+                          _amenityChip(Icons.ac_unit, 'AC'),
+                          _amenityChip(Icons.kitchen, 'Kitchen access'),
+                          _amenityChip(Icons.local_parking, 'Free parking'),
                         ],
                       ),
                       const SizedBox(height: 24),
+
+                      // Host Details
+                      _SectionTitle(icon: Icons.person, title: 'Host Details'),
+                      const SizedBox(height: 12),
+                      _InfoCard(
+                        icon: Icons.account_circle,
+                        title: 'Verified Host',
+                        subtitle: 'Response time: within an hour',
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.emerald.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${homestay.isVerified ? "4.8" : "4.5"} \u2605',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.emerald,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // House Rules
+                      _SectionTitle(icon: Icons.gavel, title: 'House Rules'),
+                      const SizedBox(height: 8),
+                      _HouseRulesCard(),
+                      const SizedBox(height: 24),
+
+                      // Timings
+                      _SectionTitle(icon: Icons.access_time, title: 'Check-in / Check-out'),
+                      const SizedBox(height: 8),
+                      _TimingsCard(),
+                      const SizedBox(height: 24),
+
+                      // Complete Trip add-on
                       _CompleteTripCard(
                         addOnEnabled: addOnEnabled,
                         onToggle: (value) {
@@ -176,8 +401,11 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                         },
                       ),
                       const SizedBox(height: 24),
+
+                      // Price breakdown with nights
                       _PriceBreakdown(
                         basePrice: basePrice,
+                        nights: _nights,
                         addOnTotal: addOnTotal,
                         total: totalPrice,
                       ),
@@ -186,18 +414,22 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                         width: double.infinity,
                         height: 56,
                         child: FilledButton(
-                          onPressed: () {
-                            AppHaptics.light();
-                            _bookHomestay(
-                                context, ref, homestay, guests, addOnEnabled);
-                          },
+                          onPressed: _checkInDate == null || _checkOutDate == null
+                              ? null
+                              : () {
+                                  AppHaptics.light();
+                                  _bookHomestay(
+                                      context, ref, homestay, guests, addOnEnabled);
+                                },
                           style: FilledButton.styleFrom(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
                           child: Text(
-                            'Slide to Book — ₹${totalPrice.toInt()}',
+                            _checkInDate == null || _checkOutDate == null
+                                ? 'Select dates to book'
+                                : 'Book Now — ₹${totalPrice.toInt()}',
                             style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold),
                           ),
@@ -242,9 +474,8 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
     int guests,
     bool addOnEnabled,
   ) async {
-    final now = DateTime.now();
-    final checkIn = now.add(const Duration(days: 1));
-    final checkOut = now.add(const Duration(days: 3));
+    final checkIn = _checkInDate!;
+    final checkOut = _checkOutDate!;
 
     final request = BookHomestayRequest(
       homestayId: homestay.id,
@@ -400,6 +631,173 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
   }
 }
 
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.icon, required this.title});
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppTheme.emerald),
+        const SizedBox(width: 8),
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+}
+
+class _DateCard extends StatelessWidget {
+  const _DateCard({
+    required this.label,
+    required this.date,
+    required this.onTap,
+    required this.icon,
+  });
+  final String label;
+  final String date;
+  final VoidCallback onTap;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: AppTheme.emerald),
+                const SizedBox(width: 6),
+                Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(date, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 28, color: AppTheme.emerald),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          if (trailing != null) trailing!,
+        ],
+      ),
+    );
+  }
+}
+
+class _HouseRulesCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final rules = [
+      'Check-in after 2:00 PM',
+      'Check-out before 11:00 AM',
+      'No smoking inside the property',
+      'Pets are not allowed',
+      'Quiet hours after 10:00 PM',
+    ];
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: rules.map((rule) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, size: 16, color: AppTheme.emerald),
+                const SizedBox(width: 8),
+                Expanded(child: Text(rule, style: const TextStyle(fontSize: 14))),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _TimingsCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          _timingRow(context, Icons.login, 'Check-in', '2:00 PM - 8:00 PM'),
+          const SizedBox(height: 12),
+          _timingRow(context, Icons.logout, 'Check-out', '8:00 AM - 11:00 AM'),
+        ],
+      ),
+    );
+  }
+
+  Widget _timingRow(BuildContext context, IconData icon, String label, String time) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppTheme.emerald),
+        const SizedBox(width: 12),
+        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        const Spacer(),
+        Text(time, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      ],
+    );
+  }
+}
+
 class _CompleteTripCard extends StatelessWidget {
   const _CompleteTripCard({
     required this.addOnEnabled,
@@ -475,11 +873,13 @@ class _CompleteTripCard extends StatelessWidget {
 class _PriceBreakdown extends StatelessWidget {
   const _PriceBreakdown({
     required this.basePrice,
+    required this.nights,
     required this.addOnTotal,
     required this.total,
   });
 
   final double basePrice;
+  final int nights;
   final double addOnTotal;
   final double total;
 
@@ -493,7 +893,7 @@ class _PriceBreakdown extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _priceRow(context, 'Stay (1 night)', '₹${basePrice.toInt()}'),
+          _priceRow(context, 'Stay ($nights night${nights > 1 ? 's' : ''})', '₹${basePrice.toInt()}'),
           if (addOnTotal > 0) ...[
             const SizedBox(height: 8),
             _priceRow(context, 'Scooter + Luggage Bundle', '₹${addOnTotal.toInt()}'),

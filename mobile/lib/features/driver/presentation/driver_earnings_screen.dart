@@ -174,6 +174,37 @@ class _EarningsBody extends StatelessWidget {
                 );
               },
             ),
+          const SizedBox(height: 24),
+          // Profile section (merged from separate Profile tab)
+          const Text('Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          AppCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _ProfileTile(
+                  icon: Icons.person_outline,
+                  title: 'Account Details',
+                  onTap: () {},
+                ),
+                _ProfileTile(
+                  icon: Icons.document_scanner_outlined,
+                  title: 'KYC Documents',
+                  onTap: () {},
+                ),
+                _ProfileTile(
+                  icon: Icons.security_outlined,
+                  title: 'Safety Settings',
+                  onTap: () {},
+                ),
+                _ProfileTile(
+                  icon: Icons.headset_mic_outlined,
+                  title: 'Help & Support',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -210,6 +241,24 @@ class _StatCard extends StatelessWidget {
           Text(rides, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
         ],
       ),
+    );
+  }
+}
+
+class _ProfileTile extends StatelessWidget {
+  const _ProfileTile({required this.icon, required this.title, required this.onTap});
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.emerald),
+      title: Text(title, style: const TextStyle(fontSize: 15)),
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      onTap: onTap,
     );
   }
 }

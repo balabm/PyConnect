@@ -433,23 +433,23 @@ class _EveningNightlife extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           _CuratedCollectionsSection(
-            title: 'Tonight',
+            title: 'Trending Tonight',
             cards: [
               _CuratedCard(
                 imageUrl: 'https://images.unsplash.com/photo-1572116469696-31def3a40c2c?w=800',
-                title: 'Pub Entry',
+                title: 'Trending Tonight',
                 subtitle: 'Skip the line',
                 route: '/venues?filter=nightlife',
               ),
               _CuratedCard(
                 imageUrl: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800',
-                title: 'Clubs & DJs',
+                title: 'Live Music & DJ',
                 subtitle: 'Dance floors nearby',
                 route: '/venues?filter=nightlife',
               ),
               _CuratedCard(
                 imageUrl: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800',
-                title: 'Dinner First',
+                title: 'Happy Hours',
                 subtitle: 'Restaurants open now',
                 route: '/food',
               ),

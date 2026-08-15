@@ -237,7 +237,6 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           DriverHomeScreen(),
           ActiveTripScreen(),
           DriverEarningsScreen(),
-          DriverProfileScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -258,11 +257,6 @@ class _DriverShellState extends ConsumerState<DriverShell> {
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet),
             label: 'Earnings',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
           ),
         ],
       ),

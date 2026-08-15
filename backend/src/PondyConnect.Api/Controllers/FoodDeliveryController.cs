@@ -29,6 +29,7 @@ public sealed class FoodDeliveryController : ControllerBase
     }
 
     [HttpPost("orders/checkout")]
+    [HttpPost("orders")]
     [Authorize]
     [EnableRateLimiting("OrderPolicy")]
     [ProducesResponseType(typeof(CheckoutResponse), StatusCodes.Status200OK)]
@@ -168,6 +169,7 @@ public sealed class FoodDeliveryController : ControllerBase
     }
 
     [HttpPut("vendor/orders/{id:guid}/status")]
+    [HttpPut("orders/{id:guid}/status")]
     [Authorize(Roles = "Vendor")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

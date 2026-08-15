@@ -9,7 +9,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../vendor/application/vendor_providers.dart';
 
-enum ScannerState { idle, scanning, success, error, networkError, permissionDenied }
+enum ScannerState { idle, scanning, success, error, duplicate, networkError, permissionDenied }
 
 class ScannerScreen extends ConsumerStatefulWidget {
   const ScannerScreen({super.key});
@@ -94,6 +94,14 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         _animationController.forward();
         AppHaptics.success();
         _playSuccessSound();
+      } else if (result.isDuplicate) {
+        setState(() {
+          _state = ScannerState.duplicate;
+          _result = result;
+        });
+        _animationController.forward();
+        AppHaptics.error();
+        _playErrorSound();
       } else {
         setState(() {
           _state = ScannerState.error;
@@ -161,6 +169,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           if (_state == ScannerState.idle) _buildScanOverlay(),
           if (_state == ScannerState.scanning) _buildScanningOverlay(),
           if (_state == ScannerState.success) _buildSuccessOverlay(),
+          if (_state == ScannerState.duplicate) _buildDuplicateOverlay(),
           if (_state == ScannerState.error) _buildErrorOverlay(),
           if (_state == ScannerState.networkError) _buildNetworkErrorOverlay(),
           if (_state == ScannerState.permissionDenied) _buildPermissionDeniedOverlay(),
@@ -393,6 +402,76 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     }
     if (serviceType.isEmpty) return 'Valid Pass';
     return serviceType;
+  }
+
+  Widget _buildDuplicateOverlay() {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black87, Colors.black54],
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.content_copy, color: Colors.orange, size: 40),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Duplicate Ticket',
+                  style: TextStyle(
+                    color: Colors.orange,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _result?.message.isNotEmpty == true
+                      ? _result!.message
+                      : 'This ticket has already been scanned.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 15),
+                ),
+                if (_result?.previousScanAt != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Previously scanned: ${_result!.previousScanAt}',
+                    style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                ],
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: () {
+                    AppHaptics.light();
+                    setState(() {
+                      _state = ScannerState.idle;
+                      _result = null;
+                    });
+                  },
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Scan Again'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildErrorOverlay() {

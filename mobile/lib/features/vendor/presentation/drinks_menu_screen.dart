@@ -116,6 +116,8 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               _buildCrowdSection(),
               const SizedBox(height: 16),
               _buildGuestlistSection(),
+              const SizedBox(height: 16),
+              _buildCoverChargeSection(),
               const SizedBox(height: 24),
               // VIP Menu Section
               if (vipItems.isNotEmpty) ...[
@@ -280,6 +282,70 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               Text('Full', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  // ── Cover Charge Section ──
+
+  Widget _buildCoverChargeSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.confirmation_number, color: AppTheme.emerald, size: 20),
+              SizedBox(width: 8),
+              Text('Cover Charges',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _coverChargeRow('Couples Entry', '\u20B91,000', '9 PM - 11 PM'),
+          _coverChargeRow('Stag Entry', '\u20B91,500', '9 PM - 11 PM'),
+          _coverChargeRow('VIP Table', '\u20B95,000', 'Includes 4 drinks'),
+          _coverChargeRow('Ladies Free', 'Free', 'Before 10 PM'),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.edit, size: 16),
+              label: const Text('Edit Cover Charges'),
+              onPressed: () {
+                AppHaptics.light();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Cover charge editing coming soon'), duration: Duration(seconds: 1)),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _coverChargeRow(String label, String price, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
+              ],
+            ),
+          ),
+          Text(price, style: const TextStyle(color: AppTheme.emerald, fontSize: 16, fontWeight: FontWeight.bold)),
         ],
       ),
     );
