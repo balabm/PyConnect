@@ -21,6 +21,12 @@ class RestaurantCard extends StatelessWidget {
     final prepTime = vendor['prepTimeMinutes'] as num?;
     final itemCount = vendor['menuItemCount'] as int? ?? 0;
     final imageUrl = vendor['imageUrl'] as String? ?? vendor['image'] as String?;
+    final isVegOnly = vendor['isVegOnly'] as bool? ?? false;
+    final priceTier = vendor['priceTier'] as int? ?? 1;
+    final discountTag = vendor['discountTag'] as String?;
+
+    // Pricing tier: 1=₹, 2=₹₹, 3=₹₹₹
+    final priceTierStr = List.generate(priceTier, (_) => '\u20B9').join();
 
     return AppCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -59,9 +65,55 @@ class RestaurantCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                if (cuisine != null) ...[
-                  const SizedBox(height: 2),
-                  Text(cuisine, style: TextStyle(fontSize: 12, color: AppTheme.emerald, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    // Veg/non-veg badge
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: isVegOnly ? AppTheme.emerald : AppTheme.danger,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Icon(
+                        isVegOnly ? Icons.circle : Icons.change_circle,
+                        size: 8,
+                        color: isVegOnly ? AppTheme.emerald : AppTheme.danger,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Pricing tier
+                    Text(
+                      priceTierStr,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (cuisine != null) ...[
+                      const SizedBox(width: 6),
+                      Text('· $cuisine', style: TextStyle(fontSize: 12, color: AppTheme.emerald, fontWeight: FontWeight.w600)),
+                    ],
+                  ],
+                ),
+                if (discountTag != null) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.emerald.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      discountTag,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.emerald),
+                    ),
+                  ),
                 ],
                 if (description != null) ...[
                   const SizedBox(height: 4),

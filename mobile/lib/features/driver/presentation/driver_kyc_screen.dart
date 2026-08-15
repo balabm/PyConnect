@@ -135,7 +135,7 @@ class _DriverKycScreenState extends ConsumerState<DriverKycScreen> {
         AppHaptics.success();
         AppToast.show(context, result.message, type: ToastType.success);
         ref.read(kycSlotsProvider.notifier).reset();
-        context.go('/');
+        context.go('/pending-verification');
       } else if (mounted) {
         AppHaptics.error();
         AppToast.show(context, result.message, type: ToastType.error);

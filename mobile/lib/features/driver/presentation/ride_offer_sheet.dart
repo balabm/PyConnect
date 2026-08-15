@@ -28,12 +28,12 @@ class RideOfferSheet extends StatefulWidget {
 class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStateMixin {
   late final AnimationController _pulseController;
   Timer? _countdownTimer;
-  int _secondsLeft = 15;
+  int _secondsLeft = 30;
 
   @override
   void initState() {
     super.initState();
-    _secondsLeft = widget.offer.expiresIn > 0 ? widget.offer.expiresIn : 15;
+    _secondsLeft = widget.offer.expiresIn > 0 ? widget.offer.expiresIn : 30;
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),

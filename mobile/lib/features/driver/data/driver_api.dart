@@ -99,12 +99,14 @@ class DriverApi {
     required String phone,
     required String vehicleType,
     String? vehiclePlate,
+    String? licenseNumber,
   }) async {
     await _api.post('api/driver/register', data: {
       'name': name,
       'phone': phone,
       'vehicleType': vehicleType,
       if (vehiclePlate != null) 'vehiclePlate': vehiclePlate,
+      if (licenseNumber != null) 'licenseNumber': licenseNumber,
     });
   }
 

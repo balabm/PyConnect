@@ -453,3 +453,17 @@ class SosEvent {
     required this.isResolved,
   });
 }
+
+// === Finance ===
+
+final adminFinanceSummaryProvider =
+    FutureProvider.autoDispose<AdminFinanceSummary>((ref) async {
+  final api = ref.watch(adminApiProvider);
+  return await api.getFinanceSummary();
+});
+
+final adminSettlementsProvider =
+    FutureProvider.autoDispose<List<AdminSettlementLog>>((ref) async {
+  final api = ref.watch(adminApiProvider);
+  return await api.getSettlements();
+});

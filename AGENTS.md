@@ -200,9 +200,8 @@ ssh -i s1bucket.pem ubuntu@16.16.120.192 "sudo cp -r /tmp/partner-web/* /var/www
 ```
 
 ### Known EC2 config issues
-- **CORS origins**: Backend Docker env has `http://16.16.120.192` and `http://localhost:*` — should include `https://pyconnect.run.place` for web app auth to work correctly.
-- **JWT issuer/audience**: Set to `http://16.16.120.192` — should be `https://pyconnect.run.place` for production token validation.
-- These require recreating the Docker container with updated env vars.
+- **CORS origins**: ✅ Fixed — `Cors__AllowedOrigins__0=https://pyconnect.run.place` (verified in container env).
+- **JWT issuer/audience**: ✅ Fixed — `Jwt__Issuer` and `Jwt__Audience` both `https://pyconnect.run.place` (verified via freshly minted token payload). Container was recreated ~2026-08-15; existing browser tokens minted with the old `http://16.16.120.192` issuer are rejected with 401 — users must log out and back in once to get a valid token.
 
 ## QA Status (Local)
 - **Backend build**: 0 errors, 0 warnings

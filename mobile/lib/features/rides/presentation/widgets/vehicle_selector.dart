@@ -13,8 +13,8 @@ class VehicleSelector extends StatelessWidget {
     this.etas,
   });
 
-  /// List of (name, icon, perKm, base, minFare, etaMin) tuples.
-  final List<(String, IconData, double, double, double, int)> vehicles;
+  /// List of (name, icon, perKm, base, minFare, etaMin, capacity, hasAC) tuples.
+  final List<(String, IconData, double, double, double, int, int, bool)> vehicles;
   final int selectedIndex;
   final List<double> fares;
   final List<int>? etas;
@@ -29,7 +29,7 @@ class VehicleSelector extends StatelessWidget {
         itemCount: vehicles.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
-          final (name, icon, _, _, _, eta) = vehicles[i];
+          final (name, icon, _, _, _, eta, capacity, hasAC) = vehicles[i];
           final fare = fares[i];
           final etaVal = etas?[i] ?? eta;
           final isSelected = selectedIndex == i;
@@ -119,6 +119,35 @@ class VehicleSelector extends StatelessWidget {
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.person, size: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 2),
+                        Text(
+                          '$capacity',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (hasAC) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppTheme.emerald.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'AC',
+                              style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: AppTheme.emerald),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),

@@ -73,10 +73,11 @@ class KdsOrder {
   int get elapsedMinutes => DateTime.now().difference(placedAt).inMinutes;
 
   /// Urgency level based on elapsed time.
+  /// Green <10min, Amber 10-20min, Red >20min per MasterPlan spec.
   KdsUrgency get urgency {
     final mins = elapsedMinutes;
-    if (mins > 10) return KdsUrgency.critical;
-    if (mins > 5) return KdsUrgency.warning;
+    if (mins > 20) return KdsUrgency.critical;
+    if (mins > 10) return KdsUrgency.warning;
     return KdsUrgency.normal;
   }
 }

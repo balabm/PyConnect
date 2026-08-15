@@ -58,9 +58,9 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
   String? _inlineError;
 
   static const _vehicles = [
-    ('Bike', Icons.two_wheeler, 8.0, 15.0, 30.0, 2),
-    ('Auto', Icons.local_taxi, 12.0, 25.0, 50.0, 4),
-    ('Car', Icons.directions_car, 15.0, 40.0, 70.0, 6),
+    ('Bike', Icons.two_wheeler, 8.0, 15.0, 30.0, 2, 1, false),
+    ('Auto', Icons.local_taxi, 12.0, 25.0, 50.0, 4, 3, false),
+    ('Car', Icons.directions_car, 15.0, 40.0, 70.0, 6, 4, true),
   ];
 
   static const _paymentMethods = ['Cash', 'UPI', 'Card'];
@@ -107,7 +107,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
   }
 
   double _calculateFare(int vehicleIndex, double distanceKm, int durationMin) {
-    final (_, _, ratePerKm, baseFare, minFare, _) = _vehicles[vehicleIndex];
+    final (_, _, ratePerKm, baseFare, minFare, _, _, _) = _vehicles[vehicleIndex];
     final perMinRate = vehicleIndex == 0 ? 1.0 : vehicleIndex == 1 ? 1.5 : 2.0;
     var fare = baseFare +
         (distanceKm * ratePerKm).ceil() +
@@ -216,20 +216,47 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
         children: [
           // Map fills the entire screen behind the bottom sheet
           Positioned.fill(
-            child: RideMap(
-              pickup: _pickupLocation ?? _defaultCenter,
-              dropoff: _dropoffLocation ?? _pickupLocation ?? _defaultCenter,
-              userLocation: _pickupLocation,
-              routePoints: hasRoute
-                  ? ref
-                      .watch(routeProvider(
-                          (start: _pickupLocation!, end: _dropoffLocation!)))
-                      .valueOrNull
-                      ?.points
-                  : null,
-              zoom: 14.0,
-              onMapTap: _onMapTap,
-              fitRoute: hasRoute,
+            child: Consumer(
+              builder: (context, ref, _) {
+                // Fetch nearby drivers for map markers
+                List<LatLng>? driverMarkers;
+                if (_pickupLocation != null) {
+                  final driversAsync = ref.watch(nearbyDriversProvider(
+                      (lat: _pickupLocation!.latitude,
+                      lng: _pickupLocation!.longitude)));
+                  driverMarkers = driversAsync.maybeWhen(
+                    data: (drivers) => drivers
+                        .whereType<Map<String, dynamic>>()
+                        .map((d) {
+                          final lat = (d['latitude'] as num?)?.toDouble() ??
+                              (d['lat'] as num?)?.toDouble();
+                          final lng = (d['longitude'] as num?)?.toDouble() ??
+                              (d['lng'] as num?)?.toDouble();
+                          if (lat == null || lng == null) return null;
+                          return LatLng(lat, lng);
+                        })
+                        .whereType<LatLng>()
+                        .toList(),
+                    orElse: () => null,
+                  );
+                }
+                return RideMap(
+                  pickup: _pickupLocation ?? _defaultCenter,
+                  dropoff: _dropoffLocation ?? _pickupLocation ?? _defaultCenter,
+                  userLocation: _pickupLocation,
+                  routePoints: hasRoute
+                      ? ref
+                          .watch(routeProvider(
+                              (start: _pickupLocation!, end: _dropoffLocation!)))
+                          .valueOrNull
+                          ?.points
+                      : null,
+                  nearbyDrivers: driverMarkers,
+                  zoom: 14.0,
+                  onMapTap: _onMapTap,
+                  fitRoute: hasRoute,
+                );
+              },
             ),
           ),
 

@@ -158,6 +158,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                               price: (item['price'] as num).toDouble(),
                               category: item['category'] as String?,
                               isLateNight: item['isLateNight'] as bool? ?? false,
+                              isVeg: item['isVeg'] as bool? ?? false,
                               imageUrl: item['imageUrl'] as String?,
                               quantity: qty,
                               onAdd: () {
@@ -499,6 +500,7 @@ class _MenuItemTile extends StatelessWidget {
     required this.price,
     required this.category,
     required this.isLateNight,
+    required this.isVeg,
     required this.quantity,
     required this.onAdd,
     required this.onRemove,
@@ -511,6 +513,7 @@ class _MenuItemTile extends StatelessWidget {
   final double price;
   final String? category;
   final bool isLateNight;
+  final bool isVeg;
   final int quantity;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
@@ -546,6 +549,24 @@ class _MenuItemTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
+                    // Veg/non-veg indicator
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: isVeg ? AppTheme.emerald : AppTheme.danger,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Icon(
+                        isVeg ? Icons.circle : Icons.change_circle,
+                        size: 8,
+                        color: isVeg ? AppTheme.emerald : AppTheme.danger,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     if (isLateNight) ...[
                       Icon(Icons.nightlight_round, size: 14, color: AppTheme.info.withValues(alpha: 0.6)),
                       const SizedBox(width: 4),

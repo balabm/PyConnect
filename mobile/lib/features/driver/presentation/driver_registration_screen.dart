@@ -25,6 +25,7 @@ class _DriverRegistrationScreenState
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _plateController = TextEditingController();
+  final _licenseController = TextEditingController();
   String _vehicleType = 'Bike';
   bool _isSubmitting = false;
 
@@ -35,12 +36,14 @@ class _DriverRegistrationScreenState
     _nameController.dispose();
     _phoneController.dispose();
     _plateController.dispose();
+    _licenseController.dispose();
     super.dispose();
   }
 
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty &&
-      _phoneController.text.trim().length >= 10;
+      _phoneController.text.trim().length >= 10 &&
+      _licenseController.text.trim().isNotEmpty;
 
   Future<void> _submit() async {
     if (!_isValid) {
@@ -61,6 +64,9 @@ class _DriverRegistrationScreenState
         vehiclePlate: _plateController.text.trim().isEmpty
             ? null
             : _plateController.text.trim(),
+        licenseNumber: _licenseController.text.trim().isEmpty
+            ? null
+            : _licenseController.text.trim(),
       );
 
       if (mounted) {
@@ -194,6 +200,16 @@ class _DriverRegistrationScreenState
                 labelText: 'Vehicle Plate (optional)',
                 hintText: 'e.g. PY01AB1234',
                 prefixIcon: Icon(Icons.numbers),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _licenseController,
+              decoration: const InputDecoration(
+                labelText: 'Driving License Number',
+                hintText: 'e.g. PY01 20240001234',
+                prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
             ),

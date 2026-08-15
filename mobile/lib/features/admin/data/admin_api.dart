@@ -14,6 +14,21 @@ class AdminApi {
     return AdminDashboardStats.fromJson(result as Map<String, dynamic>);
   }
 
+  // === Finance ===
+
+  Future<AdminFinanceSummary> getFinanceSummary() async {
+    final result = await _api.get('/api/admin/finance/summary');
+    return AdminFinanceSummary.fromJson(result as Map<String, dynamic>);
+  }
+
+  Future<List<AdminSettlementLog>> getSettlements() async {
+    final result = await _api.get('/api/admin/finance/settlements');
+    final list = result as List<dynamic>;
+    return list
+        .map((e) => AdminSettlementLog.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // === Vendor Management ===
 
   Future<List<AdminVendor>> getVendors() async {
@@ -716,4 +731,61 @@ class AdminSignalREvent {
   bool get affectsStats =>
       affectsSos || affectsTickets || affectsUsers || affectsDrivers ||
       affectsVendors || affectsRides;
+}
+
+// === Finance ===
+
+/// Finance summary returned by GET /api/admin/finance/summary.
+class AdminFinanceSummary {
+  const AdminFinanceSummary({
+    required this.gmv,
+    required this.commissionRevenue,
+    required this.driverPayoutsDue,
+    required this.totalTransactions,
+  });
+
+  factory AdminFinanceSummary.fromJson(Map<String, dynamic> json) =>
+      AdminFinanceSummary(
+        gmv: (json['gmv'] as num?)?.toDouble() ?? 0,
+        commissionRevenue: (json['commissionRevenue'] as num?)?.toDouble() ?? 0,
+        driverPayoutsDue: (json['driverPayoutsDue'] as num?)?.toDouble() ?? 0,
+        totalTransactions: json['totalTransactions'] as int? ?? 0,
+      );
+
+  final double gmv;
+  final double commissionRevenue;
+  final double driverPayoutsDue;
+  final int totalTransactions;
+}
+
+/// Settlement log entry returned by GET /api/admin/finance/settlements.
+class AdminSettlementLog {
+  const AdminSettlementLog({
+    required this.paymentId,
+    required this.providerOrderId,
+    required this.providerPaymentId,
+    required this.amount,
+    required this.currency,
+    required this.status,
+    required this.capturedAt,
+  });
+
+  factory AdminSettlementLog.fromJson(Map<String, dynamic> json) =>
+      AdminSettlementLog(
+        paymentId: json['paymentId'] as String? ?? '',
+        providerOrderId: json['providerOrderId'] as String? ?? '',
+        providerPaymentId: json['providerPaymentId'] as String? ?? '',
+        amount: (json['amount'] as num?)?.toDouble() ?? 0,
+        currency: json['currency'] as String? ?? 'INR',
+        status: json['status'] as String? ?? '',
+        capturedAt: json['capturedAt'] as String? ?? '',
+      );
+
+  final String paymentId;
+  final String providerOrderId;
+  final String providerPaymentId;
+  final double amount;
+  final String currency;
+  final String status;
+  final String capturedAt;
 }

@@ -30,6 +30,7 @@ class RideMap extends StatefulWidget {
     this.userLocation,
     this.routePoints,
     this.driverRoutePoints,
+    this.nearbyDrivers,
     this.zoom = 14.0,
     this.onMapTap,
     this.fitRoute = false,
@@ -43,6 +44,8 @@ class RideMap extends StatefulWidget {
   /// Route from the driver's current location to the pickup point.
   /// Rendered as a dashed muted-color line distinct from the main route.
   final List<LatLng>? driverRoutePoints;
+  /// Nearby driver locations to show as markers on the map.
+  final List<LatLng>? nearbyDrivers;
   final double zoom;
   final void Function(LatLng)? onMapTap;
   final bool fitRoute;
@@ -225,6 +228,36 @@ class _RideMapState extends State<RideMap> {
             ],
           ),
         ],
+        // Nearby driver markers
+        if (widget.nearbyDrivers != null && widget.nearbyDrivers!.isNotEmpty)
+          MarkerLayer(
+            markers: widget.nearbyDrivers!
+                .map((loc) => Marker(
+                      point: loc,
+                      width: 32,
+                      height: 32,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppTheme.emerald,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.emerald.withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.two_wheeler,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
         MarkerLayer(markers: markers),
       ],
     );

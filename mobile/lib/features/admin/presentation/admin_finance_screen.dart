@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../application/admin_providers.dart';
+import '../data/admin_api.dart';
 
 /// Finance & Audit screen for the PY Connect admin "God Mode" dashboard.
 ///
@@ -11,8 +14,8 @@ import '../../../core/theme/app_theme.dart';
 ///  - Driver Payouts Due (pending settlements)
 ///  - Razorpay Settlement Log (recent settlement entries)
 ///
-/// All values are mock/placeholder for now — TODO comments mark where the
-/// backend wiring should be added once the finance endpoints are available.
+/// Data is fetched from GET /api/admin/finance/summary and
+/// GET /api/admin/finance/settlements.
 class AdminFinanceScreen extends ConsumerStatefulWidget {
   const AdminFinanceScreen({super.key});
 
@@ -22,16 +25,21 @@ class AdminFinanceScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminFinanceScreenState extends ConsumerState<AdminFinanceScreen> {
-  /// Last-updated timestamp for the screen. Refreshed on pull-to-refresh.
-  DateTime _lastUpdated = DateTime.now();
-
   Future<void> _refresh() async {
-    // TODO: Wire to backend finance endpoint when available.
-    setState(() => _lastUpdated = DateTime.now());
+    ref.invalidate(adminFinanceSummaryProvider);
+    ref.invalidate(adminSettlementsProvider);
+  }
+
+  String _formatRupees(double amount) {
+    final fmt = NumberFormat.currency(locale: 'en_IN', symbol: '\u20B9');
+    return fmt.format(amount);
   }
 
   @override
   Widget build(BuildContext context) {
+    final summaryAsync = ref.watch(adminFinanceSummaryProvider);
+    final settlementsAsync = ref.watch(adminSettlementsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Finance & Audit'),
@@ -49,57 +57,83 @@ class _AdminFinanceScreenState extends ConsumerState<AdminFinanceScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            _LastUpdatedRow(lastUpdated: _lastUpdated),
-            const SizedBox(height: 24),
             // Metric cards
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final crossCount =
-                    constraints.maxWidth > 900 ? 3 : 1;
-                return Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    SizedBox(
-                      width: (constraints.maxWidth - (crossCount - 1) * 16) /
-                          crossCount,
-                      child: const _FinanceMetricCard(
-                        icon: Icons.payments_rounded,
-                        label: 'GMV (GROSS MERCHANDISE VALUE)',
-                        value: '₹4,82,650',
-                        subtitle: 'Sum of all completed payments',
-                        color: AdminColors.accent,
+            summaryAsync.when(
+              data: (summary) => LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossCount = constraints.maxWidth > 900 ? 3 : 1;
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      SizedBox(
+                        width: (constraints.maxWidth - (crossCount - 1) * 16) /
+                            crossCount,
+                        child: _FinanceMetricCard(
+                          icon: Icons.payments_rounded,
+                          label: 'GMV (GROSS MERCHANDISE VALUE)',
+                          value: _formatRupees(summary.gmv),
+                          subtitle:
+                              '${summary.totalTransactions} completed payments',
+                          color: AdminColors.accent,
+                        ),
                       ),
-                    ),
-                    SizedBox(
-                      width: (constraints.maxWidth - (crossCount - 1) * 16) /
-                          crossCount,
-                      child: const _FinanceMetricCard(
-                        icon: Icons.savings_rounded,
-                        label: 'COMMISSION REVENUE',
-                        value: '₹0',
-                        subtitle: '0% — drivers keep 100%',
-                        color: AdminColors.info,
+                      SizedBox(
+                        width: (constraints.maxWidth - (crossCount - 1) * 16) /
+                            crossCount,
+                        child: _FinanceMetricCard(
+                          icon: Icons.savings_rounded,
+                          label: 'COMMISSION REVENUE',
+                          value: _formatRupees(summary.commissionRevenue),
+                          subtitle:
+                              '0% — drivers keep 100%',
+                          color: AdminColors.info,
+                        ),
                       ),
-                    ),
-                    SizedBox(
-                      width: (constraints.maxWidth - (crossCount - 1) * 16) /
-                          crossCount,
-                      child: const _FinanceMetricCard(
-                        icon: Icons.account_balance_wallet_rounded,
-                        label: 'DRIVER PAYOUTS DUE',
-                        value: '₹1,24,300',
-                        subtitle: 'Pending settlements',
-                        color: AdminColors.warning,
+                      SizedBox(
+                        width: (constraints.maxWidth - (crossCount - 1) * 16) /
+                            crossCount,
+                        child: _FinanceMetricCard(
+                          icon: Icons.account_balance_wallet_rounded,
+                          label: 'DRIVER PAYOUTS DUE',
+                          value: _formatRupees(summary.driverPayoutsDue),
+                          subtitle: 'Pending settlements',
+                          color: AdminColors.warning,
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(40),
+                  child: CircularProgressIndicator(color: AdminColors.accent),
+                ),
+              ),
+              error: (e, _) => _FinanceError(
+                message: 'Could not load finance summary',
+                onRetry: _refresh,
+              ),
             ),
             const SizedBox(height: 32),
             // Razorpay settlement log
-            const _SettlementLogSection(),
+            settlementsAsync.when(
+              data: (settlements) => _SettlementLogSection(
+                entries: settlements,
+                onRefresh: _refresh,
+              ),
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(40),
+                  child: CircularProgressIndicator(color: AdminColors.accent),
+                ),
+              ),
+              error: (e, _) => _FinanceError(
+                message: 'Could not load settlement log',
+                onRetry: _refresh,
+              ),
+            ),
           ],
         ),
       ),
@@ -108,35 +142,7 @@ class _AdminFinanceScreenState extends ConsumerState<AdminFinanceScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Last updated row
-// ---------------------------------------------------------------------------
-
-class _LastUpdatedRow extends StatelessWidget {
-  const _LastUpdatedRow({required this.lastUpdated});
-  final DateTime lastUpdated;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(Icons.schedule_rounded, size: 16, color: AdminColors.textMuted),
-        const SizedBox(width: 6),
-        Text(
-          'Last updated: ${_formatTimestamp(lastUpdated)}',
-          style: const TextStyle(fontSize: 13, color: AdminColors.textMuted),
-        ),
-      ],
-    );
-  }
-
-  String _formatTimestamp(DateTime t) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(t.day)}/${two(t.month)}/${t.year} ${two(t.hour)}:${two(t.minute)}';
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Finance metric card
+// Metric card
 // ---------------------------------------------------------------------------
 
 class _FinanceMetricCard extends StatelessWidget {
@@ -156,63 +162,51 @@ class _FinanceMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AdminColors.surface,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AdminColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AdminColors.textMuted,
-                      letterSpacing: 0.5,
-                    ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AdminColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AdminColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AdminColors.textMuted,
+                    letterSpacing: 0.5,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: AdminColors.textPrimary,
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: AdminColors.textPrimary,
             ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: color.withValues(alpha: 0.9),
-                fontWeight: FontWeight.w500,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AdminColors.textMuted,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -223,14 +217,13 @@ class _FinanceMetricCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _SettlementLogSection extends StatelessWidget {
-  const _SettlementLogSection();
+  const _SettlementLogSection({required this.entries, required this.onRefresh});
+
+  final List<AdminSettlementLog> entries;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Replace mock settlement entries with real data from the
-    // backend Razorpay settlement endpoint when available.
-    final entries = _mockSettlements;
-
     return Container(
       decoration: BoxDecoration(
         color: AdminColors.surface,
@@ -265,16 +258,23 @@ class _SettlementLogSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            // Table — horizontally scrollable on narrow screens.
-            Scrollbar(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 600),
+            if (entries.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: Text(
+                    'No settlements yet',
+                    style: TextStyle(color: AdminColors.textMuted, fontSize: 14),
+                  ),
+                ),
+              )
+            else
+              Scrollbar(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   child: _SettlementTable(entries: entries),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -284,144 +284,121 @@ class _SettlementLogSection extends StatelessWidget {
 
 class _SettlementTable extends StatelessWidget {
   const _SettlementTable({required this.entries});
-  final List<_SettlementEntry> entries;
+  final List<AdminSettlementLog> entries;
 
   @override
   Widget build(BuildContext context) {
-    final headerStyle = TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      color: AdminColors.textMuted,
-      letterSpacing: 0.4,
+    return DataTable(
+      columnSpacing: 24,
+      columns: const [
+        DataColumn(
+          label: Text('Date',
+              style: TextStyle(
+                  color: AdminColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12)),
+        ),
+        DataColumn(
+          label: Text('Amount',
+              style: TextStyle(
+                  color: AdminColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12)),
+        ),
+        DataColumn(
+          label: Text('Status',
+              style: TextStyle(
+                  color: AdminColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12)),
+        ),
+        DataColumn(
+          label: Text('Reference ID',
+              style: TextStyle(
+                  color: AdminColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12)),
+        ),
+      ],
+      rows: entries.map((e) {
+        final statusLower = e.status.toLowerCase();
+        final color = statusLower == 'captured' || statusLower == 'succeeded'
+            ? AdminColors.success
+            : statusLower == 'pending' || statusLower == 'processing'
+                ? AdminColors.warning
+                : AdminColors.danger;
+        return DataRow(
+          cells: [
+            DataCell(Text(
+              e.capturedAt.isNotEmpty
+                  ? e.capturedAt.substring(0, e.capturedAt.length > 10 ? 10 : e.capturedAt.length)
+                  : '—',
+              style: const TextStyle(color: AdminColors.textPrimary, fontSize: 13),
+            )),
+            DataCell(Text(
+              '\u20B9${e.amount.toStringAsFixed(0)}',
+              style: const TextStyle(
+                  color: AdminColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600),
+            )),
+            DataCell(Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                e.status.isNotEmpty ? e.status : 'Unknown',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )),
+            DataCell(Text(
+              e.providerPaymentId.isNotEmpty ? e.providerPaymentId : e.paymentId,
+              style: const TextStyle(color: AdminColors.textMuted, fontSize: 12),
+            )),
+          ],
+        );
+      }).toList(),
     );
-    final cellStyle = const TextStyle(
-      fontSize: 13,
-      color: AdminColors.textPrimary,
-    );
+  }
+}
 
-    return Table(
-      columnWidths: const {
-        0: FixedColumnWidth(140),
-        1: FixedColumnWidth(120),
-        2: FixedColumnWidth(120),
-        3: FixedColumnWidth(180),
-      },
-      border: TableBorder(
-        horizontalInside: BorderSide(color: AdminColors.border),
-      ),
-      children: [
-        TableRow(
-          decoration: BoxDecoration(
-            color: AdminColors.surfaceHover.withValues(alpha: 0.4),
-          ),
+// ---------------------------------------------------------------------------
+// Error widget
+// ---------------------------------------------------------------------------
+
+class _FinanceError extends StatelessWidget {
+  const _FinanceError({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _header('DATE', headerStyle),
-            _header('AMOUNT', headerStyle),
-            _header('STATUS', headerStyle),
-            _header('REFERENCE ID', headerStyle),
+            const Icon(Icons.cloud_off, size: 48, color: AdminColors.textMuted),
+            const SizedBox(height: 12),
+            Text(message,
+                style: const TextStyle(color: AdminColors.textMuted, fontSize: 14)),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: AdminColors.accent),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Retry'),
+              onPressed: onRetry,
+            ),
           ],
         ),
-        ...entries.map((e) => TableRow(
-              children: [
-                _cell(_formatDate(e.date), cellStyle),
-                _cell(e.amount, cellStyle),
-                _cell(e.status, cellStyle, statusColor: e.statusColor),
-                _cell(e.referenceId, cellStyle),
-              ],
-            )),
-      ],
+      ),
     );
   }
-
-  Widget _header(String text, TextStyle style) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Text(text, style: style),
-      );
-
-  Widget _cell(String text, TextStyle style, {Color? statusColor}) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        child: statusColor != null
-            ? Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  text,
-                  style: style.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                  ),
-                ),
-              )
-            : Text(text, style: style),
-      );
-
-  String _formatDate(DateTime d) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(d.day)}/${two(d.month)}/${d.year}';
-  }
 }
-
-// ---------------------------------------------------------------------------
-// Mock data + models
-// ---------------------------------------------------------------------------
-
-class _SettlementEntry {
-  const _SettlementEntry({
-    required this.date,
-    required this.amount,
-    required this.status,
-    required this.referenceId,
-    required this.statusColor,
-  });
-
-  final DateTime date;
-  final String amount;
-  final String status;
-  final String referenceId;
-  final Color statusColor;
-}
-
-// TODO: Wire to backend Razorpay settlement endpoint. These are placeholder
-// entries to demonstrate the table layout.
-final _mockSettlements = <_SettlementEntry>[
-  _SettlementEntry(
-    date: DateTime(2025, 1, 15),
-    amount: '₹86,200',
-    status: 'Settled',
-    referenceId: 'rzp_setl_8J2K9PQ',
-    statusColor: AdminColors.success,
-  ),
-  _SettlementEntry(
-    date: DateTime(2025, 1, 14),
-    amount: '₹74,500',
-    status: 'Settled',
-    referenceId: 'rzp_setl_7H1G8MNO',
-    statusColor: AdminColors.success,
-  ),
-  _SettlementEntry(
-    date: DateTime(2025, 1, 13),
-    amount: '₹92,300',
-    status: 'Processing',
-    referenceId: 'rzp_setl_6F0E7LMN',
-    statusColor: AdminColors.warning,
-  ),
-  _SettlementEntry(
-    date: DateTime(2025, 1, 12),
-    amount: '₹68,900',
-    status: 'Settled',
-    referenceId: 'rzp_setl_5D9C6KLM',
-    statusColor: AdminColors.success,
-  ),
-  _SettlementEntry(
-    date: DateTime(2025, 1, 11),
-    amount: '₹54,750',
-    status: 'Failed',
-    referenceId: 'rzp_setl_4B8B5JKL',
-    statusColor: AdminColors.danger,
-  ),
-];

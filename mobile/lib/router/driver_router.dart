@@ -7,6 +7,7 @@ import '../features/auth/presentation/otp_verify_screen.dart';
 import '../features/auth/presentation/phone_entry_screen.dart';
 import '../features/driver/presentation/driver_earnings_screen.dart';
 import '../features/driver/presentation/driver_kyc_screen.dart';
+import '../features/driver/presentation/driver_pending_verification_screen.dart';
 import '../features/driver/presentation/driver_registration_screen.dart';
 import '../features/driver/presentation/driver_ride_screen.dart';
 import '../features/driver/presentation/driver_tutorial_screen.dart';
@@ -73,6 +74,10 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'tutorial',
             builder: (_, _) => const DriverTutorialScreen(),
+          ),
+          GoRoute(
+            path: 'pending-verification',
+            builder: (_, _) => const DriverPendingVerificationScreen(),
           ),
         ],
       ),
