@@ -105,3 +105,6 @@ final locationServiceProvider = Provider<LocationService>((ref) => LocationServi
 final razorpayPaymentProvider = Provider<RazorpayPaymentService>((ref) {
   return RazorpayPaymentService(ref.watch(apiClientProvider));
 });
+
+/// Global cart item count provider shared between food screen and home badge.
+final cartItemCountProvider = StateProvider<int>((ref) => 0);

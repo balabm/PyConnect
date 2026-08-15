@@ -8,7 +8,7 @@ public sealed class RateLimitingOptions
     public const string SectionName = "RateLimiting";
 
     /// <summary>
-    /// Auth/OTP endpoints: 3 requests per 5-minute window per IP or phone.
+    /// Auth/OTP endpoints: 5 requests per 60-second window per IP or phone.
     /// </summary>
     public AuthRateLimitOptions Auth { get; init; } = new();
 
@@ -20,9 +20,9 @@ public sealed class RateLimitingOptions
 
 public sealed class AuthRateLimitOptions
 {
-    public int PermitLimit { get; init; } = 3;
+    public int PermitLimit { get; init; } = 5;
 
-    public int WindowSeconds { get; init; } = 300;
+    public int WindowSeconds { get; init; } = 60;
 
     public int QueueLimit { get; init; }
 }

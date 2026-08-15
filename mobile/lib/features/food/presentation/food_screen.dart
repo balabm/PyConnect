@@ -37,6 +37,13 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   String _searchQuery = '';
   String? _categoryFilter;
 
+  /// Syncs the local cart count to the global provider so the home screen
+  /// cart badge reflects the current number of items.
+  void _syncCartCount() {
+    final count = _cart.values.fold(0, (a, b) => a + b);
+    ref.read(cartItemCountProvider.notifier).state = count;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -188,7 +195,10 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                               quantity: qty,
                               onAdd: () {
                                 AppHaptics.light();
-                                setState(() => _cart[originalIndex] = qty + 1);
+                                setState(() {
+                                  _cart[originalIndex] = qty + 1;
+                                  _syncCartCount();
+                                });
                               },
                               onRemove: () {
                                 AppHaptics.light();
@@ -198,6 +208,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                                   } else {
                                     _cart[originalIndex] = qty - 1;
                                   }
+                                  _syncCartCount();
                                 });
                               },
                               onCardTap: () {
@@ -225,7 +236,10 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                             },
                             onClear: () {
                               AppHaptics.light();
-                              setState(() => _cart.clear());
+                              setState(() {
+                                _cart.clear();
+                                _syncCartCount();
+                              });
                             },
                           ),
                         ),
@@ -251,7 +265,10 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     if (result != null && mounted) {
       AppHaptics.light();
       final qty = result['quantity'] as int? ?? 1;
-      setState(() => _cart[originalIndex] = (_cart[originalIndex] ?? 0) + qty);
+      setState(() {
+        _cart[originalIndex] = (_cart[originalIndex] ?? 0) + qty;
+        _syncCartCount();
+      });
     }
   }
 
@@ -376,7 +393,10 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       final foodOrderId = result['orderId'] as String?;
 
       if (mounted) {
-        setState(() => _cart.clear());
+        setState(() {
+          _cart.clear();
+          _syncCartCount();
+        });
         if (paymentMethod == 1) {
           // Cash on Delivery — skip Razorpay, show success directly
           if (mounted) {

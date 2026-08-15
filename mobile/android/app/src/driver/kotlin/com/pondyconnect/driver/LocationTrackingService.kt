@@ -44,8 +44,8 @@ class LocationTrackingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("PondyConnect Captain")
-            .setContentText("Tracking location for active rides")
+            .setContentTitle("PY Connect Captain")
+            .setContentText("You are online and receiving requests.")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .build()

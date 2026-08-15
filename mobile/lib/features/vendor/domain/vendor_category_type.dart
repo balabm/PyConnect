@@ -67,18 +67,18 @@ enum VendorCategoryType {
   /// The label for the second tab (category-specific).
   String get secondaryTabLabel => switch (this) {
         restaurant || cafe || pizzeria => 'KDS',
-        pubClub => 'KDS',
-        scooterRental => 'Fleet',
-        taxiOperator => 'Fleet',
-        luggageCloak => 'Capacity',
+        pubClub => 'Tables & Crowd',
+        scooterRental => 'Active Rentals',
+        taxiOperator => 'Live Rides',
+        luggageCloak => 'Storage Intake',
       };
 
   /// The label for the third tab (category-specific).
   String get tertiaryTabLabel => switch (this) {
-        restaurant || cafe || pizzeria => 'Menu',
-        pubClub => 'Drinks',
-        scooterRental => 'Rentals',
-        taxiOperator => 'Rides',
-        luggageCloak => 'Bookings',
+        restaurant || cafe || pizzeria => 'Food Menu',
+        pubClub => 'Drinks & VIP',
+        scooterRental => 'Fleet',
+        taxiOperator => 'Taxi Fleet',
+        luggageCloak => 'Capacity',
       };
 }

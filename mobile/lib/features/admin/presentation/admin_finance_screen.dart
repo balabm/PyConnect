@@ -300,18 +300,19 @@ class _SettlementTableState extends State<_SettlementTable> {
       int cmp;
       switch (_sortColumnIndex) {
         case 0:
-          cmp = a.capturedAt.compareTo(b.capturedAt);
+          cmp = (a.capturedAt).compareTo(b.capturedAt);
         case 1:
           cmp = a.amount.compareTo(b.amount);
         case 2:
           cmp = a.status.compareTo(b.status);
         default:
-          cmp = (a.providerPaymentId.isNotEmpty
-                  ? a.providerPaymentId
-                  : a.paymentId)
-              .compareTo(b.providerPaymentId.isNotEmpty
-                  ? b.providerPaymentId
-                  : b.paymentId);
+          final aRef = a.providerPaymentId.isNotEmpty
+              ? a.providerPaymentId
+              : a.paymentId;
+          final bRef = b.providerPaymentId.isNotEmpty
+              ? b.providerPaymentId
+              : b.paymentId;
+          cmp = aRef.compareTo(bRef);
       }
       return _sortAscending ? cmp : -cmp;
     });

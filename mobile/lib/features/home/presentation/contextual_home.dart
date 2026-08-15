@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/app_network_image.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/time_context_controller.dart';
 
@@ -48,7 +49,7 @@ class ContextualHome extends ConsumerWidget {
   }
 }
 
-class _HeroHeader extends StatelessWidget {
+class _HeroHeader extends ConsumerWidget {
   const _HeroHeader({
     required this.greeting,
     required this.subtitle,
@@ -58,7 +59,8 @@ class _HeroHeader extends StatelessWidget {
   final String subtitle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cartCount = ref.watch(cartItemCountProvider);
     return FadeSlideIn(
       duration: const Duration(milliseconds: 600),
       child: Padding(
@@ -125,23 +127,24 @@ class _HeroHeader extends StatelessWidget {
                         context.go('/food');
                       },
                     ),
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: AppTheme.emerald,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                        child: const Text(
-                          '0',
-                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
+                    if (cartCount > 0)
+                      Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.emerald,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          child: Text(
+                            '$cartCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ],
