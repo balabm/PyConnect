@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -449,6 +451,14 @@ class _VenueCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      // Distance from Pondicherry center (service area).
+                      Text(
+                        '${_distanceFromCenter(venue.latitude, venue.longitude).toStringAsFixed(1)} km',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.emerald,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
                     ],
                   ),
                 ],
@@ -460,3 +470,23 @@ class _VenueCard extends StatelessWidget {
     );
   }
 }
+
+/// Haversine distance (km) from the Pondicherry service-area center
+/// (11.9356, 79.8301) to the given coordinates. Used as a fallback when
+/// the user's exact GPS position is not available.
+double _distanceFromCenter(double lat, double lng) {
+  const centerLat = 11.9356;
+  const centerLng = 79.8301;
+  const r = 6371.0; // Earth radius in km
+  final dLat = _toRad(lat - centerLat);
+  final dLng = _toRad(lng - centerLng);
+  final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(_toRad(centerLat)) *
+          math.cos(_toRad(lat)) *
+          math.sin(dLng / 2) *
+          math.sin(dLng / 2);
+  final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  return r * c;
+}
+
+double _toRad(double deg) => deg * math.pi / 180.0;

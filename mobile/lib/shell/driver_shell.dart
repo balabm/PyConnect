@@ -155,6 +155,18 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         ref.read(driverOnlineStatusProvider.notifier).state = true;
         KeepAwakeService.enable();
         _startLocationTracking(ref);
+        // Connect to SignalR dispatch hub so the driver receives real-time
+        // ride/food offers. We fetch the driver profile to get the driver Id
+        // used for joining the targeted dispatch channel.
+        try {
+          final profile = await ref.read(driverApiProvider).getProfile();
+          if (profile.id.isNotEmpty) {
+            await ref.read(driverSignalRProvider).connect(profile.id);
+          }
+        } catch (_) {
+          // SignalR connection failure is non-fatal — location pings still
+          // allow dispatch via polling. The driver can retry by toggling.
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

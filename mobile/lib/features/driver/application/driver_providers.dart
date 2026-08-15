@@ -15,6 +15,17 @@ final driverApiProvider = Provider<DriverApi>((ref) {
 
 final driverOnlineStatusProvider = StateProvider<bool>((ref) => false);
 
+/// Fetches the current driver's profile (approval/tutorial/signature status).
+/// Used by the router to guard access to the main shell.
+final driverProfileProvider =
+    FutureProvider<DriverProfileModel?>((ref) async {
+  try {
+    return await ref.read(driverApiProvider).getProfile();
+  } catch (_) {
+    return null;
+  }
+});
+
 // ── KYC Upload State ──
 
 /// The KYC document slots the driver must fill.

@@ -201,8 +201,15 @@ class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStat
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Text('Your Earnings (100%)', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13)),
-                Text('\u20B9${widget.offer.driverEarnings.toStringAsFixed(0)}', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+                Text(
+                  'YOU EARN: \u20B9${widget.offer.driverEarnings.toStringAsFixed(0)} (100% of fare)',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           ),

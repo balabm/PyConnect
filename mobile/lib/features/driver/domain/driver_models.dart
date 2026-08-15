@@ -158,6 +158,49 @@ class KycUploadResult {
 /// Tracks the state of each KYC document upload zone.
 enum KycDocStatus { pending, uploading, uploaded, error }
 
+/// Driver profile returned by GET /api/driver/me.
+/// Used for router guards (approval/tutorial/signature) and SignalR connect.
+class DriverProfileModel {
+  DriverProfileModel({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.vehicleType,
+    required this.isApproved,
+    required this.isKycUploaded,
+    required this.hasCompletedTutorial,
+    required this.hasSignedAgreement,
+    required this.isOnline,
+    this.vehiclePlate,
+  });
+
+  final String id;
+  final String name;
+  final String phone;
+  final String vehicleType;
+  final String? vehiclePlate;
+  final bool isApproved;
+  final bool isKycUploaded;
+  final bool hasCompletedTutorial;
+  final bool hasSignedAgreement;
+  final bool isOnline;
+
+  factory DriverProfileModel.fromJson(Map<String, dynamic> json) {
+    return DriverProfileModel(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      vehicleType: json['vehicleType'] as String? ?? 'Bike',
+      vehiclePlate: json['vehiclePlate'] as String?,
+      isApproved: json['isApproved'] as bool? ?? false,
+      isKycUploaded: json['isKycUploaded'] as bool? ?? false,
+      hasCompletedTutorial: json['hasCompletedTutorial'] as bool? ?? false,
+      hasSignedAgreement: json['hasSignedAgreement'] as bool? ?? false,
+      isOnline: json['isOnline'] as bool? ?? false,
+    );
+  }
+}
+
 /// Represents a single KYC document upload slot.
 class KycDocumentSlot {
   KycDocumentSlot({

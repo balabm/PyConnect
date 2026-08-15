@@ -43,6 +43,13 @@ class DriverApi {
     await _api.post('api/driver/online');
   }
 
+  /// Fetches the current driver's profile including approval, tutorial and
+  /// signature status. Used for router guards and SignalR channel join.
+  Future<DriverProfileModel> getProfile() async {
+    final data = await _api.get('api/driver/me');
+    return DriverProfileModel.fromJson(data as Map<String, dynamic>);
+  }
+
   Future<void> goOffline() async {
     await _api.post('api/driver/offline');
   }

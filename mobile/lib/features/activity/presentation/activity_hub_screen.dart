@@ -186,9 +186,17 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
 
         final checkIn = booking['checkInDate'];
         final checkOut = booking['checkOutDate'];
+        final guests = booking['guests'] ?? booking['guestCount'];
+        final bookingRef = booking['bookingReference'] ?? booking['referenceId'] ?? booking['id'];
         String subtitle = 'Stay booking';
         if (checkIn != null && checkOut != null) {
           subtitle = '$checkIn → $checkOut';
+        }
+        if (guests != null) {
+          subtitle += ' · $guests ${guests == 1 ? 'guest' : 'guests'}';
+        }
+        if (bookingRef != null) {
+          subtitle += ' · Ref: $bookingRef';
         }
 
         items.add(_ActivityItem(
@@ -273,11 +281,17 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
             statusLower == 'in_progress';
 
         final vehicleType = (map['vehicleType'] as String?) ?? 'Ride';
+        final driverName = (map['driverName'] as String?) ?? '';
+
+        String rideSubtitle = '${map['pickupAddress'] ?? ''} → ${map['dropoffAddress'] ?? ''}';
+        if (driverName.isNotEmpty) {
+          rideSubtitle += ' · $driverName';
+        }
 
         items.add(_ActivityItem(
           type: _ActivityType.ride,
           title: '$vehicleType Ride',
-          subtitle: '${map['pickupAddress'] ?? ''} → ${map['dropoffAddress'] ?? ''}',
+          subtitle: rideSubtitle,
           status: status,
           amount: (map['totalAmount'] as num?)?.toDouble(),
           id: (map['id'] as String?) ?? '',

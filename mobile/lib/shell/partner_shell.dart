@@ -144,26 +144,30 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
     final secondary = switch (_category) {
       VendorCategoryType.restaurant ||
       VendorCategoryType.cafe ||
-      VendorCategoryType.pizzeria ||
-      VendorCategoryType.pubClub => const NavigationDestination(
+      VendorCategoryType.pizzeria => const NavigationDestination(
           icon: Icon(Icons.kitchen_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.kitchen, color: AppTheme.coral),
           label: 'KDS',
         ),
+      VendorCategoryType.pubClub => const NavigationDestination(
+          icon: Icon(Icons.table_restaurant_outlined, color: Color(0x80FFFFFF)),
+          selectedIcon: Icon(Icons.table_restaurant, color: AppTheme.coral),
+          label: 'Tables & Crowd',
+        ),
       VendorCategoryType.scooterRental => const NavigationDestination(
           icon: Icon(Icons.pedal_bike_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.pedal_bike, color: AppTheme.coral),
-          label: 'Rentals',
+          label: 'Active Rentals',
         ),
       VendorCategoryType.taxiOperator => const NavigationDestination(
           icon: Icon(Icons.directions_car_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.directions_car, color: AppTheme.coral),
-          label: 'Rides',
+          label: 'Live Rides',
         ),
       VendorCategoryType.luggageCloak => const NavigationDestination(
           icon: Icon(Icons.luggage_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.luggage, color: AppTheme.coral),
-          label: 'Capacity',
+          label: 'Storage Intake',
         ),
     };
 
@@ -173,12 +177,12 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
       VendorCategoryType.pizzeria => const NavigationDestination(
           icon: Icon(Icons.restaurant_menu_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.restaurant_menu, color: AppTheme.coral),
-          label: 'Menu',
+          label: 'Food Menu',
         ),
       VendorCategoryType.pubClub => const NavigationDestination(
           icon: Icon(Icons.local_bar_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.local_bar, color: AppTheme.coral),
-          label: 'Drinks',
+          label: 'Drinks & VIP',
         ),
       VendorCategoryType.scooterRental => const NavigationDestination(
           icon: Icon(Icons.electric_scooter_outlined, color: Color(0x80FFFFFF)),
@@ -188,12 +192,12 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
       VendorCategoryType.taxiOperator => const NavigationDestination(
           icon: Icon(Icons.local_taxi_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.local_taxi, color: AppTheme.coral),
-          label: 'Fleet',
+          label: 'Taxi Fleet',
         ),
       VendorCategoryType.luggageCloak => const NavigationDestination(
           icon: Icon(Icons.event_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.event, color: AppTheme.coral),
-          label: 'Bookings',
+          label: 'Capacity',
         ),
     };
 

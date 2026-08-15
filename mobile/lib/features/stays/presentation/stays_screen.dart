@@ -21,6 +21,7 @@ class _StaysScreenState extends ConsumerState<StaysScreen> {
   DateTime? _checkIn;
   DateTime? _checkOut;
   bool _hasSearched = false;
+  String _locationFilter = '';
 
   String _formatDate(DateTime date) =>
       '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -52,6 +53,11 @@ class _StaysScreenState extends ConsumerState<StaysScreen> {
               checkIn: _checkIn,
               checkOut: _checkOut,
               guests: guests,
+              locationFilter: _locationFilter,
+              onLocationChanged: (value) => setState(() {
+                _locationFilter = value;
+                _hasSearched = false;
+              }),
               onCheckInSelected: (date) => setState(() {
                 _checkIn = date;
                 _hasSearched = false;
@@ -88,14 +94,15 @@ class _StaysScreenState extends ConsumerState<StaysScreen> {
           onRetry: () => ref.invalidate(homestaySearchProvider(params)),
         ),
         data: (results) {
-          if (results.isEmpty) {
+          final filtered = _applyLocationFilter(results);
+          if (filtered.isEmpty) {
             return const EmptyState(
               icon: Icons.search_off,
               title: 'No stays available for these dates',
               subtitle: 'Try different dates or guest count.',
             );
           }
-          return _HomestayListView(homestays: results);
+          return _HomestayListView(homestays: filtered);
         },
       );
     }
@@ -108,16 +115,27 @@ class _StaysScreenState extends ConsumerState<StaysScreen> {
         onRetry: () => ref.invalidate(homestayListProvider),
       ),
       data: (homestays) {
-        if (homestays.isEmpty) {
+        final filtered = _applyLocationFilter(homestays);
+        if (filtered.isEmpty) {
           return const EmptyState(
             icon: Icons.home_outlined,
-            title: 'No stays available yet',
-            subtitle: 'Check back soon for boutique homestays.',
+            title: 'No stays available in this area',
+            subtitle: 'Try a different location or clear the filter.',
           );
         }
-        return _HomestayListView(homestays: homestays);
+        return _HomestayListView(homestays: filtered);
       },
     );
+  }
+
+  /// Filters the homestay list by the selected location area.
+  /// Empty string means "all areas" (no filter).
+  List<Homestay> _applyLocationFilter(List<Homestay> homestays) {
+    if (_locationFilter.isEmpty) return homestays;
+    return homestays
+        .where((h) =>
+            h.locationArea.toLowerCase().contains(_locationFilter.toLowerCase()))
+        .toList();
   }
 }
 
@@ -126,6 +144,8 @@ class _SearchBar extends StatelessWidget {
     required this.checkIn,
     required this.checkOut,
     required this.guests,
+    required this.locationFilter,
+    required this.onLocationChanged,
     required this.onCheckInSelected,
     required this.onCheckOutSelected,
     required this.onGuestsChanged,
@@ -135,6 +155,8 @@ class _SearchBar extends StatelessWidget {
   final DateTime? checkIn;
   final DateTime? checkOut;
   final int guests;
+  final String locationFilter;
+  final ValueChanged<String> onLocationChanged;
   final ValueChanged<DateTime> onCheckInSelected;
   final ValueChanged<DateTime> onCheckOutSelected;
   final ValueChanged<int> onGuestsChanged;
@@ -233,6 +255,7 @@ class _SearchBar extends StatelessWidget {
                   Expanded(
                     child: DropdownButton<String>(
                       isExpanded: true,
+                      value: locationFilter,
                       hint: const Text('All areas'),
                       items: const [
                         DropdownMenuItem(value: '', child: Text('All areas')),
@@ -242,7 +265,7 @@ class _SearchBar extends StatelessWidget {
                         DropdownMenuItem(value: 'Beach Road', child: Text('Beach Road')),
                       ],
                       onChanged: (value) {
-                        // Location filter is handled client-side via the list filter
+                        if (value != null) onLocationChanged(value);
                       },
                     ),
                   ),

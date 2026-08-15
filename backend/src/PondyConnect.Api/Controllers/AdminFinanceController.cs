@@ -68,6 +68,7 @@ public sealed class AdminFinanceController : ControllerBase
             .Select(p => new SettlementLogResponse(
                 p.Id,
                 p.Amount,
+                "INR",
                 p.Status.ToString(),
                 p.ProviderOrderId,
                 p.ProviderPaymentId,
@@ -85,9 +86,10 @@ public sealed record AdminFinanceSummaryResponse(
     int TotalTransactions);
 
 public sealed record SettlementLogResponse(
-    Guid Id,
+    Guid PaymentId,
     decimal Amount,
+    string Currency,
     string Status,
     string? ProviderOrderId,
     string? ProviderPaymentId,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CapturedAt);

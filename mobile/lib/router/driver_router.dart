@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/presentation/otp_verify_screen.dart';
 import '../features/auth/presentation/phone_entry_screen.dart';
+import '../features/driver/application/driver_providers.dart';
+import '../features/driver/domain/driver_models.dart';
 import '../features/driver/presentation/driver_earnings_screen.dart';
 import '../features/driver/presentation/driver_kyc_screen.dart';
 import '../features/driver/presentation/driver_pending_verification_screen.dart';
@@ -32,7 +34,24 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (authenticated && (path == '/auth' || path.startsWith('/auth'))) {
-        return '/';
+        // After auth, check driver compliance status before routing to '/'.
+        final profile = ref.read(driverProfileProvider).valueOrNull;
+        if (profile == null) {
+          // Profile not loaded yet (or no profile) — allow through; the
+          // shell will handle the empty state.
+          return '/';
+        }
+        return _complianceRedirect(profile, path) ?? '/';
+      }
+
+      // Guard the main shell: ensure tutorial, signature and admin approval
+      // are complete before the driver can access the dashboard.
+      if (authenticated && path == '/') {
+        final profile = ref.read(driverProfileProvider).valueOrNull;
+        if (profile != null) {
+          final redirect = _complianceRedirect(profile, path);
+          if (redirect != null) return redirect;
+        }
       }
 
       return null;
@@ -88,5 +107,28 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
 class _DriverAuthRefreshListenable extends ChangeNotifier {
   _DriverAuthRefreshListenable(Ref ref) {
     ref.listen(authControllerProvider, (_, _) => notifyListeners());
+    ref.listen(driverProfileProvider, (_, _) => notifyListeners());
   }
+}
+
+/// Returns a redirect path if the driver has not completed onboarding
+/// compliance steps (tutorial, signature, admin approval). Returns null
+/// if the driver is fully compliant and can access the requested path.
+String? _complianceRedirect(DriverProfileModel profile, String path) {
+  // Tutorial must be completed first.
+  if (!profile.hasCompletedTutorial && path != '/tutorial') {
+    return '/tutorial';
+  }
+  // Safety agreement must be signed.
+  if (!profile.hasSignedAgreement && path != '/tutorial') {
+    return '/tutorial';
+  }
+  // Admin approval (KYC review) must be granted before going online.
+  if (!profile.isApproved &&
+      path != '/pending-verification' &&
+      path != '/kyc' &&
+      path != '/tutorial') {
+    return '/pending-verification';
+  }
+  return null;
 }

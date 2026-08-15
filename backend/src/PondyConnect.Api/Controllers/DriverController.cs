@@ -37,6 +37,33 @@ public sealed class DriverController : ControllerBase
         _storage = storage;
     }
 
+    /// <summary>
+    /// Returns the current driver's profile including approval, tutorial and
+    /// signature status. Used by the mobile app to route to pending-verification
+    /// / tutorial / signature screens and to connect SignalR dispatch.
+    /// </summary>
+    [HttpGet("me")]
+    [ProducesResponseType(typeof(DriverProfileResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<DriverProfileResponse>> GetMyProfile(CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        return Ok(new DriverProfileResponse(
+            driver.Id,
+            driver.Name,
+            driver.Phone,
+            driver.VehicleType,
+            driver.VehiclePlate,
+            driver.IsApproved,
+            driver.IsKycUploaded,
+            driver.HasCompletedTutorial,
+            driver.HasSignedAgreement,
+            driver.IsOnline));
+    }
+
     [HttpPost("register")]
     [ProducesResponseType(typeof(DriverResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -333,3 +360,15 @@ public sealed class DriverController : ControllerBase
 
 public sealed record RegisterDriverRequest(string Name, string Phone, VehicleType VehicleType, string? VehiclePlate = null);
 public sealed record UpdateLocationRequest(double Latitude, double Longitude);
+
+public sealed record DriverProfileResponse(
+    Guid Id,
+    string Name,
+    string Phone,
+    VehicleType VehicleType,
+    string? VehiclePlate,
+    bool IsApproved,
+    bool IsKycUploaded,
+    bool HasCompletedTutorial,
+    bool HasSignedAgreement,
+    bool IsOnline);
