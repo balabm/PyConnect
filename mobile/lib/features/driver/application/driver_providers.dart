@@ -207,3 +207,10 @@ final mockTaskProvider = StreamProvider<List<DispatchTaskModel>>((ref) async* {
     ),
   ];
 });
+
+/// The task currently accepted by the driver that should be shown in the
+/// Active Trip tab. Null when no task is in progress.
+final activeTaskProvider = StateProvider<DispatchTaskModel?>((ref) => null);
+
+/// Index of the selected tab in the driver shell bottom navigation.
+final driverSelectedTabProvider = StateProvider<int>((ref) => 0);

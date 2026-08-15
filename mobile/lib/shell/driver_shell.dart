@@ -8,6 +8,8 @@ import '../core/theme/app_theme.dart';
 import '../features/driver/application/driver_providers.dart';
 import '../features/driver/presentation/driver_home_screen.dart';
 import '../features/driver/presentation/driver_earnings_screen.dart';
+import '../features/driver/presentation/active_trip_screen.dart';
+import '../features/driver/presentation/driver_profile_screen.dart';
 import '../core/services/keep_awake_service.dart';
 import '../core/services/background_location_service.dart';
 
@@ -20,7 +22,6 @@ class DriverShell extends ConsumerStatefulWidget {
 }
 
 class _DriverShellState extends ConsumerState<DriverShell> {
-  int _currentIndex = 0;
   Timer? _locationTimer;
   bool _isStartingLocation = false;
 
@@ -176,6 +177,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
   @override
   Widget build(BuildContext context) {
     final isOnline = ref.watch(driverOnlineStatusProvider);
+    final currentIndex = ref.watch(driverSelectedTabProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -219,25 +221,37 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         ],
       ),
       body: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: const [
           DriverHomeScreen(),
+          ActiveTripScreen(),
           DriverEarningsScreen(),
+          DriverProfileScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        selectedIndex: currentIndex,
+        onDestinationSelected: (i) => ref.read(driverSelectedTabProvider.notifier).state = i,
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.list_outlined),
+            selectedIcon: Icon(Icons.list),
+            label: 'Tasks',
+          ),
           NavigationDestination(
             icon: Icon(Icons.two_wheeler_outlined),
             selectedIcon: Icon(Icons.two_wheeler),
-            label: 'Rides',
+            label: 'Active Trip',
           ),
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet),
             label: 'Earnings',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),
