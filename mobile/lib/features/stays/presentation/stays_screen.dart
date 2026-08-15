@@ -188,7 +188,7 @@ class _SearchBar extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.group, size: 20, color: AppTheme.lagoon),
+                  Icon(Icons.group, size: 20, color: AppTheme.emerald),
                   const SizedBox(width: 8),
                   const Text('Guests'),
                   const SizedBox(width: 8),
@@ -207,7 +207,7 @@ class _SearchBar extends StatelessWidget {
                   const Spacer(),
                   FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.lagoon,
+                      backgroundColor: AppTheme.emerald,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
                     ),
                     onPressed: (checkIn != null && checkOut != null)
@@ -259,7 +259,7 @@ class _DateField extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: date != null ? FontWeight.w600 : FontWeight.normal,
-                color: date != null ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: date != null ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],

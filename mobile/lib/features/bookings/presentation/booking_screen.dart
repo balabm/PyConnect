@@ -120,7 +120,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             title: 'When?',
             child: ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_month, color: AppTheme.lagoon),
+              leading: const Icon(Icons.calendar_month, color: AppTheme.emerald),
               title: Text(
                 '${_scheduledFor.day}/${_scheduledFor.month}/${_scheduledFor.year} '
                 '· ${_scheduledFor.hour.toString().padLeft(2, '0')}:'
@@ -405,10 +405,10 @@ class _BookingSuccessScreen extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: AppTheme.lagoon.withValues(alpha: 0.1),
+              color: AppTheme.emerald.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check_circle, size: 40, color: AppTheme.lagoon),
+            child: const Icon(Icons.check_circle, size: 40, color: AppTheme.emerald),
           ),
           const SizedBox(height: 16),
           Text(
@@ -613,9 +613,9 @@ class _CircleButton extends StatelessWidget {
           : null,
       style: IconButton.styleFrom(
         backgroundColor: enabled
-            ? AppTheme.lagoon.withValues(alpha: 0.15)
+            ? AppTheme.emerald.withValues(alpha: 0.15)
             : Theme.of(context).disabledColor.withValues(alpha: 0.2),
-        foregroundColor: enabled ? AppTheme.lagoon : Theme.of(context).disabledColor,
+        foregroundColor: enabled ? AppTheme.emerald : Theme.of(context).disabledColor,
       ),
       icon: Icon(icon),
     );

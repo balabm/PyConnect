@@ -22,7 +22,7 @@ class RouteInfoBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.lagoon.withValues(alpha: 0.15),
+            color: AppTheme.emerald.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),

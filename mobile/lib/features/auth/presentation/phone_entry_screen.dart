@@ -38,7 +38,7 @@ class PhoneEntryScreen extends ConsumerWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppTheme.lagoon, AppTheme.lagoonDark],
+            colors: [AppTheme.emerald, AppTheme.emeraldDark],
           ),
         ),
         child: SafeArea(
@@ -226,7 +226,7 @@ class PhoneEntryScreen extends ConsumerWidget {
                           // Get OTP button
                           FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppTheme.lagoon,
+                              backgroundColor: AppTheme.emerald,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
                             ),

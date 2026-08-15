@@ -107,7 +107,7 @@ class _ExperienceCard extends ConsumerWidget {
       imageUrl: venue.imageUrl,
       imageHeight: 120,
       gradient: LinearGradient(
-        colors: [AppTheme.lagoon.withValues(alpha: 0.6), AppTheme.lagoon],
+        colors: [AppTheme.emerald.withValues(alpha: 0.6), AppTheme.emerald],
       ),
       badge: StatusBadge(
         label: venue.isOpen ? 'Open' : 'Closed',
@@ -215,10 +215,10 @@ class _ExperienceBookingSheetState extends ConsumerState<_ExperienceBookingSheet
           const SizedBox(height: 12),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.calendar_today, color: AppTheme.lagoon),
+            leading: const Icon(Icons.calendar_today, color: AppTheme.emerald),
             title: const Text('Date'),
             subtitle: Text('${_when.day}/${_when.month}/${_when.year} 10:00'),
-            trailing: const Icon(Icons.edit_calendar, color: AppTheme.lagoon),
+            trailing: const Icon(Icons.edit_calendar, color: AppTheme.emerald),
             onTap: () async {
               final picked = await showDatePicker(
                 context: context,
@@ -233,12 +233,12 @@ class _ExperienceBookingSheetState extends ConsumerState<_ExperienceBookingSheet
           Row(children: [
             const Text('Guests'),
             const Spacer(),
-            IconButton(onPressed: _guests > 1 ? () => setState(() => _guests--) : null, icon: const Icon(Icons.remove_circle_outline, color: AppTheme.lagoon)),
+            IconButton(onPressed: _guests > 1 ? () => setState(() => _guests--) : null, icon: const Icon(Icons.remove_circle_outline, color: AppTheme.emerald)),
             Text('$_guests', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            IconButton(onPressed: _guests < 12 ? () => setState(() => _guests++) : null, icon: const Icon(Icons.add_circle_outline, color: AppTheme.lagoon)),
+            IconButton(onPressed: _guests < 12 ? () => setState(() => _guests++) : null, icon: const Icon(Icons.add_circle_outline, color: AppTheme.emerald)),
           ]),
           Text('Total: \u20B9${_total.toStringAsFixed(0)}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.lagoon, fontWeight: FontWeight.bold)),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.emerald, fontWeight: FontWeight.bold)),
           if (_error != null)
             Container(
               margin: const EdgeInsets.only(top: 8),
@@ -249,7 +249,7 @@ class _ExperienceBookingSheetState extends ConsumerState<_ExperienceBookingSheet
           const SizedBox(height: 16),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.lagoon,
+              backgroundColor: AppTheme.emerald,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
             ),

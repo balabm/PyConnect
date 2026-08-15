@@ -119,7 +119,7 @@ class _RideMapState extends State<RideMap> {
         width: 44,
         height: 56,
         child: _PinMarker(
-          color: AppTheme.lagoon,
+          color: AppTheme.emerald,
           icon: Icons.radio_button_checked,
           label: 'A',
         ),
@@ -145,7 +145,7 @@ class _RideMapState extends State<RideMap> {
           child: Container(
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppTheme.lagoon, AppTheme.lagoonLight],
+                colors: [AppTheme.emerald, AppTheme.emeraldLight],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -153,7 +153,7 @@ class _RideMapState extends State<RideMap> {
               border: Border.all(color: Colors.white, width: 3),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.lagoon.withValues(alpha: 0.3),
+                  color: AppTheme.emerald.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),

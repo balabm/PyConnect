@@ -76,10 +76,10 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.lagoon : Theme.of(context).colorScheme.surface,
+          color: selected ? AppTheme.emerald : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppRadius.pill),
           border: Border.all(
-            color: selected ? AppTheme.lagoon : Theme.of(context).dividerColor,
+            color: selected ? AppTheme.emerald : Theme.of(context).dividerColor,
           ),
         ),
         child: Text(
@@ -237,7 +237,7 @@ class _ActivityCard extends StatelessWidget {
 
     final iconColor = switch (item.type) {
       _ActivityType.food => AppTheme.coral,
-      _ActivityType.ride => AppTheme.lagoon,
+      _ActivityType.ride => AppTheme.emerald,
     };
 
     final statusVariant = item.isActive

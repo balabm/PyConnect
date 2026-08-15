@@ -39,7 +39,7 @@ class AppToast {
 
   static (Color, Color) _colorsFor(ToastType type) {
     return switch (type) {
-      ToastType.success => (AppTheme.lagoon, AppTheme.lagoon.withValues(alpha: 0.95)),
+      ToastType.success => (AppTheme.emerald, AppTheme.emerald.withValues(alpha: 0.95)),
       ToastType.error => (const Color(0xFFEF4444), const Color(0xFFEF4444).withValues(alpha: 0.95)),
       ToastType.warning => (AppTheme.coral, AppTheme.coral.withValues(alpha: 0.95)),
       ToastType.info => (AppTheme.sky, AppTheme.sky.withValues(alpha: 0.95)),

@@ -308,16 +308,16 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.lagoon.withValues(alpha: 0.08),
+                color: AppTheme.emerald.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.lagoon.withValues(alpha: 0.2)),
+                border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
                   Text(
                     'Pass Token',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.lagoon,
+                          color: AppTheme.emerald,
                           fontWeight: FontWeight.w600,
                         ),
                   ),

@@ -26,8 +26,8 @@ class SectionHeader extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: (iconColor ?? AppTheme.lagoon).withValues(alpha: 0.15),
-            child: Icon(icon, color: iconColor ?? AppTheme.lagoon),
+            backgroundColor: (iconColor ?? AppTheme.emerald).withValues(alpha: 0.15),
+            child: Icon(icon, color: iconColor ?? AppTheme.emerald),
           ),
           const SizedBox(width: AppSpacing.lg),
           Expanded(

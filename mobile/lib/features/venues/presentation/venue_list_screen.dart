@@ -129,7 +129,7 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.pill),
-                      borderSide: const BorderSide(color: AppTheme.lagoon, width: 2),
+                      borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
                     ),
                   ),
                   onChanged: (v) => setState(() => _searchQuery = v),

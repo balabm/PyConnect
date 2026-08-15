@@ -120,7 +120,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           LinearProgressIndicator(
             value: (_currentPage + 1) / 3,
             backgroundColor: Theme.of(context).dividerColor,
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.lagoon),
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.emerald),
           ),
           Expanded(
             child: PageView(
@@ -180,11 +180,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.lagoon.withValues(alpha: 0.1),
+              color: AppTheme.emerald.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.restaurant_menu,
-                size: 48, color: AppTheme.lagoon),
+                size: 48, color: AppTheme.emerald),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
@@ -237,10 +237,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.lagoon.withValues(alpha: 0.1),
+              color: AppTheme.emerald.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 48, color: AppTheme.lagoon),
+            child: Icon(icon, size: 48, color: AppTheme.emerald),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(

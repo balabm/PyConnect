@@ -34,14 +34,14 @@ class ErrorState extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: (isAuthError ? AppTheme.lagoon : AppTheme.coral)
+                color: (isAuthError ? AppTheme.emerald : AppTheme.coral)
                     .withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isAuthError ? Icons.lock_outline : Icons.cloud_off,
                 size: 32,
-                color: isAuthError ? AppTheme.lagoon : AppTheme.coral,
+                color: isAuthError ? AppTheme.emerald : AppTheme.coral,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -117,14 +117,14 @@ class AuthAwareErrorState extends ConsumerWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: (isAuthError ? AppTheme.lagoon : AppTheme.coral)
+                color: (isAuthError ? AppTheme.emerald : AppTheme.coral)
                     .withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isAuthError ? Icons.lock_outline : Icons.cloud_off,
                 size: 32,
-                color: isAuthError ? AppTheme.lagoon : AppTheme.coral,
+                color: isAuthError ? AppTheme.emerald : AppTheme.coral,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),

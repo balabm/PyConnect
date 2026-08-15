@@ -99,7 +99,7 @@ class _StatusTimeline extends StatelessWidget {
                 return Expanded(
                   child: Container(
                     height: 2,
-                    color: reached ? AppTheme.lagoon : Theme.of(context).dividerColor,
+                    color: reached ? AppTheme.emerald : Theme.of(context).dividerColor,
                   ),
                 );
               }
@@ -107,7 +107,7 @@ class _StatusTimeline extends StatelessWidget {
               final reached = stageIndex <= currentIndex;
               return Icon(
                 reached ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: reached ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: reached ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 24,
               );
             }),
@@ -119,7 +119,7 @@ class _StatusTimeline extends StatelessWidget {
               final reached = _stages.indexOf(s) <= currentIndex;
               return Text(
                 s.replaceAllMapped(RegExp(r'[A-Z]'), (m) => ' ${m.group(0)}').trim(),
-                style: TextStyle(fontSize: 9, color: reached ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: reached ? FontWeight.bold : FontWeight.normal),
+                style: TextStyle(fontSize: 9, color: reached ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: reached ? FontWeight.bold : FontWeight.normal),
               );
             }).toList(),
           ),

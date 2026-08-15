@@ -32,7 +32,7 @@ class _ScheduledRidesScreenState extends ConsumerState<ScheduledRidesScreen> {
           AppHaptics.light();
           context.push('/rides/schedule');
         },
-        backgroundColor: AppTheme.lagoon,
+        backgroundColor: AppTheme.emerald,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
@@ -117,7 +117,7 @@ class _ScheduledRideCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.schedule, color: AppTheme.lagoon, size: 20),
+                  Icon(Icons.schedule, color: AppTheme.emerald, size: 20),
                   const SizedBox(width: 8),
                   Text(_formatScheduleTime(scheduledAt), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ],

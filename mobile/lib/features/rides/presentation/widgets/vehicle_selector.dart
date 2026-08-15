@@ -49,19 +49,19 @@ class VehicleSelector extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppTheme.lagoon.withValues(alpha: 0.08)
+                      ? AppTheme.emerald.withValues(alpha: 0.08)
                       : Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(
                     color: isSelected
-                        ? AppTheme.lagoon
+                        ? AppTheme.emerald
                         : Theme.of(context).dividerColor,
                     width: isSelected ? 2 : 1,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: AppTheme.lagoon.withValues(alpha: 0.12),
+                            color: AppTheme.emerald.withValues(alpha: 0.12),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -85,7 +85,7 @@ class VehicleSelector extends StatelessWidget {
                         icon,
                         size: 30,
                         color: isSelected
-                            ? AppTheme.lagoon
+                            ? AppTheme.emerald
                             : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
@@ -96,7 +96,7 @@ class VehicleSelector extends StatelessWidget {
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: isSelected
-                            ? AppTheme.lagoon
+                            ? AppTheme.emerald
                             : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
@@ -107,7 +107,7 @@ class VehicleSelector extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: isSelected
-                            ? AppTheme.lagoon
+                            ? AppTheme.emerald
                             : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),

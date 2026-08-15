@@ -292,7 +292,7 @@ class _BookingCard extends StatelessWidget {
       case 'EnRoute':
       case 'Active':
       case 'Dropped':
-        return AppTheme.lagoon;
+        return AppTheme.emerald;
       case 'Completed':
       case 'Collected':
       case 'Returned':
@@ -325,7 +325,7 @@ class _ServiceIcon extends StatelessWidget {
       'Nightlife' => (Icons.nightlife, AppTheme.coral),
       'Transit' => (Icons.airport_shuttle, AppTheme.sky),
       'Luggage' => (Icons.luggage, AppTheme.gold),
-      'Rental' => (Icons.pedal_bike, AppTheme.lagoon),
+      'Rental' => (Icons.pedal_bike, AppTheme.emerald),
       _ => (Icons.event, Theme.of(context).colorScheme.onSurfaceVariant),
     };
     return Container(
@@ -349,7 +349,7 @@ class _StatusChip extends StatelessWidget {
     final color = switch (status) {
       'Pending' || 'Requested' || 'Reserved' => AppTheme.gold,
       'Confirmed' || 'Assigned' => AppTheme.sky,
-      'CheckedIn' || 'EnRoute' || 'Active' || 'Dropped' => AppTheme.lagoon,
+      'CheckedIn' || 'EnRoute' || 'Active' || 'Dropped' => AppTheme.emerald,
       'Completed' || 'Collected' || 'Returned' => AppTheme.success,
       'Cancelled' => AppTheme.danger,
       _ => Theme.of(context).colorScheme.onSurfaceVariant,
@@ -379,14 +379,14 @@ class _PaymentChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: (isPaid ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant)
+        color: (isPaid ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant)
             .withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         isPaid ? 'Paid' : 'Unpaid',
         style: TextStyle(
-          color: isPaid ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
+          color: isPaid ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 10,
           fontWeight: FontWeight.w600,
         ),

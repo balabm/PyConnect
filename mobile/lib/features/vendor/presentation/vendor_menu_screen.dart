@@ -102,10 +102,10 @@ class _MenuItemCard extends ConsumerWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: AppTheme.lagoon.withValues(alpha: 0.1),
+                color: AppTheme.emerald.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.restaurant, color: AppTheme.lagoon),
+              child: const Icon(Icons.restaurant, color: AppTheme.emerald),
             ),
           const SizedBox(width: 16),
           Expanded(
@@ -151,7 +151,7 @@ class _MenuItemCard extends ConsumerWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.lagoon,
+                    color: AppTheme.emerald,
                   ),
                 ),
               ],
@@ -175,7 +175,7 @@ class _MenuItemCard extends ConsumerWidget {
                   const PopupMenuItem(
                     value: 'edit',
                     child: Row(children: [
-                      Icon(Icons.edit, color: AppTheme.lagoon, size: 20),
+                      Icon(Icons.edit, color: AppTheme.emerald, size: 20),
                       SizedBox(width: 12),
                       Text('Edit Item', style: TextStyle(color: Colors.white)),
                     ]),
@@ -195,13 +195,13 @@ class _MenuItemCard extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: item.isAvailable ? AppTheme.lagoon : AppTheme.coral,
+                  color: item.isAvailable ? AppTheme.emerald : AppTheme.coral,
                 ),
               ),
               Switch(
                 value: item.isAvailable,
-                activeThumbColor: AppTheme.lagoon,
-                activeTrackColor: AppTheme.lagoon.withValues(alpha: 0.3),
+                activeThumbColor: AppTheme.emerald,
+                activeTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
                 inactiveThumbColor: AppTheme.coral,
                 inactiveTrackColor: AppTheme.coral.withValues(alpha: 0.3),
                 onChanged: (_) {
@@ -375,7 +375,7 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
                 AppHaptics.medium();
                 _submit();
               },
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.lagoon),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: _submitting
@@ -505,7 +505,7 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
             title: const Text('Late Night Item'),
             subtitle: const Text('Show in late-night menu (after 11 PM)'),
             value: _isLateNight,
-            activeThumbColor: AppTheme.lagoon,
+            activeThumbColor: AppTheme.emerald,
             onChanged: (v) {
               AppHaptics.light();
               setState(() => _isLateNight = v);
@@ -519,7 +519,7 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
                 AppHaptics.medium();
                 _submit();
               },
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.lagoon),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: _submitting

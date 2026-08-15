@@ -56,7 +56,7 @@ class NearbyDriversSection extends StatelessWidget {
               width: 8,
               height: 8,
               decoration: const BoxDecoration(
-                color: AppTheme.lagoon,
+                color: AppTheme.emerald,
                 shape: BoxShape.circle,
               ),
             ),
@@ -75,7 +75,7 @@ class NearbyDriversSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppTheme.lagoon,
+                color: AppTheme.emerald,
               ),
             ),
           ],
@@ -126,13 +126,13 @@ class NearbyDriversSection extends StatelessWidget {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppTheme.lagoon.withValues(alpha: 0.1),
+                          color: AppTheme.emerald.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           _vehicleIcon(vehicleType),
                           size: 22,
-                          color: AppTheme.lagoon,
+                          color: AppTheme.emerald,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -186,7 +186,7 @@ class NearbyDriversSection extends StatelessWidget {
                                     width: 4,
                                     height: 4,
                                     decoration: const BoxDecoration(
-                                      color: AppTheme.lagoon,
+                                      color: AppTheme.emerald,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -195,7 +195,7 @@ class NearbyDriversSection extends StatelessWidget {
                                     '${distanceKm.toStringAsFixed(1)} km',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: AppTheme.lagoon,
+                                      color: AppTheme.emerald,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),

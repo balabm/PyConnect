@@ -10,18 +10,18 @@ class RideCompletedBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.lagoon.withValues(alpha: 0.08),
+        color: AppTheme.emerald.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       padding: const EdgeInsets.all(16),
       child: const Row(
         children: [
-          Icon(Icons.check_circle, color: AppTheme.lagoon, size: 32),
+          Icon(Icons.check_circle, color: AppTheme.emerald, size: 32),
           SizedBox(width: 12),
           Text(
             'Ride Completed',
             style: TextStyle(
-              color: AppTheme.lagoon,
+              color: AppTheme.emerald,
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),

@@ -169,7 +169,7 @@ class _RentalCard extends StatelessWidget {
                 ),
               ),
               Text('\u20B9${booking.amount.toStringAsFixed(0)}',
-                  style: const TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.bold, fontSize: 18)),
+                  style: const TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
           const SizedBox(height: 12),

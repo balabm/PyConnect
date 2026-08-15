@@ -316,7 +316,7 @@ class _SosMapDialog extends ConsumerWidget {
                       height: 36,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: d.isOnline ? AppTheme.lagoon : AdminColors.textMuted,
+                          color: d.isOnline ? AppTheme.emerald : AdminColors.textMuted,
                           shape: BoxShape.circle,
                           border: Border.all(color: AdminColors.textPrimary, width: 2),
                         ),
@@ -411,7 +411,7 @@ class _SosMapDialog extends ConsumerWidget {
                           const SizedBox(width: 4),
                           const Text('SOS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AdminColors.textPrimary)),
                           const SizedBox(width: 12),
-                          Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppTheme.lagoon, shape: BoxShape.circle)),
+                          Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppTheme.emerald, shape: BoxShape.circle)),
                           const SizedBox(width: 4),
                           Text('Drivers (${drivers.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AdminColors.textPrimary)),
                         ],

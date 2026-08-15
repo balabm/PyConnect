@@ -62,7 +62,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.message),
-            backgroundColor: result.success ? AppTheme.lagoon : AppTheme.coral,
+            backgroundColor: result.success ? AppTheme.emerald : AppTheme.coral,
           ),
         );
       }

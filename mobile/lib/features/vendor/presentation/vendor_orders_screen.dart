@@ -195,7 +195,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Order moved to ${_statusLabel(newStatus)}'),
-            backgroundColor: AppTheme.lagoon,
+            backgroundColor: AppTheme.emerald,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -280,7 +280,7 @@ class _OrderCard extends StatelessWidget {
               Text(
                 '\u20B9${order.totalAmount.toStringAsFixed(0)}',
                 style: const TextStyle(
-                  color: AppTheme.lagoon,
+                  color: AppTheme.emerald,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -338,7 +338,7 @@ class _OrderCard extends StatelessWidget {
         'Pending' => AppTheme.warning,
         'Accepted' => AppTheme.info,
         'Preparing' => AppTheme.coral,
-        'OutForDelivery' => AppTheme.lagoon,
+        'OutForDelivery' => AppTheme.emerald,
         'Delivered' => AppTheme.success,
         'Cancelled' => AppTheme.danger,
         _ => Colors.white.withValues(alpha: 0.5),
@@ -347,7 +347,7 @@ class _OrderCard extends StatelessWidget {
   _NextAction? _nextAction(String status) => switch (status) {
         'Pending' => _NextAction('Accept Order', 'Accepted', Icons.check, AppTheme.info),
         'Accepted' => _NextAction('Start Preparing', 'Preparing', Icons.kitchen, AppTheme.coral),
-        'Preparing' => _NextAction('Send Out for Delivery', 'OutForDelivery', Icons.delivery_dining, AppTheme.lagoon),
+        'Preparing' => _NextAction('Send Out for Delivery', 'OutForDelivery', Icons.delivery_dining, AppTheme.emerald),
         'OutForDelivery' => _NextAction('Mark Delivered', 'Delivered', Icons.check_circle, AppTheme.success),
         _ => null,
       };

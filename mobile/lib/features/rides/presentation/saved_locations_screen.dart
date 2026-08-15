@@ -63,7 +63,7 @@ class _SavedLocationsScreenState extends ConsumerState<SavedLocationsScreen> {
       appBar: AppBar(title: const Text('Saved Places')),
       floatingActionButton: FloatingActionButton(
         onPressed: _addLocation,
-        backgroundColor: AppTheme.lagoon,
+        backgroundColor: AppTheme.emerald,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
@@ -157,10 +157,10 @@ class _SavedLocationCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.lagoon.withValues(alpha: 0.1),
+                    color: AppTheme.emerald.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: AppTheme.lagoon, size: 22),
+                  child: Icon(icon, color: AppTheme.emerald, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

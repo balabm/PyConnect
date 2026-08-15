@@ -137,10 +137,10 @@ class _TripsPickupTab extends ConsumerWidget {
                           child: Row(
                             children: [
                               CircleAvatar(
-                                backgroundColor: AppTheme.lagoon.withValues(alpha: 0.15),
+                                backgroundColor: AppTheme.emerald.withValues(alpha: 0.15),
                                 child: Icon(
                                   hubs[i].kind == 'Airport' ? Icons.flight_takeoff : Icons.directions_bus,
-                                  color: AppTheme.lagoon,
+                                  color: AppTheme.emerald,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -183,8 +183,8 @@ class _TripsPickupTab extends ConsumerWidget {
                         children: [
                           Container(
                             width: 64, height: 64,
-                            decoration: BoxDecoration(color: AppTheme.lagoon.withValues(alpha: 0.1), shape: BoxShape.circle),
-                            child: Icon(Icons.tour_outlined, size: 32, color: AppTheme.lagoon.withValues(alpha: 0.5)),
+                            decoration: BoxDecoration(color: AppTheme.emerald.withValues(alpha: 0.1), shape: BoxShape.circle),
+                            child: Icon(Icons.tour_outlined, size: 32, color: AppTheme.emerald.withValues(alpha: 0.5)),
                           ),
                           const SizedBox(height: 12),
                           Text('No pickups booked yet.',
@@ -257,14 +257,14 @@ class _TripCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.lagoon.withValues(alpha: 0.1),
+                    color: AppTheme.emerald.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     trip.arrivalMode == 'Flight' ? Icons.flight_takeoff
                         : trip.arrivalMode == 'Train' ? Icons.train
                         : Icons.directions_bus,
-                    color: AppTheme.lagoon,
+                    color: AppTheme.emerald,
                     size: 22,
                   ),
                 ),
@@ -300,7 +300,7 @@ class _TripCard extends StatelessWidget {
                   '\u20B9${trip.price.toStringAsFixed(0)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.lagoon,
+                        color: AppTheme.emerald,
                       ),
                 ),
               ],
@@ -386,12 +386,12 @@ class _TripBookingSheetState extends ConsumerState<_TripBookingSheet> {
           const SizedBox(height: 8),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.schedule, color: AppTheme.lagoon),
+            leading: const Icon(Icons.schedule, color: AppTheme.emerald),
             title: const Text('Arrival time'),
             subtitle: Text(
               '${_arrival.day}/${_arrival.month} ${_arrival.hour}:${_arrival.minute > 9 ? '' : '0'}${_arrival.minute}',
             ),
-            trailing: const Icon(Icons.edit_calendar, color: AppTheme.lagoon),
+            trailing: const Icon(Icons.edit_calendar, color: AppTheme.emerald),
             onTap: () async {
               final picked = await showDatePicker(
                 context: context,
@@ -416,12 +416,12 @@ class _TripBookingSheetState extends ConsumerState<_TripBookingSheet> {
               const Spacer(),
               IconButton(
                 onPressed: _party > 1 ? () => setState(() => _party--) : null,
-                icon: const Icon(Icons.remove_circle_outline, color: AppTheme.lagoon),
+                icon: const Icon(Icons.remove_circle_outline, color: AppTheme.emerald),
               ),
               Text('$_party', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               IconButton(
                 onPressed: _party < 10 ? () => setState(() => _party++) : null,
-                icon: const Icon(Icons.add_circle_outline, color: AppTheme.lagoon),
+                icon: const Icon(Icons.add_circle_outline, color: AppTheme.emerald),
               ),
             ],
           ),
@@ -435,7 +435,7 @@ class _TripBookingSheetState extends ConsumerState<_TripBookingSheet> {
           const SizedBox(height: 12),
           Text(
             'Estimated fare: \u20B9${_price.toStringAsFixed(0)}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.lagoon, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.emerald, fontWeight: FontWeight.bold),
           ),
           if (_error != null)
             Container(
@@ -447,7 +447,7 @@ class _TripBookingSheetState extends ConsumerState<_TripBookingSheet> {
           const SizedBox(height: 16),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.lagoon,
+              backgroundColor: AppTheme.emerald,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
             ),
@@ -521,16 +521,16 @@ class _LuggageCloakTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.lagoon.withValues(alpha: 0.08),
+              color: AppTheme.emerald.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.lagoon.withValues(alpha: 0.2)),
+              border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.lock_outline, color: AppTheme.lagoon, size: 20),
+                Icon(Icons.lock_outline, color: AppTheme.emerald, size: 20),
                 const SizedBox(width: 12),
                 Expanded(child: Text('Log in to book luggage storage near your arrival hub.',
-                    style: TextStyle(color: AppTheme.lagoon, fontSize: 14))),
+                    style: TextStyle(color: AppTheme.emerald, fontSize: 14))),
               ],
             ),
           )
@@ -586,8 +586,8 @@ class _LuggageCloakTab extends ConsumerWidget {
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: AppTheme.lagoon.withValues(alpha: 0.15),
-                                  child: const Icon(Icons.storefront, color: AppTheme.lagoon),
+                                  backgroundColor: AppTheme.emerald.withValues(alpha: 0.15),
+                                  child: const Icon(Icons.storefront, color: AppTheme.emerald),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -605,12 +605,12 @@ class _LuggageCloakTab extends ConsumerWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.lagoon.withValues(alpha: 0.1),
+                                    color: AppTheme.emerald.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(AppRadius.pill),
                                   ),
                                   child: const Text(
                                     '\u20B960/hr',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.lagoon),
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.emerald),
                                   ),
                                 ),
                               ],
@@ -642,8 +642,8 @@ class _LuggageCloakTab extends ConsumerWidget {
                         children: [
                           Container(
                             width: 64, height: 64,
-                            decoration: BoxDecoration(color: AppTheme.lagoon.withValues(alpha: 0.1), shape: BoxShape.circle),
-                            child: Icon(Icons.luggage_outlined, size: 32, color: AppTheme.lagoon.withValues(alpha: 0.5)),
+                            decoration: BoxDecoration(color: AppTheme.emerald.withValues(alpha: 0.1), shape: BoxShape.circle),
+                            child: Icon(Icons.luggage_outlined, size: 32, color: AppTheme.emerald.withValues(alpha: 0.5)),
                           ),
                           const SizedBox(height: 12),
                           Text('No luggage drop-offs yet.',
@@ -721,10 +721,10 @@ class _LuggageBookingCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.lagoon.withValues(alpha: 0.1),
+                    color: AppTheme.emerald.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.luggage, color: AppTheme.lagoon, size: 22),
+                  child: const Icon(Icons.luggage, color: AppTheme.emerald, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -753,7 +753,7 @@ class _LuggageBookingCard extends StatelessWidget {
                   '\u20B9${dropOff.totalAmount.toStringAsFixed(0)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.lagoon,
+                        color: AppTheme.emerald,
                       ),
                 ),
                 if (onCancel != null)
@@ -816,10 +816,10 @@ class _LuggageBookingSheetState extends ConsumerState<_LuggageBookingSheet> {
           Text('Reserve at ${widget.vendor.name}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.schedule, color: AppTheme.lagoon),
+            leading: const Icon(Icons.schedule, color: AppTheme.emerald),
             title: const Text('Drop time'),
             subtitle: Text(_date(_dropAt)),
-            trailing: const Icon(Icons.edit_calendar, color: AppTheme.lagoon),
+            trailing: const Icon(Icons.edit_calendar, color: AppTheme.emerald),
             onTap: () async {
               final t = await showTimePicker(
                 context: context,
@@ -836,19 +836,19 @@ class _LuggageBookingSheetState extends ConsumerState<_LuggageBookingSheet> {
           Row(children: [
             const Text('Bags'),
             const Spacer(),
-            IconButton(onPressed: _bags > 1 ? () => setState(() => _bags--) : null, icon: const Icon(Icons.remove_circle_outline, color: AppTheme.lagoon)),
+            IconButton(onPressed: _bags > 1 ? () => setState(() => _bags--) : null, icon: const Icon(Icons.remove_circle_outline, color: AppTheme.emerald)),
             Text('$_bags', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            IconButton(onPressed: _bags < 10 ? () => setState(() => _bags++) : null, icon: const Icon(Icons.add_circle_outline, color: AppTheme.lagoon)),
+            IconButton(onPressed: _bags < 10 ? () => setState(() => _bags++) : null, icon: const Icon(Icons.add_circle_outline, color: AppTheme.emerald)),
           ]),
           Row(children: [
             const Text('Hours'),
             const Spacer(),
-            IconButton(onPressed: _hours > 1 ? () => setState(() => _hours--) : null, icon: const Icon(Icons.remove_circle_outline, color: AppTheme.lagoon)),
+            IconButton(onPressed: _hours > 1 ? () => setState(() => _hours--) : null, icon: const Icon(Icons.remove_circle_outline, color: AppTheme.emerald)),
             Text('$_hours', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            IconButton(onPressed: _hours < 24 ? () => setState(() => _hours++) : null, icon: const Icon(Icons.add_circle_outline, color: AppTheme.lagoon)),
+            IconButton(onPressed: _hours < 24 ? () => setState(() => _hours++) : null, icon: const Icon(Icons.add_circle_outline, color: AppTheme.emerald)),
           ]),
           Text('Total: \u20B9${_total.toStringAsFixed(0)}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.lagoon, fontWeight: FontWeight.bold)),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.emerald, fontWeight: FontWeight.bold)),
           if (_error != null)
             Container(
               margin: const EdgeInsets.only(top: 8),
@@ -859,7 +859,7 @@ class _LuggageBookingSheetState extends ConsumerState<_LuggageBookingSheet> {
           const SizedBox(height: 16),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.lagoon,
+              backgroundColor: AppTheme.emerald,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
             ),
@@ -918,16 +918,16 @@ class _MobilityTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.lagoon.withValues(alpha: 0.08),
+              color: AppTheme.emerald.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.lagoon.withValues(alpha: 0.2)),
+              border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.lock_outline, color: AppTheme.lagoon, size: 20),
+                Icon(Icons.lock_outline, color: AppTheme.emerald, size: 20),
                 const SizedBox(width: 12),
                 Expanded(child: Text('Log in to book scooter rentals.',
-                    style: TextStyle(color: AppTheme.lagoon, fontSize: 14))),
+                    style: TextStyle(color: AppTheme.emerald, fontSize: 14))),
               ],
             ),
           )
@@ -982,8 +982,8 @@ class _MobilityTab extends ConsumerWidget {
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: AppTheme.lagoon.withValues(alpha: 0.15),
-                                  child: const Icon(Icons.two_wheeler, color: AppTheme.lagoon),
+                                  backgroundColor: AppTheme.emerald.withValues(alpha: 0.15),
+                                  child: const Icon(Icons.two_wheeler, color: AppTheme.emerald),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -1001,12 +1001,12 @@ class _MobilityTab extends ConsumerWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.lagoon.withValues(alpha: 0.1),
+                                    color: AppTheme.emerald.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(AppRadius.pill),
                                   ),
                                   child: const Text(
                                     '\u20B9140/hr',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.lagoon),
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.emerald),
                                   ),
                                 ),
                               ],
@@ -1037,8 +1037,8 @@ class _MobilityTab extends ConsumerWidget {
                         children: [
                           Container(
                             width: 64, height: 64,
-                            decoration: BoxDecoration(color: AppTheme.lagoon.withValues(alpha: 0.1), shape: BoxShape.circle),
-                            child: Icon(Icons.two_wheeler_outlined, size: 32, color: AppTheme.lagoon.withValues(alpha: 0.5)),
+                            decoration: BoxDecoration(color: AppTheme.emerald.withValues(alpha: 0.1), shape: BoxShape.circle),
+                            child: Icon(Icons.two_wheeler_outlined, size: 32, color: AppTheme.emerald.withValues(alpha: 0.5)),
                           ),
                           const SizedBox(height: 12),
                           Text('No rentals yet.',
@@ -1095,10 +1095,10 @@ class _RentalCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.lagoon.withValues(alpha: 0.1),
+                    color: AppTheme.emerald.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.two_wheeler, color: AppTheme.lagoon, size: 22),
+                  child: const Icon(Icons.two_wheeler, color: AppTheme.emerald, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1129,7 +1129,7 @@ class _RentalCard extends StatelessWidget {
                   '\u20B9${rental.totalAmount.toStringAsFixed(0)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.lagoon,
+                        color: AppTheme.emerald,
                       ),
                 ),
               ],
@@ -1183,10 +1183,10 @@ class _RentalBookingSheetState extends ConsumerState<_RentalBookingSheet> {
           Text('Book from ${widget.vendor.name}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.schedule, color: AppTheme.lagoon),
+            leading: const Icon(Icons.schedule, color: AppTheme.emerald),
             title: const Text('Rental start'),
             subtitle: Text('${_start.day}/${_start.month} ${_start.hour}:${_start.minute < 10 ? '0' : ''}${_start.minute}'),
-            trailing: const Icon(Icons.edit_calendar, color: AppTheme.lagoon),
+            trailing: const Icon(Icons.edit_calendar, color: AppTheme.emerald),
             onTap: () async {
               final picked = await showDatePicker(
                 context: context,
@@ -1205,9 +1205,9 @@ class _RentalBookingSheetState extends ConsumerState<_RentalBookingSheet> {
           Row(children: [
             const Text('Duration (hours)'),
             const Spacer(),
-            IconButton(onPressed: _hours > 1 ? () => setState(() => _hours--) : null, icon: const Icon(Icons.remove_circle_outline, color: AppTheme.lagoon)),
+            IconButton(onPressed: _hours > 1 ? () => setState(() => _hours--) : null, icon: const Icon(Icons.remove_circle_outline, color: AppTheme.emerald)),
             Text('$_hours', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            IconButton(onPressed: _hours < 24 ? () => setState(() => _hours++) : null, icon: const Icon(Icons.add_circle_outline, color: AppTheme.lagoon)),
+            IconButton(onPressed: _hours < 24 ? () => setState(() => _hours++) : null, icon: const Icon(Icons.add_circle_outline, color: AppTheme.emerald)),
           ]),
           Text('Due $_hours h for \u20B9${_total.toStringAsFixed(0)} · end ${end.hour}:${end.minute < 10 ? '0' : ''}${end.minute}',
               style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
@@ -1221,7 +1221,7 @@ class _RentalBookingSheetState extends ConsumerState<_RentalBookingSheet> {
           const SizedBox(height: 16),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.lagoon,
+              backgroundColor: AppTheme.emerald,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
             ),

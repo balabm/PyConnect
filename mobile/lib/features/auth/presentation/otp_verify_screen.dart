@@ -191,10 +191,10 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                   height: 64,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppTheme.lagoon.withValues(alpha: 0.1),
+                    color: AppTheme.emerald.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.lock_outline, size: 32, color: AppTheme.lagoon),
+                  child: const Icon(Icons.lock_outline, size: 32, color: AppTheme.emerald),
                 ),
               ),
               // Title with fade-in
@@ -323,7 +323,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppTheme.lagoon, width: 2),
+                            borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
                           ),
                         ),
                         onChanged: (value) {
@@ -346,7 +346,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
               // Verify button
               FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.lagoon,
+                  backgroundColor: AppTheme.emerald,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
                 ),
@@ -384,7 +384,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                         ? 'Resend OTP in ${_secondsRemaining}s'
                         : 'Resend OTP',
                     style: TextStyle(
-                      color: _secondsRemaining > 0 ? Theme.of(context).colorScheme.onSurfaceVariant : AppTheme.lagoon,
+                      color: _secondsRemaining > 0 ? Theme.of(context).colorScheme.onSurfaceVariant : AppTheme.emerald,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

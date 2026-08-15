@@ -66,7 +66,7 @@ class _VenueStatusPaneState extends ConsumerState<VenueStatusPane> {
                                 : '${venue.currentCapacity}/${venue.maxCapacity}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: effectiveSoldOut ? AppTheme.coral : AppTheme.lagoon,
+                              color: effectiveSoldOut ? AppTheme.coral : AppTheme.emerald,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -80,7 +80,7 @@ class _VenueStatusPaneState extends ConsumerState<VenueStatusPane> {
                             ? AppTheme.coral
                             : fillPercent > 0.8
                                 ? AppTheme.gold
-                                : AppTheme.lagoon,
+                                : AppTheme.emerald,
                       ),
                       const SizedBox(height: 8),
                       Row(

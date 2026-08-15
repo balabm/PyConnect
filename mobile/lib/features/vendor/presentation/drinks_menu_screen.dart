@@ -188,7 +188,7 @@ class _DrinkCard extends StatelessWidget {
                     Text(
                       '\u20B9${price.toStringAsFixed(0)}',
                       style: const TextStyle(
-                        color: AppTheme.lagoon,
+                        color: AppTheme.emerald,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -221,13 +221,13 @@ class _DrinkCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isAvailable ? AppTheme.lagoon : AppTheme.coral,
+                  color: isAvailable ? AppTheme.emerald : AppTheme.coral,
                 ),
               ),
               Switch(
                 value: isAvailable,
-                activeThumbColor: AppTheme.lagoon,
-                activeTrackColor: AppTheme.lagoon.withValues(alpha: 0.3),
+                activeThumbColor: AppTheme.emerald,
+                activeTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
                 inactiveThumbColor: AppTheme.coral,
                 inactiveTrackColor: AppTheme.coral.withValues(alpha: 0.3),
                 onChanged: (_) => onToggle(),

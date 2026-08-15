@@ -33,11 +33,11 @@ class ProfileScreen extends ConsumerWidget {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        gradient: AppTheme.lagoonGradient,
+                        gradient: AppTheme.emeraldGradient,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.lagoon.withValues(alpha: 0.3),
+                            color: AppTheme.emerald.withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -71,14 +71,14 @@ class ProfileScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.lagoon.withValues(alpha: 0.1),
+                          color: AppTheme.emerald.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Text(
                           session?.role ?? 'tourist',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.lagoon,
+                            color: AppTheme.emerald,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -288,7 +288,7 @@ class _ThemeModeSelector extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.lagoon : Colors.transparent,
+            color: selected ? AppTheme.emerald : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: Column(
@@ -353,10 +353,10 @@ class _HistoryLink extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.lagoon.withValues(alpha: 0.1),
+                    color: AppTheme.emerald.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: AppTheme.lagoon, size: 22),
+                  child: Icon(icon, color: AppTheme.emerald, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -435,11 +435,11 @@ class _DietaryPreferenceSelector extends StatelessWidget {
           selected: isSelected,
           onSelected: (_) => onChanged(value),
           backgroundColor: Theme.of(context).colorScheme.surface,
-          selectedColor: AppTheme.lagoon.withValues(alpha: 0.15),
-          checkmarkColor: AppTheme.lagoon,
+          selectedColor: AppTheme.emerald.withValues(alpha: 0.15),
+          checkmarkColor: AppTheme.emerald,
           side: BorderSide(
             color: isSelected
-                ? AppTheme.lagoon
+                ? AppTheme.emerald
                 : Theme.of(context).dividerColor,
           ),
         );

@@ -83,7 +83,7 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.pill),
-                    borderSide: const BorderSide(color: AppTheme.lagoon, width: 2),
+                    borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
                   ),
                 ),
                 onChanged: (v) => setState(() => _searchQuery = v),
@@ -161,13 +161,13 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.lagoon : Theme.of(context).colorScheme.surface,
+            color: selected ? AppTheme.emerald : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
-              color: selected ? AppTheme.lagoon : Theme.of(context).dividerColor,
+              color: selected ? AppTheme.emerald : Theme.of(context).dividerColor,
             ),
             boxShadow: selected
-                ? [BoxShadow(color: AppTheme.lagoon.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
                 : [],
           ),
           child: Text(

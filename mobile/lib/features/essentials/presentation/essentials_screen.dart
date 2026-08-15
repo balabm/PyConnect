@@ -99,7 +99,7 @@ class _EssentialsScreenState extends ConsumerState<EssentialsScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.pill),
-                    borderSide: const BorderSide(color: AppTheme.lagoon, width: 2),
+                    borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
                   ),
                 ),
                 onChanged: (v) => setState(() => _searchQuery = v),
@@ -232,11 +232,11 @@ class _EssentialsScreenState extends ConsumerState<EssentialsScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.lagoon : Colors.white,
+            color: selected ? AppTheme.emerald : Colors.white,
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(color: selected ? AppTheme.lagoon : Theme.of(context).dividerColor),
+            border: Border.all(color: selected ? AppTheme.emerald : Theme.of(context).dividerColor),
             boxShadow: selected
-                ? [BoxShadow(color: AppTheme.lagoon.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
                 : [],
           ),
           child: Row(
@@ -484,8 +484,8 @@ class _ProductCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppTheme.lagoon.withValues(alpha: 0.1),
-                        AppTheme.lagoon.withValues(alpha: 0.05),
+                        AppTheme.emerald.withValues(alpha: 0.1),
+                        AppTheme.emerald.withValues(alpha: 0.05),
                       ],
                     ),
                   ),
@@ -493,7 +493,7 @@ class _ProductCard extends StatelessWidget {
                     child: Icon(
                       _categoryIcon(product['category'] as String? ?? ''),
                       size: 40,
-                      color: AppTheme.lagoon.withValues(alpha: 0.5),
+                      color: AppTheme.emerald.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -516,14 +516,14 @@ class _ProductCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    Text('\u20B9${product['price']}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.lagoon)),
+                    Text('\u20B9${product['price']}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.emerald)),
                     if (inCart == 0)
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.tonal(
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppTheme.lagoon.withValues(alpha: 0.08),
-                            foregroundColor: AppTheme.lagoon,
+                            backgroundColor: AppTheme.emerald.withValues(alpha: 0.08),
+                            foregroundColor: AppTheme.emerald,
                             padding: const EdgeInsets.symmetric(vertical: 6),
                             minimumSize: const Size(0, 32),
                           ),
@@ -534,15 +534,15 @@ class _ProductCard extends StatelessWidget {
                     else
                       Container(
                         decoration: BoxDecoration(
-                          color: AppTheme.lagoon.withValues(alpha: 0.08),
+                          color: AppTheme.emerald.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            IconButton(icon: const Icon(Icons.remove, size: 16), onPressed: onRemove, visualDensity: VisualDensity.compact, color: AppTheme.lagoon),
-                            Text('$inCart', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.lagoon)),
-                            IconButton(icon: const Icon(Icons.add, size: 16), onPressed: onAdd, visualDensity: VisualDensity.compact, color: AppTheme.lagoon),
+                            IconButton(icon: const Icon(Icons.remove, size: 16), onPressed: onRemove, visualDensity: VisualDensity.compact, color: AppTheme.emerald),
+                            Text('$inCart', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.emerald)),
+                            IconButton(icon: const Icon(Icons.add, size: 16), onPressed: onAdd, visualDensity: VisualDensity.compact, color: AppTheme.emerald),
                           ],
                         ),
                       ),
@@ -714,10 +714,10 @@ class _CartBar extends StatelessWidget {
     return SafeArea(
       child: Container(
         decoration: BoxDecoration(
-          gradient: AppTheme.lagoonGradient,
+          gradient: AppTheme.emeraldGradient,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: AppTheme.lagoon.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
+            BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
           ],
         ),
         child: Padding(
@@ -737,7 +737,7 @@ class _CartBar extends StatelessWidget {
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.lagoon,
+                        foregroundColor: AppTheme.emerald,
                       ),
                       onPressed: loading ? null : onCheckout,
                       icon: loading
@@ -774,9 +774,9 @@ class _OrderResultSheet extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  gradient: AppTheme.lagoonGradient,
+                  gradient: AppTheme.emeraldGradient,
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: AppTheme.lagoon.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
                 ),
                 child: const Icon(Icons.check_circle, size: 36, color: Colors.white),
               ),
@@ -804,10 +804,10 @@ class _OrderResultSheet extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.lagoon.withValues(alpha: 0.08),
+                color: AppTheme.emerald.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
-              child: Text('Status: ${result['status']}', style: TextStyle(color: AppTheme.lagoon, fontSize: 13, fontWeight: FontWeight.w600)),
+              child: Text('Status: ${result['status']}', style: TextStyle(color: AppTheme.emerald, fontSize: 13, fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(height: 24),

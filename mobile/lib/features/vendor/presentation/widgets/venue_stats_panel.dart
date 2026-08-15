@@ -28,7 +28,7 @@ class VenueStatsPanel extends StatelessWidget {
               Container(
                 width: 4, height: 20,
                 decoration: BoxDecoration(
-                  color: AppTheme.lagoon,
+                  color: AppTheme.emerald,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -87,22 +87,22 @@ class VenueStatsPanel extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppTheme.lagoon.withValues(alpha: 0.15),
-                  AppTheme.lagoonDark.withValues(alpha: 0.05),
+                  AppTheme.emerald.withValues(alpha: 0.15),
+                  AppTheme.emeraldDark.withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.lagoon.withValues(alpha: 0.2)),
+              border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
                 Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(
-                    color: AppTheme.lagoon.withValues(alpha: 0.2),
+                    color: AppTheme.emerald.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.payments, color: AppTheme.lagoon, size: 20),
+                  child: const Icon(Icons.payments, color: AppTheme.emerald, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -122,7 +122,7 @@ class VenueStatsPanel extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.lagoon,
+                          color: AppTheme.emerald,
                         ),
                       ),
                     ],

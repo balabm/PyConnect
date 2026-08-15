@@ -33,19 +33,19 @@ class PaymentMethodSelector extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.lagoon
+                    ? AppTheme.emerald
                     : Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
                 border: Border.all(
                   color: isSelected
-                      ? AppTheme.lagoon
+                      ? AppTheme.emerald
                       : Theme.of(context).dividerColor,
                   width: 1.5,
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: AppTheme.lagoon.withValues(alpha: 0.2),
+                          color: AppTheme.emerald.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),

@@ -30,11 +30,11 @@ class RideResultCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          gradient: AppTheme.lagoonGradient,
+          gradient: AppTheme.emeraldGradient,
           borderRadius: BorderRadius.circular(AppRadius.xl),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.lagoon.withValues(alpha: 0.2),
+              color: AppTheme.emerald.withValues(alpha: 0.2),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -128,7 +128,7 @@ class RideResultCard extends StatelessWidget {
                 onPressed: onTrack,
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.lagoon,
+                  foregroundColor: AppTheme.emerald,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.lg),

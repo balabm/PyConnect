@@ -174,9 +174,9 @@ class _RideCard extends StatelessWidget {
       case 'ongoing':
       case 'started':
       case 'enroute':
-        return AppTheme.lagoon;
+        return AppTheme.emerald;
       case 'completed':
-        return AppTheme.lagoon;
+        return AppTheme.emerald;
       case 'cancelled':
         return AppTheme.danger;
       default:

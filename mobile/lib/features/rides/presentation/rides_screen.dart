@@ -252,7 +252,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
               child: FloatingActionButton.small(
                 onPressed: _locating ? null : _autoLocate,
                 backgroundColor: Theme.of(context).colorScheme.surface,
-                foregroundColor: AppTheme.lagoon,
+                foregroundColor: AppTheme.emerald,
                 child: _locating
                     ? const SizedBox(
                         width: 20,

@@ -94,7 +94,7 @@ class DispatchTaskCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.lagoon,
+                      color: AppTheme.emerald,
                     ),
                   ),
                   TextSpan(
@@ -102,14 +102,14 @@ class DispatchTaskCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.lagoon,
+                      color: AppTheme.emerald,
                     ),
                   ),
                   const TextSpan(
                     text: ' (100% of fare)',
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppTheme.lagoon,
+                      color: AppTheme.emerald,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

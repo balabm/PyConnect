@@ -155,7 +155,7 @@ class _CreatePromotionFormState extends State<_CreatePromotionForm> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Promotion created!'),
-            backgroundColor: AppTheme.lagoon,
+            backgroundColor: AppTheme.emerald,
           ),
         );
       }
@@ -242,7 +242,7 @@ class _CreatePromotionFormState extends State<_CreatePromotionForm> {
                 AppHaptics.medium();
                 _submit();
               },
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.lagoon),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: _submitting
@@ -425,7 +425,7 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Flash sale launched!'),
-            backgroundColor: AppTheme.lagoon,
+            backgroundColor: AppTheme.emerald,
           ),
         );
       }

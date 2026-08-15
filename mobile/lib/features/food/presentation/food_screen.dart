@@ -89,7 +89,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.pill),
-                    borderSide: const BorderSide(color: AppTheme.lagoon, width: 2),
+                    borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
                   ),
                 ),
                 onChanged: (v) => setState(() => _searchQuery = v),
@@ -219,13 +219,13 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.lagoon : Theme.of(context).colorScheme.surface,
+            color: selected ? AppTheme.emerald : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
-              color: selected ? AppTheme.lagoon : Theme.of(context).dividerColor,
+              color: selected ? AppTheme.emerald : Theme.of(context).dividerColor,
             ),
             boxShadow: selected
-                ? [BoxShadow(color: AppTheme.lagoon.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
                 : [],
           ),
           child: Text(
@@ -513,13 +513,13 @@ class _MenuItemTile extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text('\u20B9${price.toStringAsFixed(0)}', style: TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.w700, fontSize: 15)),
+                    Text('\u20B9${price.toStringAsFixed(0)}', style: TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.w700, fontSize: 15)),
                     if (category != null) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: AppTheme.lagoon.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppRadius.pill)),
-                        child: Text(category!, style: TextStyle(fontSize: 10, color: AppTheme.lagoon, fontWeight: FontWeight.w600)),
+                        decoration: BoxDecoration(color: AppTheme.emerald.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppRadius.pill)),
+                        child: Text(category!, style: TextStyle(fontSize: 10, color: AppTheme.emerald, fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ],
@@ -559,24 +559,24 @@ class _MenuItemTile extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.lagoon,
+                      color: AppTheme.emerald,
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: AppTheme.lagoon.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
+                      boxShadow: [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
                     ),
                     child: const Icon(Icons.add, color: Colors.white, size: 20),
                   ),
                 )
               : Container(
                   decoration: BoxDecoration(
-                    color: AppTheme.lagoon.withValues(alpha: 0.08),
+                    color: AppTheme.emerald.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(icon: const Icon(Icons.remove, size: 18), onPressed: onRemove, color: AppTheme.lagoon),
+                      IconButton(icon: const Icon(Icons.remove, size: 18), onPressed: onRemove, color: AppTheme.emerald),
                       Text('$quantity', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      IconButton(icon: const Icon(Icons.add, size: 18), onPressed: onAdd, color: AppTheme.lagoon),
+                      IconButton(icon: const Icon(Icons.add, size: 18), onPressed: onAdd, color: AppTheme.emerald),
                     ],
                   ),
                 ),
@@ -599,10 +599,10 @@ class _CheckoutBar extends StatelessWidget {
     return SafeArea(
       child: Container(
         decoration: BoxDecoration(
-          gradient: AppTheme.lagoonGradient,
+          gradient: AppTheme.emeraldGradient,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: AppTheme.lagoon.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
+            BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
           ],
         ),
         child: Padding(
@@ -629,7 +629,7 @@ class _CheckoutBar extends StatelessWidget {
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.lagoon,
+                        foregroundColor: AppTheme.emerald,
                       ),
                       onPressed: loading ? null : onCheckout,
                       child: loading
@@ -777,7 +777,7 @@ class _CartSummarySheet extends StatelessWidget {
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(
-                                color: AppTheme.lagoon.withValues(alpha: 0.1),
+                                color: AppTheme.emerald.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Center(
@@ -785,7 +785,7 @@ class _CartSummarySheet extends StatelessWidget {
                                   '$qty',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.lagoon,
+                                    color: AppTheme.emerald,
                                   ),
                                 ),
                               ),
@@ -816,7 +816,7 @@ class _CartSummarySheet extends StatelessWidget {
                   children: [
                     const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     Text('\u20B9${total.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.lagoon)),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.emerald)),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -826,7 +826,7 @@ class _CartSummarySheet extends StatelessWidget {
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppTheme.lagoon,
+                      backgroundColor: AppTheme.emerald,
                     ),
                     onPressed: () => Navigator.pop(context, true),
                     child: const Text('Confirm Order', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),

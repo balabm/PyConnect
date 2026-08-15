@@ -60,7 +60,7 @@ class RideStatusCard extends StatelessWidget {
                 return Expanded(
                   child: Container(
                     height: 2,
-                    color: reached ? AppTheme.lagoon : Theme.of(context).dividerColor,
+                    color: reached ? AppTheme.emerald : Theme.of(context).dividerColor,
                   ),
                 );
               }
@@ -68,7 +68,7 @@ class RideStatusCard extends StatelessWidget {
               final reached = stageIndex <= currentIndex;
               return Icon(
                 reached ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: reached ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: reached ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 20,
               );
             }),
@@ -88,7 +88,7 @@ class RideStatusCard extends StatelessWidget {
                     ).trim(),
                     style: TextStyle(
                       fontSize: 10,
-                      color: reached ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: reached ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant,
                       fontWeight: reached ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),

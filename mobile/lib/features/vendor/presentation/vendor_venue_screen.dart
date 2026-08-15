@@ -67,7 +67,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Venue profile updated!'),
-            backgroundColor: AppTheme.lagoon,
+            backgroundColor: AppTheme.emerald,
           ),
         );
       }
@@ -178,7 +178,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: _saving ? null : _save,
-                    style: FilledButton.styleFrom(backgroundColor: AppTheme.lagoon),
+                    style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: _saving

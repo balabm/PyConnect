@@ -60,16 +60,16 @@ class _EarningsBody extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                const Text('Today\'s Earnings', style: TextStyle(color: AppTheme.lagoon, fontSize: 14)),
+                const Text('Today\'s Earnings', style: TextStyle(color: AppTheme.emerald, fontSize: 14)),
                 const SizedBox(height: 8),
-                Text('\u20B9$todayEarnings', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.lagoon)),
+                Text('\u20B9$todayEarnings', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.emerald)),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.directions_car, color: AppTheme.lagoon, size: 16),
+                    const Icon(Icons.directions_car, color: AppTheme.emerald, size: 16),
                     const SizedBox(width: 4),
-                    Text('$todayRides rides today', style: const TextStyle(color: AppTheme.lagoon)),
+                    Text('$todayRides rides today', style: const TextStyle(color: AppTheme.emerald)),
                   ],
                 ),
               ],
@@ -129,14 +129,14 @@ class _EarningsBody extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: const Row(
               children: [
-                Icon(Icons.savings, color: AppTheme.lagoon, size: 24),
+                Icon(Icons.savings, color: AppTheme.emerald, size: 24),
                 SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('0% Commission', style: TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('100% of ride fare goes to you. No hidden cuts.', style: TextStyle(color: AppTheme.lagoon, fontSize: 12)),
+                      Text('0% Commission', style: TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('100% of ride fare goes to you. No hidden cuts.', style: TextStyle(color: AppTheme.emerald, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -170,7 +170,7 @@ class _EarningsBody extends StatelessWidget {
                   leading: const CircleAvatar(child: Icon(Icons.directions_car)),
                   title: Text('\u20B9$earnings', style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('$distance km · $duration min · ${_formatDate(completedAt)}', style: const TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.check_circle, color: AppTheme.lagoon, size: 20),
+                  trailing: const Icon(Icons.check_circle, color: AppTheme.emerald, size: 20),
                 );
               },
             ),

@@ -185,7 +185,7 @@ class _ContactCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.phone, color: AppTheme.lagoon),
+                const Icon(Icons.phone, color: AppTheme.emerald),
               ],
             ),
           ),

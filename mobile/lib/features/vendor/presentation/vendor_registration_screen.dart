@@ -611,7 +611,7 @@ class _SourceOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.lagoon),
+            Icon(icon, color: AppTheme.emerald),
             const SizedBox(width: 16),
             Text(label, style: Theme.of(context).textTheme.bodyLarge),
           ],

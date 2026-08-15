@@ -78,7 +78,7 @@ class HomestayCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.lagoon,
+                      color: AppTheme.emerald,
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                     child: const Text(
@@ -130,7 +130,7 @@ class HomestayCard extends StatelessWidget {
                         ),
                       ),
                       if (homestay.hasWifi)
-                        Icon(Icons.wifi, size: 18, color: AppTheme.lagoon),
+                        Icon(Icons.wifi, size: 18, color: AppTheme.emerald),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -142,7 +142,7 @@ class HomestayCard extends StatelessWidget {
                       const Spacer(),
                       Text(
                         '\u20B9${homestay.nightlyRate.toInt()}/night',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.lagoon),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.emerald),
                       ),
                     ],
                   ),

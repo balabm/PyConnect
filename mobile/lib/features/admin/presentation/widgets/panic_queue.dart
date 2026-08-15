@@ -92,7 +92,7 @@ class _PanicQueueState extends ConsumerState<PanicQueue>
                       children: [
                         Icon(
                           hasCritical ? Icons.warning_rounded : Icons.check_circle,
-                          color: hasCritical ? AdminColors.textPrimary : AppTheme.lagoon,
+                          color: hasCritical ? AdminColors.textPrimary : AppTheme.emerald,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -157,7 +157,7 @@ class _PanicQueueState extends ConsumerState<PanicQueue>
                                           ref.read(criticalTicketsProvider.notifier).acknowledge(ticket.id);
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppTheme.lagoon,
+                                          backgroundColor: AppTheme.emerald,
                                           foregroundColor: AdminColors.textPrimary,
                                           padding: const EdgeInsets.symmetric(horizontal: 12),
                                         ),

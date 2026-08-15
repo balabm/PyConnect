@@ -89,7 +89,7 @@ class ManageHubScreen extends ConsumerWidget {
                   icon: Icons.account_balance_wallet,
                   label: 'Wallet',
                   subtitle: 'Credits & transactions',
-                  color: AppTheme.lagoon,
+                  color: AppTheme.emerald,
                   onTap: () {
                     AppHaptics.light();
                     context.push('/wallet');
@@ -99,7 +99,7 @@ class ManageHubScreen extends ConsumerWidget {
                   icon: Icons.store,
                   label: 'Venue Profile',
                   subtitle: 'Edit venue details & hours',
-                  color: AppTheme.lagoon,
+                  color: AppTheme.emerald,
                   onTap: () {
                     AppHaptics.light();
                     context.push('/venue');
@@ -149,7 +149,7 @@ class ManageHubScreen extends ConsumerWidget {
               icon: Icons.restaurant_menu,
               label: 'Add Menu Item',
               subtitle: 'Add a new dish to your menu',
-              color: AppTheme.lagoon,
+              color: AppTheme.emerald,
               onTap: () { AppHaptics.light(); context.push('/menu'); }),
           const SizedBox(height: 8),
         ];
@@ -159,7 +159,7 @@ class ManageHubScreen extends ConsumerWidget {
               icon: Icons.local_bar,
               label: 'Add Drink',
               subtitle: 'Add a new drink to your menu',
-              color: AppTheme.lagoon,
+              color: AppTheme.emerald,
               onTap: () { AppHaptics.light(); context.push('/drinks-menu'); }),
           const SizedBox(height: 8),
         ];
@@ -169,7 +169,7 @@ class ManageHubScreen extends ConsumerWidget {
               icon: Icons.pedal_bike,
               label: 'View Active Rentals',
               subtitle: 'Track scooters currently rented',
-              color: AppTheme.lagoon,
+              color: AppTheme.emerald,
               onTap: () { AppHaptics.light(); context.push('/rentals'); }),
           const SizedBox(height: 8),
         ];
@@ -179,7 +179,7 @@ class ManageHubScreen extends ConsumerWidget {
               icon: Icons.directions_car,
               label: 'View Active Rides',
               subtitle: 'Track taxis currently on duty',
-              color: AppTheme.lagoon,
+              color: AppTheme.emerald,
               onTap: () { AppHaptics.light(); context.push('/rides'); }),
           const SizedBox(height: 8),
         ];
@@ -189,7 +189,7 @@ class ManageHubScreen extends ConsumerWidget {
               icon: Icons.luggage,
               label: 'View Stored Bags',
               subtitle: 'Check cloak occupancy and stored items',
-              color: AppTheme.lagoon,
+              color: AppTheme.emerald,
               onTap: () { AppHaptics.light(); context.push('/capacity'); }),
           const SizedBox(height: 8),
         ];

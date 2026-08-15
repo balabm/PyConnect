@@ -109,7 +109,7 @@ class _DriverRegistrationScreenState
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.lagoon.withValues(alpha: 0.1),
+                color: AppTheme.emerald.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -117,11 +117,11 @@ class _DriverRegistrationScreenState
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.lagoon.withValues(alpha: 0.2),
+                      color: AppTheme.emerald.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(Icons.two_wheeler,
-                        color: AppTheme.lagoon, size: 28),
+                        color: AppTheme.emerald, size: 28),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -205,7 +205,7 @@ class _DriverRegistrationScreenState
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppTheme.lagoon),
+                          strokeWidth: 2, color: AppTheme.emerald),
                     )
                   : const Text('Register as Captain'),
             ),

@@ -31,10 +31,10 @@ class EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppTheme.lagoon.withValues(alpha: 0.1),
+                color: AppTheme.emerald.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 40, color: AppTheme.lagoon),
+              child: Icon(icon, size: 40, color: AppTheme.emerald),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(

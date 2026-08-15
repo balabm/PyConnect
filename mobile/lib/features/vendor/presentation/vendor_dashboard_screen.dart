@@ -243,7 +243,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
               label: 'Revenue',
               value: d.revenueToday.toInt(),
               prefix: '\u20B9',
-              color: AppTheme.lagoon,
+              color: AppTheme.emerald,
             ),
           ),
         ],

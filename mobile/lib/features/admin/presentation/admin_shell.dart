@@ -95,7 +95,7 @@ class AdminShell extends ConsumerWidget {
                   Container(
                     width: 40, height: 40,
                     decoration: BoxDecoration(
-                      gradient: AppTheme.lagoonGradient,
+                      gradient: AppTheme.emeraldGradient,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.shield_rounded, color: AdminColors.textPrimary, size: 22),
@@ -118,7 +118,7 @@ class AdminShell extends ConsumerWidget {
               child: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  gradient: AppTheme.lagoonGradient,
+                  gradient: AppTheme.emeraldGradient,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.shield_rounded, color: AdminColors.textPrimary, size: 22),

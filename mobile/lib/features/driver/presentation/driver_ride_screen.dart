@@ -336,9 +336,9 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
                       padding: const EdgeInsets.all(16),
                       child: const Row(
                         children: [
-                          Icon(Icons.check_circle, color: AppTheme.lagoon, size: 32),
+                          Icon(Icons.check_circle, color: AppTheme.emerald, size: 32),
                           SizedBox(width: 12),
-                          Text('Ride Completed!', style: TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.bold, fontSize: 18)),
+                          Text('Ride Completed!', style: TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.bold, fontSize: 18)),
                         ],
                       ),
                     ),
@@ -390,7 +390,7 @@ class _FareInfo extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          FareRow(label: 'Your earnings (100%)', value: '\u20B9$fare', bold: true, valueColor: AppTheme.lagoon),
+          FareRow(label: 'Your earnings (100%)', value: '\u20B9$fare', bold: true, valueColor: AppTheme.emerald),
           const SizedBox(height: 8),
           FareRow(label: 'Payment: $payment', value: 'Vehicle: $vehicle', small: true),
         ],

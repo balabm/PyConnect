@@ -72,7 +72,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     _RoleChip(role: r),
                     const SizedBox(width: 12),
                     if (user.role == r)
-                      const Icon(Icons.check, color: AppTheme.lagoon, size: 18),
+                      const Icon(Icons.check, color: AppTheme.emerald, size: 18),
                   ]),
                 ))
             .toList(),

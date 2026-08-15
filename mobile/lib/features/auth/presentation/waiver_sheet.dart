@@ -79,7 +79,7 @@ class _WaiverSheetState extends ConsumerState<WaiverSheet> {
           // Title
           Row(
             children: [
-              Icon(Icons.shield_outlined, color: AppTheme.lagoon, size: 24),
+              Icon(Icons.shield_outlined, color: AppTheme.emerald, size: 24),
               const SizedBox(width: 8),
               Text(
                 'Liability Waiver',
@@ -122,7 +122,7 @@ class _WaiverSheetState extends ConsumerState<WaiverSheet> {
               'I have read and accept the liability waiver',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
-            activeColor: AppTheme.lagoon,
+            activeColor: AppTheme.emerald,
             contentPadding: EdgeInsets.zero,
           ),
           const SizedBox(height: 8),

@@ -7,7 +7,7 @@ import '../theme/app_theme.dart';
 class LoadingDots extends StatefulWidget {
   const LoadingDots({
     super.key,
-    this.color = AppTheme.lagoon,
+    this.color = AppTheme.emerald,
     this.size = 8,
     this.spacing = 4,
     this.duration = const Duration(milliseconds: 1200),
@@ -99,7 +99,7 @@ class LoadingOverlay extends StatelessWidget {
               width: 40,
               height: 40,
               child: CircularProgressIndicator(
-                color: AppTheme.lagoon,
+                color: AppTheme.emerald,
                 strokeWidth: 3,
               ),
             ),

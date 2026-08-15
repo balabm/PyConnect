@@ -56,13 +56,13 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.lagoon.withValues(alpha: 0.1),
+                color: AppTheme.emerald.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
                 '0% Commission',
                 style: TextStyle(
-                  color: AppTheme.lagoon,
+                  color: AppTheme.emerald,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -145,7 +145,7 @@ class _OnlineToggleState extends ConsumerState<_OnlineToggle>
       decoration: BoxDecoration(
         gradient: widget.isOnline
             ? LinearGradient(
-                colors: [AppTheme.lagoon.withValues(alpha: 0.1), AppTheme.lagoon.withValues(alpha: 0.05)],
+                colors: [AppTheme.emerald.withValues(alpha: 0.1), AppTheme.emerald.withValues(alpha: 0.05)],
               )
             : null,
         color: widget.isOnline ? null : Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -166,7 +166,7 @@ class _OnlineToggleState extends ConsumerState<_OnlineToggle>
                       child: Container(
                         width: 14, height: 14,
                         decoration: BoxDecoration(
-                          color: AppTheme.lagoon.withValues(alpha: opacity * 0.4),
+                          color: AppTheme.emerald.withValues(alpha: opacity * 0.4),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -176,7 +176,7 @@ class _OnlineToggleState extends ConsumerState<_OnlineToggle>
               Container(
                 width: 14, height: 14,
                 decoration: BoxDecoration(
-                  color: widget.isOnline ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: widget.isOnline ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
@@ -187,7 +187,7 @@ class _OnlineToggleState extends ConsumerState<_OnlineToggle>
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 300),
             style: TextStyle(
-              color: widget.isOnline ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: widget.isOnline ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
               fontSize: 15,
             ),
@@ -202,7 +202,7 @@ class _OnlineToggleState extends ConsumerState<_OnlineToggle>
           const Spacer(),
           Switch(
             value: widget.isOnline,
-            activeThumbColor: AppTheme.lagoon,
+            activeThumbColor: AppTheme.emerald,
             onChanged: (value) async {
               AppHaptics.selection();
               ref.read(driverOnlineStatusProvider.notifier).state = value;
@@ -420,7 +420,7 @@ class _WalletContent extends StatelessWidget {
         BounceIn(
           duration: const Duration(milliseconds: 600),
           child: AnimatedGradientHeader(
-            colors: [AppTheme.lagoon, AppTheme.lagoonDark],
+            colors: [AppTheme.emerald, AppTheme.emeraldDark],
             borderRadius: 20,
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -494,14 +494,14 @@ class _LedgerEntryTile extends StatelessWidget {
     return ListTile(
       leading: Icon(
         isEarning ? Icons.add_circle : Icons.remove_circle,
-        color: isEarning ? AppTheme.lagoon : AppTheme.coral,
+        color: isEarning ? AppTheme.emerald : AppTheme.coral,
       ),
       title: Text(entry.transactionType),
       subtitle: Text(entry.reference ?? ''),
       trailing: Text(
         '${isEarning ? '+' : ''}\u20B9${entry.amount.toStringAsFixed(2)}',
         style: TextStyle(
-          color: isEarning ? AppTheme.lagoon : AppTheme.coral,
+          color: isEarning ? AppTheme.emerald : AppTheme.coral,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -518,7 +518,7 @@ class _WalletFallback extends StatelessWidget {
         BounceIn(
           duration: const Duration(milliseconds: 600),
           child: AnimatedGradientHeader(
-            colors: [AppTheme.lagoon, AppTheme.lagoonDark],
+            colors: [AppTheme.emerald, AppTheme.emeraldDark],
             borderRadius: 20,
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -562,22 +562,22 @@ class _WalletFallback extends StatelessWidget {
         Text('Recent Transactions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
         const SizedBox(height: 8),
         SlideInLeft(child: ListTile(
-          leading: Icon(Icons.add_circle, color: AppTheme.lagoon),
+          leading: Icon(Icons.add_circle, color: AppTheme.emerald),
           title: Text('Earning'),
           subtitle: Text('SEED-RIDE-001'),
-          trailing: Text('\u20B9250.00', style: TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.w600)),
+          trailing: Text('\u20B9250.00', style: TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.w600)),
         )),
         SlideInLeft(delay: const Duration(milliseconds: 80), child: ListTile(
-          leading: Icon(Icons.add_circle, color: AppTheme.lagoon),
+          leading: Icon(Icons.add_circle, color: AppTheme.emerald),
           title: Text('Earning'),
           subtitle: Text('SEED-FOOD-001'),
-          trailing: Text('\u20B9180.00', style: TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.w600)),
+          trailing: Text('\u20B9180.00', style: TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.w600)),
         )),
         SlideInLeft(delay: const Duration(milliseconds: 160), child: ListTile(
-          leading: Icon(Icons.add_circle, color: AppTheme.lagoon),
+          leading: Icon(Icons.add_circle, color: AppTheme.emerald),
           title: Text('Bonus'),
           subtitle: Text('SEED-LATE-NIGHT-BONUS'),
-          trailing: Text('\u20B950.00', style: TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.w600)),
+          trailing: Text('\u20B950.00', style: TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.w600)),
         )),
       ],
     );

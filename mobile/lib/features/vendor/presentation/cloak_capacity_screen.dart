@@ -224,7 +224,7 @@ class _BagCard extends StatelessWidget {
             ),
           ),
           Text('\u20B9${booking.amount.toStringAsFixed(0)}',
-              style: const TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.bold, fontSize: 16)),
+              style: const TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.bold, fontSize: 16)),
         ],
       ),
     );

@@ -88,7 +88,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isActive ? 'Now accepting orders' : 'Orders paused'),
-            backgroundColor: isActive ? AppTheme.lagoon : AppTheme.coral,
+            backgroundColor: isActive ? AppTheme.emerald : AppTheme.coral,
             duration: const Duration(seconds: 2),
           ),
         );

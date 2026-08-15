@@ -10,7 +10,7 @@ class GradientButton extends StatefulWidget {
     super.key,
     required this.label,
     required this.onPressed,
-    this.gradient = AppTheme.lagoonGradient,
+    this.gradient = AppTheme.emeraldGradient,
     this.icon,
     this.trailingIcon,
     this.width,
@@ -166,7 +166,7 @@ class GradientChip extends StatelessWidget {
   const GradientChip({
     super.key,
     required this.label,
-    this.gradient = AppTheme.lagoonGradient,
+    this.gradient = AppTheme.emeraldGradient,
     this.icon,
     this.onTap,
     this.selected = false,

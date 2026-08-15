@@ -189,10 +189,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               height: 250,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.lagoonLight, width: 3),
+                border: Border.all(color: AppTheme.emeraldLight, width: 3),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.lagoon.withValues(alpha: 0.4),
+                    color: AppTheme.emerald.withValues(alpha: 0.4),
                     blurRadius: 20,
                     spreadRadius: 2,
                   ),
@@ -207,8 +207,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       width: 24, height: 24,
                       decoration: BoxDecoration(
                         border: Border(
-                          top: BorderSide(width: 4, color: AppTheme.lagoonLight),
-                          left: BorderSide(width: 4, color: AppTheme.lagoonLight),
+                          top: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                          left: BorderSide(width: 4, color: AppTheme.emeraldLight),
                         ),
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(20),
@@ -222,8 +222,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       width: 24, height: 24,
                       decoration: BoxDecoration(
                         border: Border(
-                          top: BorderSide(width: 4, color: AppTheme.lagoonLight),
-                          right: BorderSide(width: 4, color: AppTheme.lagoonLight),
+                          top: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                          right: BorderSide(width: 4, color: AppTheme.emeraldLight),
                         ),
                         borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(20),
@@ -237,8 +237,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       width: 24, height: 24,
                       decoration: BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(width: 4, color: AppTheme.lagoonLight),
-                          left: BorderSide(width: 4, color: AppTheme.lagoonLight),
+                          bottom: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                          left: BorderSide(width: 4, color: AppTheme.emeraldLight),
                         ),
                         borderRadius: const BorderRadius.only(
                           bottomLeft: Radius.circular(20),
@@ -252,8 +252,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       width: 24, height: 24,
                       decoration: BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(width: 4, color: AppTheme.lagoonLight),
-                          right: BorderSide(width: 4, color: AppTheme.lagoonLight),
+                          bottom: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                          right: BorderSide(width: 4, color: AppTheme.emeraldLight),
                         ),
                         borderRadius: const BorderRadius.only(
                           bottomRight: Radius.circular(20),
@@ -268,11 +268,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                gradient: AppTheme.lagoonGradient,
+                gradient: AppTheme.emeraldGradient,
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.lagoon.withValues(alpha: 0.3),
+                    color: AppTheme.emerald.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -311,7 +311,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppTheme.lagoon, AppTheme.lagoonDark],
+            colors: [AppTheme.emerald, AppTheme.emeraldDark],
           ),
         ),
         child: Center(

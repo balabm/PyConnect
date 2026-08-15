@@ -76,7 +76,7 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
         'Be polite and professional with all riders',
         'Rate riders after each trip to maintain quality',
       ],
-      color: AppTheme.lagoon,
+      color: AppTheme.emerald,
     ),
     _TutorialPage(
       icon: Icons.assignment_outlined,

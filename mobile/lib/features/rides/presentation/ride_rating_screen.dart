@@ -228,10 +228,10 @@ class _RideRatingScreenState extends ConsumerState<RideRatingScreen> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: AppTheme.lagoon.withValues(alpha: 0.1),
+                  color: AppTheme.emerald.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check, color: AppTheme.lagoon, size: 48),
+                child: const Icon(Icons.check, color: AppTheme.emerald, size: 48),
               ),
               const SizedBox(height: 24),
               const Text('Thank You!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
@@ -245,7 +245,7 @@ class _RideRatingScreenState extends ConsumerState<RideRatingScreen> {
                 const SizedBox(height: 16),
                 Text(
                   '\u20B9$_tipAmount tip will be added to your ride',
-                  style: const TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.w600),
                 ),
               ],
               const SizedBox(height: 32),
