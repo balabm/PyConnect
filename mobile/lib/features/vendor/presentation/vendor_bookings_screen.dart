@@ -187,13 +187,13 @@ class _BookingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          ..._buildActionButtons(),
+          ..._buildActionButtons(context),
         ],
       ),
     );
   }
 
-  List<Widget> _buildActionButtons() {
+  List<Widget> _buildActionButtons(BuildContext context) {
     final next = _nextStatus(booking.serviceType, booking.status);
     if (next == null) return [];
 
