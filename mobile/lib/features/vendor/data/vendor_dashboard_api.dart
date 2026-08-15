@@ -127,6 +127,16 @@ class VendorDashboardApi {
     });
   }
 
+  /// Removes an item from a food order and triggers a partial refund for
+  /// the item's price. Used when a vendor discovers an item is out of stock
+  /// after accepting the order. The rest of the order stays active.
+  Future<Map<String, dynamic>> partialRefund(String orderId, String itemId) async {
+    final body = await _api.post('/api/vendor/orders/$orderId/partial-refund', data: {
+      'itemId': itemId,
+    });
+    return body as Map<String, dynamic>;
+  }
+
   Future<ActivatePriorityResult> activatePriority(String venueId) async {
     final body = await _api.post(
       '/api/vendor/activate-priority',

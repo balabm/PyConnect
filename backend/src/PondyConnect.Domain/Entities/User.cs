@@ -210,4 +210,32 @@ public sealed class User : BaseEntity
         HasCompletedOnboarding = true;
         MarkUpdated();
     }
+
+    /// <summary>
+    /// Anonymizes the user's PII for the "Right to be Forgotten" flow.
+    /// Hard-deletes all personally identifiable information (Name, Phone,
+    /// Email, DietaryPreference, FcmDeviceToken, GoogleId, PictureUrl,
+    /// DrivingLicenseNumber, AadhaarHash) while keeping the record itself
+    /// so historical order/payment data remains intact for financial auditing.
+    /// The account is also deactivated so it can never be logged into again.
+    /// </summary>
+    public void AnonymizeForDeletion()
+    {
+        Name = "Deleted User";
+        Phone = $"deleted_{Id:N}";
+        Email = null;
+        DietaryPreference = null;
+        FcmDeviceToken = null;
+        GoogleId = null;
+        PictureUrl = null;
+        DrivingLicenseNumber = null;
+        AadhaarHash = null;
+        IsActive = false;
+        IsProMember = false;
+        ProMemberUntil = null;
+        IsVerifiedLocal = false;
+        IsEmailVerified = false;
+        HasCompletedOnboarding = false;
+        MarkUpdated();
+    }
 }

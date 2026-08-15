@@ -56,6 +56,19 @@ public sealed class NoopPaymentGateway : IPaymentGateway
             RefundId: $"refund_noop_{Guid.NewGuid():N}"));
     }
 
+    public Task<ProviderOrderStatusResult> FetchOrderStatusAsync(
+        string providerOrderId,
+        CancellationToken cancellationToken = default)
+    {
+        // In dev mode, simulate a paid order so the reconciliation worker
+        // picks it up and transitions the booking to confirmed.
+        return Task.FromResult(new ProviderOrderStatusResult(
+            Success: true,
+            ProviderOrderId: providerOrderId,
+            ProviderPaymentId: $"pay_noop_{Guid.NewGuid():N}",
+            Status: PaymentStatus.Captured));
+    }
+
     private static string? ExtractOrderId(string payload)
     {
         // Very loose extraction for dev

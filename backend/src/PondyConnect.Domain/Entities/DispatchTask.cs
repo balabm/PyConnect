@@ -112,4 +112,24 @@ public sealed class DispatchTask : BaseEntity
         Status = DispatchTaskStatus.Cancelled;
         MarkUpdated();
     }
+
+    /// <summary>
+    /// Emergency release: unassigns the current driver and pushes the task
+    /// back to the Available state so it can be re-dispatched to the next
+    /// nearest driver. Called when the driver has a breakdown or emergency
+    /// and cannot complete the trip. Only valid for tasks that are currently
+    /// assigned to a driver (Assigned, InProgress, ArrivedAtStore, OutForDelivery).
+    /// </summary>
+    public void EmergencyRelease()
+    {
+        if (Status is not (DispatchTaskStatus.Assigned
+            or DispatchTaskStatus.InProgress
+            or DispatchTaskStatus.ArrivedAtStore
+            or DispatchTaskStatus.OutForDelivery))
+            throw new InvalidOperationException("Only active tasks can be emergency-released.");
+
+        DriverId = null;
+        Status = DispatchTaskStatus.Available;
+        MarkUpdated();
+    }
 }

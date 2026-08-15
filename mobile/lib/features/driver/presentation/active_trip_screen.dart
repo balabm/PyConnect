@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
+import '../../../core/network/offline_mutation_queue.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/driver_providers.dart';
 import '../domain/driver_models.dart';
@@ -100,6 +102,11 @@ class _DeliveryLifecycleScreenState
       appBar: AppBar(
         title: Text(_phaseTitle),
         actions: [
+          IconButton(
+            icon: Icon(Icons.warning_amber_rounded, color: AppTheme.danger),
+            tooltip: 'Emergency Issue / Cannot Complete',
+            onPressed: () => _showEmergencyReleaseDialog(context),
+          ),
           IconButton(
             icon: const Icon(Icons.close),
             tooltip: 'Cancel trip',
@@ -250,12 +257,44 @@ class _DeliveryLifecycleScreenState
         await ref.read(driverApiProvider).markOutForDelivery(widget.task.id);
       }
     } catch (e) {
-      // Backend persist failed — still advance locally so the driver can
-      // continue, but warn them.
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Phase update failed: $e. Continuing anyway.')),
-        );
+      // Network error: queue the mutation for replay when connectivity
+      // is restored. Update the UI optimistically so the driver is not blocked.
+      if (e is Exception && _isNetworkError(e)) {
+        final path = nextPhase == _DeliveryPhase.atStore
+            ? 'api/driver/tasks/${widget.task.id}/arrived-at-store'
+            : 'api/driver/tasks/${widget.task.id}/out-for-delivery';
+        try {
+          await ref.read(offlineMutationQueueProvider).enqueue(
+                QueuedMutation(
+                  id: '${widget.task.id}_${nextPhase.name}',
+                  method: 'POST',
+                  path: path,
+                  createdAt: DateTime.now(),
+                ),
+              );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Offline — saved. Will sync when back online.'),
+                backgroundColor: AppTheme.warning,
+              ),
+            );
+          }
+        } catch (_) {
+          // Queue enqueue failed — fall through to the generic error message.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Phase update failed: $e. Continuing anyway.')),
+            );
+          }
+        }
+      } else {
+        // Non-network error — warn the driver but continue.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Phase update failed: $e. Continuing anyway.')),
+          );
+        }
       }
     }
 
@@ -265,6 +304,18 @@ class _DeliveryLifecycleScreenState
         _advancing = false;
       });
     }
+  }
+
+  /// Checks if an exception is a network error (vs a server error).
+  bool _isNetworkError(Exception e) {
+    // DioException network types are queued; other errors are surfaced.
+    if (e.toString().contains('connection') ||
+        e.toString().contains('timeout') ||
+        e.toString().contains('network') ||
+        e.toString().contains('socket')) {
+      return true;
+    }
+    return false;
   }
 
   Future<void> _completeDelivery(BuildContext context) async {
@@ -285,10 +336,41 @@ class _DeliveryLifecycleScreenState
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to complete: $e')),
-        );
+      if (e is Exception && _isNetworkError(e)) {
+        // Network error: queue the completion for replay when online.
+        try {
+          await ref.read(offlineMutationQueueProvider).enqueue(
+                QueuedMutation(
+                  id: '${widget.task.id}_complete',
+                  method: 'POST',
+                  path: 'api/driver/tasks/${widget.task.id}/complete',
+                  createdAt: DateTime.now(),
+                ),
+              );
+          if (mounted) {
+            // Optimistically complete — the driver is done, just offline.
+            ref.read(activeTaskProvider.notifier).state = null;
+            ref.read(driverSelectedTabProvider.notifier).state = 0;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Offline — completion saved. Will sync when back online.'),
+                backgroundColor: AppTheme.warning,
+              ),
+            );
+          }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to complete: $e')),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to complete: $e')),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _completing = false);
@@ -299,6 +381,72 @@ class _DeliveryLifecycleScreenState
     AppHaptics.light();
     ref.read(activeTaskProvider.notifier).state = null;
     ref.read(driverSelectedTabProvider.notifier).state = 0;
+  }
+
+  /// Shows a confirmation dialog for emergency release. The driver's task
+  /// is unassigned and re-dispatched to another driver. The driver is set
+  /// back to Online and not penalized.
+  void _showEmergencyReleaseDialog(BuildContext context) {
+    AppHaptics.heavy();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.danger),
+            const SizedBox(width: 8),
+            const Text('Emergency Release'),
+          ],
+        ),
+        content: const Text(
+          'This will unassign you from the trip and send it to the next '
+          'available driver. You will go back online. Use this only if you '
+          'cannot complete the trip due to a breakdown or emergency.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _performEmergencyRelease(context);
+            },
+            child: const Text('Release Task'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performEmergencyRelease(BuildContext context) async {
+    setState(() => _completing = true);
+    try {
+      await ref.read(driverApiProvider).emergencyRelease(widget.task.id);
+      if (mounted) {
+        ref.read(activeTaskProvider.notifier).state = null;
+        ref.read(driverSelectedTabProvider.notifier).state = 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Task released. Re-dispatched to another driver.'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to release: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _completing = false);
+    }
   }
 }
 

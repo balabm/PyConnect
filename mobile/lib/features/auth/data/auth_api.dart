@@ -81,6 +81,14 @@ class AuthApi {
     });
     return AuthResult.fromJson(body as Map<String, dynamic>);
   }
+
+  /// Deletes the user's account and anonymizes all PII (Right to be Forgotten).
+  /// The user record is kept for financial auditing but all personal data is
+  /// hard-deleted. After this call, the token is invalid and the user must
+  /// sign out locally.
+  Future<void> deleteAccount() async {
+    await _api.delete('/api/auth/account');
+  }
 }
 
 class OtpRequestedResult {

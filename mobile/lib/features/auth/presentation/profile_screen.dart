@@ -191,6 +191,19 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                   const Divider(height: 32),
+                  // Right to be Forgotten: Delete Account & Data
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.danger,
+                      side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.3)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
+                    ),
+                    onPressed: () => _showDeleteAccountDialog(context, ref),
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('Delete Account & Data', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(height: 12),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.coral,
@@ -222,6 +235,62 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ],
             ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
+    AppHaptics.heavy();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.delete_forever, color: AppTheme.danger),
+            const SizedBox(width: 8),
+            const Text('Delete Account'),
+          ],
+        ),
+        content: const Text(
+          'This will permanently delete all your personal data (name, phone, '
+          'locations, dietary preferences). Your historical orders will be '
+          'kept for financial auditing but anonymized. This action cannot be '
+          'undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                await ref.read(authControllerProvider.notifier).deleteAccount();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Account deleted. All personal data has been removed.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  context.go('/auth');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete account: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete Forever'),
+          ),
+        ],
+      ),
     );
   }
 }

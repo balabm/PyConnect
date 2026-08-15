@@ -23,13 +23,15 @@ public sealed class VendorController : ControllerBase
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
     private readonly IStorageService _storage;
+    private readonly IPaymentGateway _paymentGateway;
 
-    public VendorController(IMediator mediator, IApplicationDbContext context, ICurrentUserService currentUser, IStorageService storage)
+    public VendorController(IMediator mediator, IApplicationDbContext context, ICurrentUserService currentUser, IStorageService storage, IPaymentGateway paymentGateway)
     {
         _mediator = mediator;
         _context = context;
         _currentUser = currentUser;
         _storage = storage;
+        _paymentGateway = paymentGateway;
     }
 
     /// <summary>
@@ -784,7 +786,78 @@ public sealed class VendorController : ControllerBase
     }
     }
 
+    // -----------------------------------------------------------------------
+    // Partial fulfillment: vendor marks an item out of stock and auto-refunds
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Removes an item from a food order and triggers a partial refund for
+    /// the item's price. Used when a vendor discovers an item is out of
+    /// stock after accepting the order. The rest of the order stays active.
+    /// </summary>
+    [HttpPost("orders/{orderId:guid}/partial-refund")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PartialRefund(Guid orderId, [FromBody] PartialRefundRequest request, CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Authenticated phone not found." });
+
+        var vendorId = await _context.Vendors.AsNoTracking()
+            .Where(v => v.ContactPhone == phone)
+            .Select(v => v.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (vendorId == Guid.Empty)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        var order = await _context.FoodOrders
+            .FirstOrDefaultAsync(f => f.Id == orderId, cancellationToken);
+        if (order is null)
+            return NotFound(new { Message = "Food order not found." });
+        if (order.VendorId != vendorId)
+            return Forbid();
+
+        try
+        {
+            // Remove the item from the order and get the refund amount.
+            var refundAmount = order.RemoveItem(request.ItemId);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // If the order was paid online, trigger a partial refund via Razorpay.
+            if (order.PaymentStatus == PaymentStatus.Captured)
+            {
+                var payment = await _context.Payments
+                    .FirstOrDefaultAsync(p => p.FoodOrderId == order.Id && p.Status == PaymentStatus.Captured, cancellationToken);
+                if (payment?.ProviderPaymentId is not null)
+                {
+                    var refundResult = await _paymentGateway.RefundAsync(
+                        payment.ProviderPaymentId,
+                        refundAmount,
+                        $"Item out of stock: {request.ItemId}",
+                        cancellationToken);
+                    if (!refundResult.Success)
+                        return BadRequest(new { Message = $"Refund failed: {refundResult.ErrorMessage}" });
+                }
+            }
+
+            return Ok(new
+            {
+                Message = "Item removed and refund processed.",
+                RefundAmount = refundAmount,
+                NewTotal = order.TotalAmount,
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
 }
+
+public sealed record PartialRefundRequest(Guid ItemId);
 
 public sealed record ValidateTicketRequest(string QrPayload);
 public sealed record ActivatePriorityRequest(Guid VenueId);

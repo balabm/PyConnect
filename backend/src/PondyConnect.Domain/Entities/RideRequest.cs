@@ -419,8 +419,8 @@ public sealed class RideRequest : BaseEntity
         if (Status is RideStatus.Requested or RideStatus.Searching or RideStatus.NoDriversAvailable)
             return 0m;
 
-        // Free within 2 minutes of request
-        if ((DateTimeOffset.UtcNow - RequestedAt).TotalMinutes < 2)
+        // Free within 60 seconds of request (cancellation grace period)
+        if ((DateTimeOffset.UtcNow - RequestedAt).TotalSeconds < 60)
             return 0m;
 
         // ₹50 if driver arrived at pickup (rider no-show)

@@ -144,6 +144,68 @@ public sealed class RazorpayGateway : IPaymentGateway
         return new RefundResult(true, RefundId: refundId);
     }
 
+    /// <summary>
+    /// Fetches the current status of a Razorpay order by calling
+    /// <c>GET v1/orders/{id}</c>. Used by the reconciliation worker to
+    /// recover orders where the user paid but the app lost network before
+    /// confirming the payment.
+    /// </summary>
+    public async Task<ProviderOrderStatusResult> FetchOrderStatusAsync(
+        string providerOrderId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.KeyId) || string.IsNullOrWhiteSpace(_options.KeySecret))
+            return new ProviderOrderStatusResult(false, ErrorMessage: "Razorpay keys not configured");
+
+        if (string.IsNullOrWhiteSpace(providerOrderId))
+            return new ProviderOrderStatusResult(false, ErrorMessage: "Provider order ID is required");
+
+        var response = await _http.GetAsync($"v1/orders/{providerOrderId}", cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadAsStringAsync(cancellationToken);
+            return new ProviderOrderStatusResult(false, ErrorMessage: $"Razorpay error: {err}");
+        }
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken);
+        var statusStr = json.GetProperty("status").GetString() ?? "";
+        var amountPaidPaise = json.TryGetProperty("amount_paid", out var ap) && ap.ValueKind == JsonValueKind.Number
+            ? ap.GetInt32()
+            : 0;
+        var amountDuePaise = json.TryGetProperty("amount_due", out var ad) && ad.ValueKind == JsonValueKind.Number
+            ? ad.GetInt32()
+            : 0;
+
+        // Determine the payment ID if any payments are associated.
+        string? paymentId = null;
+        if (json.TryGetProperty("payments", out var paymentsEl) && paymentsEl.TryGetProperty("items", out var itemsEl) && itemsEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in itemsEl.EnumerateArray())
+            {
+                if (item.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String)
+                {
+                    paymentId = idEl.GetString();
+                    break;
+                }
+            }
+        }
+
+        var status = (statusStr, amountDuePaise) switch
+        {
+            ("paid", 0) => PaymentStatus.Captured,
+            ("attempted", _) => PaymentStatus.Failed,
+            ("failed", _) => PaymentStatus.Failed,
+            _ => PaymentStatus.Unpaid
+        };
+
+        return new ProviderOrderStatusResult(
+            Success: true,
+            ProviderOrderId: providerOrderId,
+            ProviderPaymentId: paymentId,
+            Status: status,
+            AmountPaid: amountPaidPaise / 100m);
+    }
+
     private static string ComputeHmacSha256(string data, string key)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key));

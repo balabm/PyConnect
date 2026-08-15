@@ -301,6 +301,55 @@ public sealed class AuthController : ControllerBase
         var token = _jwtTokenFactory.CreateAccessToken(user.Id, user.Phone, user.Role.ToString());
         return Ok(new AuthResponse(token, user.Id, user.Phone, user.Name, user.Role.ToString()));
     }
+
+    // -----------------------------------------------------------------------
+    // Right to be Forgotten: delete account & anonymize PII
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Deletes the user's account and anonymizes all PII. The user record
+    /// is kept (anonymized) so historical order/payment data remains intact
+    /// for financial auditing. All personally identifiable information is
+    /// hard-deleted: Name, Phone, Email, DietaryPreference, FcmDeviceToken,
+    /// GoogleId, PictureUrl, DrivingLicenseNumber, AadhaarHash, SavedLocations.
+    /// The account is deactivated so it can never be logged into again.
+    /// </summary>
+    [HttpDelete("account")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null)
+            return Unauthorized(new { Message = "User not authenticated." });
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is null)
+            return NotFound(new { Message = "User not found." });
+
+        // Anonymize the user record (keeps it for financial auditing).
+        user.AnonymizeForDeletion();
+
+        // Hard-delete all saved locations (PII).
+        var savedLocations = await _dbContext.SavedLocations
+            .Where(l => l.UserId == userId)
+            .ToListAsync(cancellationToken);
+        if (savedLocations.Count > 0)
+            _dbContext.SavedLocations.RemoveRange(savedLocations);
+
+        // Deactivate any driver profile associated with this user.
+        var driver = await _dbContext.Drivers.FirstOrDefaultAsync(d => d.UserId == userId, cancellationToken);
+        if (driver is not null)
+        {
+            driver.GoOffline();
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { Message = "Account deleted. All personal data has been anonymized." });
+    }
 }
 
 public sealed record UpdateProfileRequest(string? Name);

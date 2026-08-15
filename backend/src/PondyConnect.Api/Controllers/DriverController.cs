@@ -23,6 +23,7 @@ public sealed class DriverController : ControllerBase
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
     private readonly IStorageService _storage;
+    private readonly DispatchEngine _dispatchEngine;
 
     public DriverController(
         IMediator mediator,
@@ -30,7 +31,8 @@ public sealed class DriverController : ControllerBase
         DriverLocationStore locationStore,
         IApplicationDbContext dbContext,
         ICurrentUserService currentUser,
-        IStorageService storage)
+        IStorageService storage,
+        DispatchEngine dispatchEngine)
     {
         _mediator = mediator;
         _payoutService = payoutService;
@@ -38,6 +40,7 @@ public sealed class DriverController : ControllerBase
         _dbContext = dbContext;
         _currentUser = currentUser;
         _storage = storage;
+        _dispatchEngine = dispatchEngine;
     }
 
     /// <summary>
@@ -432,6 +435,52 @@ public sealed class DriverController : ControllerBase
         await _dbContext.SaveChangesAsync(ct);
 
         return Ok(new { Message = "Extended KYC uploaded.", InsuranceUploaded = insuranceKey != null, SelfieUploaded = selfieKey != null });
+    }
+
+    // -----------------------------------------------------------------------
+    // Emergency release: driver breakdown / flat tire / cannot complete
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Emergency release: unassigns the driver from the task, sets them back
+    /// to Online, and pushes the task back to the dispatch queue for the next
+    /// nearest driver. The driver is not penalized for emergency releases.
+    /// </summary>
+    [HttpPost("tasks/{taskId:guid}/emergency-release")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> EmergencyRelease(Guid taskId, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var task = await _dbContext.DispatchTasks
+            .FirstOrDefaultAsync(t => t.Id == taskId && t.DriverId == driver.Id, ct);
+        if (task is null)
+            return NotFound(new { Message = "Task not found or not assigned to you." });
+
+        try
+        {
+            task.EmergencyRelease();
+            driver.EndRide();
+            driver.GoOnline();
+            _locationStore.SetOnRide(driver.Id, Guid.Empty);
+            await _dbContext.SaveChangesAsync(ct);
+
+            // Re-dispatch the task to the next nearest driver.
+            if (task.TaskType == DispatchTaskType.Ride && task.SourceEntityId is { } rideId)
+            {
+                _ = _dispatchEngine.DispatchRideAsync(rideId, cancellationToken: ct);
+            }
+
+            return Ok(new { Message = "Emergency release processed. Task re-dispatched to another driver." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
     private async Task<Domain.Entities.Driver?> GetCurrentUserDriverAsync(CancellationToken ct)

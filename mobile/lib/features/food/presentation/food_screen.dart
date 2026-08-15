@@ -1038,11 +1038,20 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                   onChanged: (v) => setState(() => _paymentMethod = v ?? 1),
                 ),
                 const Divider(height: 24),
-                // Bill details
-                _BillRow(label: 'Subtotal', value: '\u20B9${subtotal.toStringAsFixed(0)}'),
-                _BillRow(label: 'Delivery Fee', value: '\u20B9${_deliveryFee.toStringAsFixed(0)}'),
-                _BillRow(label: 'Platform Fee', value: '\u20B9${_platformFee.toStringAsFixed(0)}'),
-                _BillRow(label: 'Taxes & Charges (5%)', value: '\u20B9${_taxes.toStringAsFixed(0)}'),
+                // Bill details — 100% transparent breakdown
+                _BillRow(label: 'Base Item Total', value: '\u20B9${subtotal.toStringAsFixed(0)}'),
+                _BillRow(label: 'Taxes (GST 5%)', value: '\u20B9${_taxes.toStringAsFixed(0)}'),
+                _BillRow(
+                  label: 'Platform Fee',
+                  value: '\u20B9${_platformFee.toStringAsFixed(0)}',
+                  tooltip: 'This keeps the servers running without charging exorbitant merchant commissions.',
+                ),
+                _BillRow(
+                  label: 'Driver Delivery Fee',
+                  value: '\u20B9${_deliveryFee.toStringAsFixed(0)}',
+                  badge: '100% to driver',
+                  tooltip: 'The full delivery fee goes directly to the captain. PY Connect takes zero cut.',
+                ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1079,9 +1088,11 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
 }
 
 class _BillRow extends StatelessWidget {
-  const _BillRow({required this.label, required this.value});
+  const _BillRow({required this.label, required this.value, this.tooltip, this.badge});
   final String label;
   final String value;
+  final String? tooltip;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -1090,7 +1101,33 @@ class _BillRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              if (badge != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emerald.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.xs),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.emerald),
+                  ),
+                ),
+              ],
+              if (tooltip != null) ...[
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: tooltip,
+                  child: Icon(Icons.info_outline, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ],
+          ),
           Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
         ],
       ),

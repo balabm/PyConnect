@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'network/api_client.dart';
+import 'network/offline_mutation_queue.dart';
 import 'network/osm_geocoding_service.dart';
 import 'network/osrm_routing_service.dart';
 import 'network/signalr_client.dart';
@@ -108,3 +110,37 @@ final razorpayPaymentProvider = Provider<RazorpayPaymentService>((ref) {
 
 /// Global cart item count provider shared between food screen and home badge.
 final cartItemCountProvider = StateProvider<int>((ref) => 0);
+
+/// SharedPreferences instance for the offline mutation queue and other
+/// lightweight persistence needs.
+final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async {
+  return SharedPreferences.getInstance();
+});
+
+/// Offline mutation queue for the Captain (driver) app. When a driver taps
+/// "Complete Trip" or "Arrived" and the network is down, the mutation is
+/// queued and replayed when connectivity is restored.
+final offlineMutationQueueProvider = Provider<OfflineMutationQueue>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider).maybeWhen(
+        data: (p) => p,
+        orElse: () => throw StateError('SharedPreferences not ready'),
+      );
+  final apiClient = ref.watch(apiClientProvider);
+
+  final queue = OfflineMutationQueue(
+    prefs,
+    (mutation) async {
+      try {
+        await apiClient.post(mutation.path, data: mutation.body);
+        return true;
+      } catch (e) {
+        if (e is Exception) rethrow;
+        return false;
+      }
+    },
+  );
+
+  // Watch the auth token — when it changes, try to flush the queue.
+  ref.watch(authTokenProvider);
+  return queue;
+});

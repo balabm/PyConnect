@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/network/offline_mutation_queue.dart';
+import '../core/providers.dart';
 import '../features/driver/application/driver_providers.dart';
 import '../features/driver/application/driver_signalr_provider.dart';
 import '../features/driver/presentation/driver_home_screen.dart';
@@ -60,8 +62,23 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         ref.read(activeTaskProvider.notifier).state = activeTask;
         ref.read(driverSelectedTabProvider.notifier).state = 1;
       }
+      // Network is up — flush any queued offline mutations.
+      _flushOfflineQueue();
     } catch (_) {
       // Non-fatal — driver can still go online normally
+    }
+  }
+
+  /// Flushes the offline mutation queue if there are pending mutations.
+  /// Called after successful API calls when network connectivity is restored.
+  void _flushOfflineQueue() {
+    try {
+      final queue = ref.read(offlineMutationQueueProvider);
+      if (queue.isNotEmpty) {
+        queue.flush();
+      }
+    } catch (_) {
+      // SharedPreferences not ready yet — skip.
     }
   }
 

@@ -177,6 +177,20 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     state = const AsyncData(null);
   }
 
+  /// Deletes the user's account and all personal data (Right to be Forgotten).
+  /// After successful deletion, signs the user out locally.
+  Future<void> deleteAccount() async {
+    state = const AsyncLoading();
+    try {
+      await ref.read(authApiProvider).deleteAccount();
+      await ref.read(tokenStorageProvider).clear();
+      ref.read(authTokenProvider.notifier).state = null;
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
   /// Refreshes the session with a new JWT (e.g. after a phone number
   /// change). Persists the new token and updates the in-memory state.
   Future<void> refreshWithToken(String newToken) async {

@@ -40,6 +40,15 @@ public interface IPaymentGateway
         decimal amount,
         string reason,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches the current status of a provider order from the Razorpay API.
+    /// Used by the payment reconciliation worker to recover orders where the
+    /// user paid but the app lost network before confirming.
+    /// </summary>
+    Task<ProviderOrderStatusResult> FetchOrderStatusAsync(
+        string providerOrderId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record PaymentOrderResult(
@@ -58,4 +67,16 @@ public sealed record PaymentVerificationResult(
 public sealed record RefundResult(
     bool Success,
     string? RefundId = null,
+    string? ErrorMessage = null);
+
+/// <summary>
+/// Result of fetching an order's status from the payment provider.
+/// AmountPaid is in rupees (converted from paise by the gateway).
+/// </summary>
+public sealed record ProviderOrderStatusResult(
+    bool Success,
+    string? ProviderOrderId = null,
+    string? ProviderPaymentId = null,
+    PaymentStatus Status = PaymentStatus.Unpaid,
+    decimal AmountPaid = 0m,
     string? ErrorMessage = null);

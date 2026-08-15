@@ -11,6 +11,7 @@ using PondyConnect.Api.Services;
 using PondyConnect.Application;
 using PondyConnect.Application.Features.GeoFence;
 using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Application.Features.Payments;
 using PondyConnect.Application.Features.RideHailing;
 using PondyConnect.Application.Features.Telemetry;
 using PondyConnect.Application.Features.Vendor;
@@ -47,6 +48,7 @@ builder.Services.AddSignalR();
 builder.Services.AddHostedService<FlashPromoExpiryWorker>();
 builder.Services.AddHostedService<ScheduledPayoutWorker>();
 builder.Services.AddHostedService<TelemetryBatchProcessor>();
+builder.Services.AddHostedService<PaymentReconciliationWorker>();
 builder.Services.AddScoped<DriverPayoutService>();
 
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SectionName));

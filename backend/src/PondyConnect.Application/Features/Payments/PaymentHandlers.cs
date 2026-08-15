@@ -159,9 +159,11 @@ public sealed class VerifyPaymentWebhookHandler : IRequestHandler<VerifyPaymentW
         }
 
         // Non-captured result: record the failed payment idempotently.
+        // Skip if the payment is already captured (webhook replay after success)
+        // or already failed (duplicate webhook delivery).
         var payment = await _context.Payments
             .FirstOrDefaultAsync(p => p.ProviderOrderId == result.ProviderOrderId, cancellationToken);
-        if (payment is not null)
+        if (payment is not null && payment.Status == PaymentStatus.Unpaid)
         {
             payment.MarkFailed(result.ErrorMessage ?? "Payment failed");
             await _context.SaveChangesAsync(cancellationToken);

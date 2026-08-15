@@ -141,6 +141,29 @@ public sealed class FoodOrder : BaseEntity
         MarkUpdated();
     }
 
+    /// <summary>
+    /// Removes an item from the order and recalculates the total. Used for
+    /// partial fulfillment when a vendor discovers an item is out of stock
+    /// after accepting the order. The price difference is refunded to the
+    /// customer via Razorpay. Only valid for orders that have not been
+    /// delivered or cancelled.
+    /// </summary>
+    /// <returns>The refund amount (price of the removed item × quantity).</returns>
+    public decimal RemoveItem(Guid itemId)
+    {
+        if (Status is FoodOrderStatus.Delivered or FoodOrderStatus.Cancelled)
+            throw new InvalidOperationException("Cannot modify a delivered or cancelled order.");
+
+        var item = _items.FirstOrDefault(i => i.Id == itemId)
+            ?? throw new InvalidOperationException("Item not found in this order.");
+
+        var refundAmount = item.LineTotal;
+        _items.Remove(item);
+        Recalculate();
+        MarkUpdated();
+        return refundAmount;
+    }
+
     public void RecordPayment(PaymentStatus status)
     {
         PaymentStatus = status;

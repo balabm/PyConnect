@@ -29,6 +29,13 @@ class DriverApi {
     await _api.post('api/driver/tasks/$taskId/complete');
   }
 
+  /// Emergency release: unassigns the driver from the task and pushes it
+  /// back to the dispatch queue for the next nearest driver. Used when the
+  /// driver has a breakdown or emergency and cannot complete the trip.
+  Future<void> emergencyRelease(String taskId) async {
+    await _api.post('api/driver/tasks/$taskId/emergency-release');
+  }
+
   /// Marks the driver as arrived at the store/restaurant for a food or
   /// essentials delivery. Persists the phase for app-restart resume.
   Future<void> markArrivedAtStore(String taskId) async {
