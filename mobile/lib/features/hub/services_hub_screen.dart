@@ -12,6 +12,30 @@ class ServicesHubScreen extends StatelessWidget {
 
   static const _services = [
     _HubService(
+      icon: Icons.receipt_long_outlined,
+      title: 'My Bookings & Activity',
+      subtitle: 'Stays, food, rides, rentals',
+      route: '/activity',
+    ),
+    _HubService(
+      icon: Icons.bookmark_outline,
+      title: 'Saved Places & Addresses',
+      subtitle: 'Your go-to locations',
+      route: '/rides/saved-locations',
+    ),
+    _HubService(
+      icon: Icons.emergency_outlined,
+      title: 'Safety & Emergency SOS',
+      subtitle: 'Contacts and emergency settings',
+      route: '/rides/emergency-contacts',
+    ),
+    _HubService(
+      icon: Icons.headset_mic_outlined,
+      title: 'Help & Support',
+      subtitle: 'Disputes, help, contact us',
+      route: '',
+    ),
+    _HubService(
       icon: Icons.directions_bus_outlined,
       title: 'Transit',
       subtitle: 'Bus, ferry & luggage cloak',
@@ -19,7 +43,7 @@ class ServicesHubScreen extends StatelessWidget {
     ),
     _HubService(
       icon: Icons.shopping_bag_outlined,
-      title: 'Shop',
+      title: 'Quick Essentials',
       subtitle: 'Essentials & daily needs',
       route: '/essentials',
     ),
@@ -98,6 +122,12 @@ class _HubRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () {
         AppHaptics.light();
+        if (service.route.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Support chat is coming soon.')),
+          );
+          return;
+        }
         context.go(service.route);
       },
       child: Container(

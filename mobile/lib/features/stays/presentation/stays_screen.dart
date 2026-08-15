@@ -34,6 +34,11 @@ class _StaysScreenState extends ConsumerState<StaysScreen> {
         title: const Text('Boutique Stays'),
         actions: [
           IconButton(
+            onPressed: () => context.go('/activity'),
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'My Bookings',
+          ),
+          IconButton(
             onPressed: () => ref.refresh(homestayListProvider),
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',

@@ -62,7 +62,7 @@ class _EssentialsScreenState extends ConsumerState<EssentialsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Essentials'),
+        title: const Text('Quick Essentials'),
         actions: [
           IconButton(
             icon: const Icon(Icons.storefront),

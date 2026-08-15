@@ -90,7 +90,10 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                    shadows: [
+                      Shadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 1)),
+                      Shadow(color: Colors.black54, blurRadius: 4),
+                    ],
                   ),
                 ),
                 background: Stack(
@@ -119,9 +122,11 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     // Priority Ping badge
                     if (venue.isPriorityPingActive)
                       Positioned(
-                        top: MediaQuery.of(context).padding.top + 8,
+                        top: MediaQuery.of(context).padding.top + 16,
                         right: 16,
-                        child: Container(
+                        child: SafeArea(
+                          top: true,
+                          child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: AppTheme.emerald,
@@ -144,6 +149,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -257,6 +263,34 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                           ),
                         )),
                   ],
+                  const SizedBox(height: 24),
+                  if (_amenitiesFor(venue.category).isNotEmpty) ...[
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 560),
+                      child: const SectionHeader(icon: Icons.auto_awesome, title: 'Amenities'),
+                    ),
+                    const SizedBox(height: 8),
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 580),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _amenitiesFor(venue.category)
+                            .map((a) => Chip(
+                                  label: Text(a),
+                                  backgroundColor: AppTheme.emerald.withValues(alpha: 0.08),
+                                  side: BorderSide.none,
+                                  labelStyle: const TextStyle(color: AppTheme.emerald, fontSize: 12),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 590),
+                    child: _InfoTile(icon: Icons.checkroom, text: _dressCodeFor(venue.category)),
+                  ),
                   const SizedBox(height: 28),
                   FadeSlideIn(
                     delay: const Duration(milliseconds: 600),
@@ -347,6 +381,28 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
 
   String _formatTime(TimeOfDay time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  List<String> _amenitiesFor(String category) {
+    final c = category.toLowerCase();
+    if (['pub', 'bar', 'club', 'nightlife', 'lounge'].contains(c)) {
+      return const ['DJ', 'Dance Floor', 'Smoking Area', 'WiFi', 'Air Conditioning'];
+    }
+    if (['restaurant', 'cafe'].contains(c)) {
+      return const ['Air Conditioning', 'Outdoor Seating', 'WiFi', 'Valet Parking'];
+    }
+    return const ['WiFi', 'Parking', 'Air Conditioning'];
+  }
+
+  String _dressCodeFor(String category) {
+    final c = category.toLowerCase();
+    if (['pub', 'bar', 'club', 'nightlife', 'lounge'].contains(c)) {
+      return 'Smart casual. No flip-flops or beachwear after 7 PM.';
+    }
+    if (['restaurant', 'cafe'].contains(c)) {
+      return 'Casual. Family-friendly attire welcome.';
+    }
+    return 'Casual';
   }
 }
 

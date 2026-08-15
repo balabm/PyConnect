@@ -46,7 +46,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to go offline: $e'),
-              backgroundColor: AppTheme.coral,
+              backgroundColor: AppTheme.danger,
             ),
           );
         }
@@ -66,7 +66,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to go online: $e'),
-              backgroundColor: AppTheme.coral,
+              backgroundColor: AppTheme.danger,
             ),
           );
         }
@@ -85,7 +85,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Please enable location services to go online'),
-              backgroundColor: AppTheme.coral,
+              backgroundColor: AppTheme.danger,
             ),
           );
         }
@@ -100,7 +100,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Location permission is required to go online'),
-                backgroundColor: AppTheme.coral,
+                backgroundColor: AppTheme.danger,
               ),
             );
           }
@@ -112,7 +112,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Please enable location permission in Settings'),
-              backgroundColor: AppTheme.coral,
+              backgroundColor: AppTheme.danger,
             ),
           );
         }

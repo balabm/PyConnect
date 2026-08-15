@@ -94,7 +94,7 @@ class HomestayCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.9),
+                        color: AppTheme.info,
                         borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                       child: const Row(
