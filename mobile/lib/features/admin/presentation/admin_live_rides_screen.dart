@@ -59,12 +59,13 @@ class _AdminLiveRidesScreenState extends ConsumerState<AdminLiveRidesScreen> {
             final deliveriesAsync = ref.watch(adminActiveDeliveriesProvider);
             final deliveries = deliveriesAsync.valueOrNull ?? [];
             final driversAsync = ref.watch(adminDriverLocationsProvider);
-            final onlineDrivers = (driversAsync.valueOrNull ?? [])
+            final drivers = (driversAsync.valueOrNull ?? [])
                 .where((d) => d.isOnline)
-                .length;
+                .toList();
+            final onlineDrivers = drivers.length;
             return Stack(
               children: [
-                _LiveOpsMap(rides: rides, deliveries: deliveries),
+                _LiveOpsMap(rides: rides, deliveries: deliveries, drivers: drivers),
                 Positioned(
                   top: 12,
                   left: 12,
@@ -133,10 +134,11 @@ class _AdminLiveRidesScreenState extends ConsumerState<AdminLiveRidesScreen> {
 
 /// Global map showing all active rides, online drivers, and food deliveries.
 class _LiveOpsMap extends StatelessWidget {
-  const _LiveOpsMap({required this.rides, this.deliveries = const []});
+  const _LiveOpsMap({required this.rides, this.deliveries = const [], this.drivers = const []});
 
   final List<AdminActiveRide> rides;
   final List<Map<String, dynamic>> deliveries;
+  final List<DriverLocation> drivers;
 
   @override
   Widget build(BuildContext context) {
@@ -171,6 +173,15 @@ class _LiveOpsMap extends StatelessWidget {
           child: const Icon(Icons.shopping_bag_rounded, color: Colors.orange, size: 28),
         ));
       }
+    }
+    // Add online driver markers (emerald navigation icon).
+    for (final d in drivers) {
+      markers.add(Marker(
+        point: LatLng(d.lat, d.lng),
+        width: 40,
+        height: 40,
+        child: const Icon(Icons.navigation, color: AdminColors.accent, size: 26),
+      ));
     }
 
     return FlutterMap(

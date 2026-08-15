@@ -531,7 +531,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
                                                 size: 20),
                                             const SizedBox(width: 8),
                                             Text(
-                                                'Request ${_vehicles[_selectedVehicle].$1} \u00B7 \u20B9${_calculateFare(_selectedVehicle, ref.read(routeProvider((start: _pickupLocation!, end: _dropoffLocation!))).valueOrNull?.distanceKm ?? 0, ref.read(routeProvider((start: _pickupLocation!, end: _dropoffLocation!))).valueOrNull?.durationMin ?? 0).toInt()}',
+                                                'Request ${_vehicles[_selectedVehicle].$1} \u2022 \u20B9${_calculateFare(_selectedVehicle, ref.read(routeProvider((start: _pickupLocation!, end: _dropoffLocation!))).valueOrNull?.distanceKm ?? 0, ref.read(routeProvider((start: _pickupLocation!, end: _dropoffLocation!))).valueOrNull?.durationMin ?? 0).toInt()}',
                                                 style: const TextStyle(
                                                     fontSize: 16,
                                                     fontWeight:

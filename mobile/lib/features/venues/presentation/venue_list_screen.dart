@@ -411,7 +411,7 @@ class _VenueCard extends StatelessWidget {
                         Icon(vibe.icon, size: 12, color: vibe.color),
                         const SizedBox(width: 3),
                         Text(
-                          '${vibe.label} · $occupancyPct%',
+                          '${vibe.label} \u2022 $occupancyPct%',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,

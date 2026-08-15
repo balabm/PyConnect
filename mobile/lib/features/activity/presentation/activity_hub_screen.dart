@@ -322,9 +322,21 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
 
         String subtitle = scooterModel;
         if (startTime != null && endTime != null) {
-          subtitle = '$scooterModel · $startTime → $endTime';
+          final end = DateTime.tryParse(endTime.toString());
+          if (end != null && isActive) {
+            final remaining = end.difference(DateTime.now());
+            if (remaining.isNegative) {
+              subtitle = '$scooterModel \u2022 Overdue';
+            } else {
+              final h = remaining.inHours;
+              final m = remaining.inMinutes.remainder(60);
+              subtitle = '$scooterModel \u2022 Return in ${h}h ${m}m';
+            }
+          } else {
+            subtitle = '$scooterModel \u2022 $startTime \u2192 $endTime';
+          }
         } else if (startTime != null) {
-          subtitle = '$scooterModel · from $startTime';
+          subtitle = '$scooterModel \u2022 from $startTime';
         }
 
         items.add(_ActivityItem(

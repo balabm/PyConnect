@@ -84,15 +84,31 @@ class _VendorRegistrationScreenState
       _selectedCategory != null &&
       _phoneController.text.trim().length >= 10;
 
-  bool get _isStep2Valid =>
-      _fssaiController.text.trim().isNotEmpty ||
-      _gstController.text.trim().isNotEmpty ||
-      _panController.text.trim().isNotEmpty;
+  bool get _isStep2Valid {
+    final fssai = _fssaiController.text.trim();
+    final gst = _gstController.text.trim();
+    final pan = _panController.text.trim();
+    // At least one KYC field is required.
+    if (fssai.isEmpty && gst.isEmpty && pan.isEmpty) return false;
+    // Format validation: FSSAI is 14 digits, GSTIN is 15 alphanumeric,
+    // PAN is 10 chars (5 letters + 4 digits + 1 letter).
+    if (fssai.isNotEmpty && !RegExp(r'^\d{14}$').hasMatch(fssai)) return false;
+    if (gst.isNotEmpty && !RegExp(r'^[A-Z0-9]{15}$').hasMatch(gst.toUpperCase())) return false;
+    if (pan.isNotEmpty && !RegExp(r'^[A-Z]{5}\d{4}[A-Z]$').hasMatch(pan.toUpperCase())) return false;
+    return true;
+  }
 
-  bool get _isStep3Valid =>
-      _bankAccountController.text.trim().isNotEmpty &&
-      _bankIfscController.text.trim().isNotEmpty &&
-      _bankNameController.text.trim().isNotEmpty;
+  bool get _isStep3Valid {
+    final account = _bankAccountController.text.trim();
+    final ifsc = _bankIfscController.text.trim();
+    final name = _bankNameController.text.trim();
+    if (account.isEmpty || ifsc.isEmpty || name.isEmpty) return false;
+    // IFSC: 4 letters + 0 + 6 alphanumeric (e.g. HDFC0001234).
+    if (!RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$').hasMatch(ifsc.toUpperCase())) return false;
+    // Account number: 9-18 digits.
+    if (!RegExp(r'^\d{9,18}$').hasMatch(account)) return false;
+    return true;
+  }
 
   Future<void> _pickFile(File? current, Function(File) onPicked) async {
     AppHaptics.light();

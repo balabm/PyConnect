@@ -109,6 +109,12 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         onDecline: () {
           Navigator.pop(sheetContext);
           _offerSheetOpen = false;
+          // Notify backend so the offer can be re-dispatched immediately.
+          try {
+            ref.read(driverSignalRProvider).declineRide(offer.rideId);
+          } catch (_) {
+            // Best-effort decline — backend will timeout the offer anyway.
+          }
         },
       ),
     ).whenComplete(() => _offerSheetOpen = false);
@@ -163,9 +169,17 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           if (profile.id.isNotEmpty) {
             await ref.read(driverSignalRProvider).connect(profile.id);
           }
-        } catch (_) {
+        } catch (e) {
           // SignalR connection failure is non-fatal — location pings still
-          // allow dispatch via polling. The driver can retry by toggling.
+          // allow dispatch via polling. Warn the driver so they can retry.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Could not connect to dispatch: $e. Toggle offline/online to retry.'),
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
         }
       } catch (e) {
         if (mounted) {

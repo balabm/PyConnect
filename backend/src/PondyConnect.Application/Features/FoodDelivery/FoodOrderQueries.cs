@@ -28,16 +28,34 @@ public sealed record FoodOrderItemResponse(string Name, int Quantity, decimal Un
 public sealed class GetFoodOrderHandler : IRequestHandler<GetFoodOrderQuery, FoodOrderDetailResponse>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public GetFoodOrderHandler(IApplicationDbContext context) => _context = context;
+    public GetFoodOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    {
+        _context = context;
+        _currentUser = currentUser;
+    }
 
     public async Task<FoodOrderDetailResponse> Handle(GetFoodOrderQuery request, CancellationToken cancellationToken)
     {
+        var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("User not authenticated.");
         var order = await _context.FoodOrders
             .AsNoTracking()
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken)
             ?? throw new InvalidOperationException("Order not found.");
+
+        // Ownership check: only the order owner, the assigned vendor, or an admin may view details.
+        var isOwner = order.UserId == userId;
+        var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+        var isVendor = false;
+        if (!isOwner && !isAdmin)
+        {
+            var vendorEntity = await _context.Vendors.AsNoTracking().FirstOrDefaultAsync(v => v.Id == order.VendorId, cancellationToken);
+            isVendor = vendorEntity != null && vendorEntity.ContactPhone == _currentUser.Phone;
+        }
+        if (!isOwner && !isAdmin && !isVendor)
+            throw new UnauthorizedAccessException("You are not authorized to view this order.");
 
         var vendor = await _context.Vendors.AsNoTracking().FirstOrDefaultAsync(v => v.Id == order.VendorId, cancellationToken);
 

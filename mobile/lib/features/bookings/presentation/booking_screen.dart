@@ -338,14 +338,23 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       switch (paymentResult) {
         case PaymentSuccess(:final paymentId, :final orderId, :final signature):
           // Verify payment signature on backend before confirming.
-          await paymentService.verifyPayment(
+          final verified = await paymentService.verifyPayment(
             razorpayPaymentId: paymentId,
             razorpayOrderId: orderId,
             razorpaySignature: signature,
           );
-          if (mounted) {
-            setState(() => _bookingResult = booking);
+          if (!mounted) return;
+          if (!verified) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment verification failed. Please contact support.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            setState(() => _error = 'Payment verification failed');
+            return;
           }
+          setState(() => _bookingResult = booking);
         case PaymentError(:final code, :final message):
           if (mounted) {
             _showPaymentErrorSnackBar(code, message, () {
