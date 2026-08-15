@@ -81,7 +81,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('New order received!'),
-        backgroundColor: AppTheme.coral,
+        backgroundColor: AppTheme.emerald,
         duration: Duration(seconds: 2),
       ),
     );
@@ -111,7 +111,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: AppTheme.coral),
+          const CircularProgressIndicator(color: AppTheme.emerald),
           const SizedBox(height: 16),
           Text(
             'Loading dashboard...',
@@ -147,7 +147,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () {
@@ -164,7 +164,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
 
   Widget _buildContent() {
     return RefreshIndicator(
-      color: AppTheme.coral,
+      color: AppTheme.emerald,
       backgroundColor: const Color(0xFF1E293B),
       onRefresh: _loadData,
       child: SingleChildScrollView(
@@ -215,7 +215,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
               icon: Icons.receipt_long,
               label: 'Bookings',
               value: d.totalBookingsToday,
-              color: AppTheme.coral,
+              color: AppTheme.emerald,
             ),
           ),
           const SizedBox(width: 8),

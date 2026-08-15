@@ -34,7 +34,7 @@ class DrinksMenuScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.coral,
+        backgroundColor: AppTheme.emerald,
         onPressed: () {
           AppHaptics.light();
           _showAddDrinkSheet(context, ref);
@@ -43,7 +43,7 @@ class DrinksMenuScreen extends ConsumerWidget {
       ),
       body: menuAsync.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.coral),
+          child: CircularProgressIndicator(color: AppTheme.emerald),
         ),
         error: (e, _) => _buildError(context, ref, e.toString()),
         data: (items) {
@@ -83,7 +83,7 @@ class DrinksMenuScreen extends ConsumerWidget {
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () => ref.read(vendorMenuProvider.notifier).load(),
@@ -152,10 +152,10 @@ class _DrinkCard extends StatelessWidget {
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.coral.withValues(alpha: 0.15),
+              color: AppTheme.emerald.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.local_bar, color: AppTheme.coral, size: 24),
+            child: const Icon(Icons.local_bar, color: AppTheme.emerald, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -221,15 +221,15 @@ class _DrinkCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isAvailable ? AppTheme.emerald : AppTheme.coral,
+                  color: isAvailable ? AppTheme.emerald : AppTheme.danger,
                 ),
               ),
               Switch(
                 value: isAvailable,
                 activeThumbColor: AppTheme.emerald,
                 activeTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
-                inactiveThumbColor: AppTheme.coral,
-                inactiveTrackColor: AppTheme.coral.withValues(alpha: 0.3),
+                inactiveThumbColor: AppTheme.emerald,
+                inactiveTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
                 onChanged: (_) => onToggle(),
               ),
             ],
@@ -280,7 +280,7 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.coral),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
         );
       }
     } finally {
@@ -316,7 +316,7 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.coral,
+                backgroundColor: AppTheme.emerald,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: _submitting ? null : _submit,
@@ -354,7 +354,7 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTheme.coral),
+          borderSide: const BorderSide(color: AppTheme.emerald),
         ),
       ),
     );

@@ -44,7 +44,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
             child: Text('Cancel', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Activate'),
           ),
@@ -62,14 +62,14 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.message),
-            backgroundColor: result.success ? AppTheme.emerald : AppTheme.coral,
+            backgroundColor: result.success ? AppTheme.emerald : AppTheme.danger,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.coral),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
         );
       }
     } finally {
@@ -85,8 +85,8 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
         gradient: widget.isActive
             ? LinearGradient(
                 colors: [
-                  AppTheme.coral.withValues(alpha: 0.15),
-                  AppTheme.coralLight.withValues(alpha: 0.05),
+                  AppTheme.emerald.withValues(alpha: 0.15),
+                  AppTheme.emeraldLight.withValues(alpha: 0.05),
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -96,7 +96,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.isActive
-              ? AppTheme.coral.withValues(alpha: 0.3)
+              ? AppTheme.emerald.withValues(alpha: 0.3)
               : Colors.white.withValues(alpha: 0.05),
         ),
       ),
@@ -105,10 +105,10 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
           Container(
             width: 44, height: 44,
             decoration: BoxDecoration(
-              color: AppTheme.coral.withValues(alpha: 0.15),
+              color: AppTheme.emerald.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.rocket_launch, color: AppTheme.coral, size: 24),
+            child: const Icon(Icons.rocket_launch, color: AppTheme.emerald, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -138,13 +138,13 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
           if (_loading)
             const SizedBox(
               width: 24, height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.coral),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emerald),
             )
           else
             Switch(
               value: widget.isActive,
-              activeThumbColor: AppTheme.coral,
-              activeTrackColor: AppTheme.coral.withValues(alpha: 0.3),
+              activeThumbColor: AppTheme.emerald,
+              activeTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
               inactiveThumbColor: Colors.white.withValues(alpha: 0.5),
               inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
               onChanged: _onToggle,

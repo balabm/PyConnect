@@ -32,7 +32,7 @@ class ActiveOrdersPanel extends StatelessWidget {
                   Container(
                     width: 4, height: 20,
                     decoration: BoxDecoration(
-                      color: AppTheme.coral,
+                      color: AppTheme.emerald,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -50,13 +50,13 @@ class ActiveOrdersPanel extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppTheme.coral.withValues(alpha: 0.2),
+                        color: AppTheme.emerald.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         '${bookings.length}',
                         style: const TextStyle(
-                          color: AppTheme.coral,
+                          color: AppTheme.emerald,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -65,7 +65,7 @@ class ActiveOrdersPanel extends StatelessWidget {
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.notifications_active, color: AppTheme.coral, size: 20),
+                icon: const Icon(Icons.notifications_active, color: AppTheme.emerald, size: 20),
                 onPressed: onNewBooking,
                 tooltip: 'Test alert sound',
               ),

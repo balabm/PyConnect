@@ -31,7 +31,7 @@ class VendorBookingsScreen extends ConsumerWidget {
       ),
       body: bookingsAsync.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.coral),
+          child: CircularProgressIndicator(color: AppTheme.emerald),
         ),
         error: (e, _) => _buildError(context, ref, e.toString()),
         data: (bookings) {
@@ -39,7 +39,7 @@ class VendorBookingsScreen extends ConsumerWidget {
             return _buildEmpty(context);
           }
           return RefreshIndicator(
-            color: AppTheme.coral,
+            color: AppTheme.emerald,
             onRefresh: () => ref.read(vendorBookingsProvider.notifier).load(),
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -69,7 +69,7 @@ class VendorBookingsScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off, size: 48, color: AppTheme.coral),
+            const Icon(Icons.cloud_off, size: 48, color: AppTheme.emerald),
             const SizedBox(height: 12),
             Text(
               'Could not load bookings',
@@ -322,7 +322,7 @@ class _ServiceIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color) = switch (serviceType) {
-      'Nightlife' => (Icons.nightlife, AppTheme.coral),
+      'Nightlife' => (Icons.nightlife, AppTheme.emerald),
       'Transit' => (Icons.airport_shuttle, AppTheme.sky),
       'Luggage' => (Icons.luggage, AppTheme.gold),
       'Rental' => (Icons.pedal_bike, AppTheme.emerald),

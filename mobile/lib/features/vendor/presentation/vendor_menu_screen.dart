@@ -34,7 +34,7 @@ class VendorMenuScreen extends ConsumerWidget {
           AppHaptics.light();
           _showAddItemSheet(context, ref);
         },
-        backgroundColor: AppTheme.coral,
+        backgroundColor: AppTheme.emerald,
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: menuAsync.when(
@@ -183,9 +183,9 @@ class _MenuItemCard extends ConsumerWidget {
                   const PopupMenuItem(
                     value: 'delete',
                     child: Row(children: [
-                      Icon(Icons.delete, color: AppTheme.coral, size: 20),
+                      Icon(Icons.delete, color: AppTheme.danger, size: 20),
                       SizedBox(width: 12),
-                      Text('Remove Item', style: TextStyle(color: AppTheme.coral)),
+                      Text('Remove Item', style: TextStyle(color: AppTheme.danger)),
                     ]),
                   ),
                 ],
@@ -195,15 +195,15 @@ class _MenuItemCard extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: item.isAvailable ? AppTheme.emerald : AppTheme.coral,
+                  color: item.isAvailable ? AppTheme.emerald : AppTheme.danger,
                 ),
               ),
               Switch(
                 value: item.isAvailable,
                 activeThumbColor: AppTheme.emerald,
                 activeTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
-                inactiveThumbColor: AppTheme.coral,
-                inactiveTrackColor: AppTheme.coral.withValues(alpha: 0.3),
+                inactiveThumbColor: AppTheme.emerald,
+                inactiveTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
                 onChanged: (_) {
                   AppHaptics.light();
                   onToggle();
@@ -240,7 +240,7 @@ class _MenuItemCard extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
             onPressed: () {
               Navigator.pop(ctx);
               ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
@@ -313,7 +313,7 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.coral),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
         );
       }
     } finally {
@@ -443,7 +443,7 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.coral),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
         );
       }
     } finally {

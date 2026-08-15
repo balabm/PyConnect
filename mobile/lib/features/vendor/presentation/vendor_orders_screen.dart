@@ -108,13 +108,13 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppTheme.coral.withValues(alpha: 0.2),
+              color: AppTheme.emerald.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '$count',
               style: TextStyle(
-                color: AppTheme.coral,
+                color: AppTheme.emerald,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -130,7 +130,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: AppTheme.coral),
+          const CircularProgressIndicator(color: AppTheme.emerald),
           const SizedBox(height: 16),
           Text('Loading orders...',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
@@ -156,7 +156,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () => ref.read(vendorOrdersProvider.notifier).load(),
@@ -205,7 +205,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed: $e'),
-            backgroundColor: AppTheme.coral,
+            backgroundColor: AppTheme.emerald,
           ),
         );
       }
@@ -313,7 +313,7 @@ class _OrderCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => onAdvance('Cancelled'),
-                  style: TextButton.styleFrom(foregroundColor: AppTheme.coral),
+                  style: TextButton.styleFrom(foregroundColor: AppTheme.emerald),
                   child: const Text('Cancel'),
                 ),
               ],
@@ -337,7 +337,7 @@ class _OrderCard extends StatelessWidget {
   Color _statusColor(String status) => switch (status) {
         'Pending' => AppTheme.warning,
         'Accepted' => AppTheme.info,
-        'Preparing' => AppTheme.coral,
+        'Preparing' => AppTheme.emerald,
         'OutForDelivery' => AppTheme.emerald,
         'Delivered' => AppTheme.success,
         'Cancelled' => AppTheme.danger,
@@ -346,7 +346,7 @@ class _OrderCard extends StatelessWidget {
 
   _NextAction? _nextAction(String status) => switch (status) {
         'Pending' => _NextAction('Accept Order', 'Accepted', Icons.check, AppTheme.info),
-        'Accepted' => _NextAction('Start Preparing', 'Preparing', Icons.kitchen, AppTheme.coral),
+        'Accepted' => _NextAction('Start Preparing', 'Preparing', Icons.kitchen, AppTheme.emerald),
         'Preparing' => _NextAction('Send Out for Delivery', 'OutForDelivery', Icons.delivery_dining, AppTheme.emerald),
         'OutForDelivery' => _NextAction('Mark Delivered', 'Delivered', Icons.check_circle, AppTheme.success),
         _ => null,

@@ -70,13 +70,13 @@ class _ActiveRentalsScreenState extends ConsumerState<ActiveRentalsScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.coral))
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.emerald))
           : _error != null
               ? _buildError()
               : _rentals.isEmpty
                   ? _buildEmpty()
                   : RefreshIndicator(
-                      color: AppTheme.coral,
+                      color: AppTheme.emerald,
                       onRefresh: _loadData,
                       child: ListView.builder(
                         padding: const EdgeInsets.all(16),
@@ -117,7 +117,7 @@ class _ActiveRentalsScreenState extends ConsumerState<ActiveRentalsScreen> {
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () { setState(() => _loading = true); _loadData(); },

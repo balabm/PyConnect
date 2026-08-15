@@ -79,7 +79,7 @@ class ManageHubScreen extends ConsumerWidget {
                   icon: Icons.local_offer,
                   label: 'Promotions',
                   subtitle: 'Discounts & flash sales',
-                  color: AppTheme.coral,
+                  color: AppTheme.emerald,
                   onTap: () {
                     AppHaptics.light();
                     context.push('/promotions');
@@ -213,7 +213,7 @@ class ManageHubScreen extends ConsumerWidget {
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppTheme.coral, AppTheme.coralLight]),
+              gradient: const LinearGradient(colors: [AppTheme.emerald, AppTheme.emeraldLight]),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.store, color: Colors.white, size: 24),
@@ -266,7 +266,7 @@ class ManageHubScreen extends ConsumerWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit, color: AppTheme.coral),
+            icon: const Icon(Icons.edit, color: AppTheme.emerald),
             onPressed: () {
               AppHaptics.light();
               context.push('/venue');

@@ -36,7 +36,7 @@ class VendorWalletScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(color: AppTheme.coral),
+              const CircularProgressIndicator(color: AppTheme.emerald),
               const SizedBox(height: 16),
               Text('Loading wallet...',
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
@@ -53,7 +53,7 @@ class VendorWalletScreen extends ConsumerWidget {
               loading: () => const SliverToBoxAdapter(
                 child: Center(child: Padding(
                   padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(color: AppTheme.coral),
+                  child: CircularProgressIndicator(color: AppTheme.emerald),
                 )),
               ),
               error: (e, _) => SliverToBoxAdapter(child: _buildTransactionsError(e.toString())),
@@ -83,12 +83,12 @@ class VendorWalletScreen extends ConsumerWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.coral, AppTheme.coralLight],
+          colors: [AppTheme.emerald, AppTheme.emeraldLight],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.coral.withValues(alpha: 0.3),
+            color: AppTheme.emerald.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -202,7 +202,7 @@ class VendorWalletScreen extends ConsumerWidget {
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () => ref.invalidate(vendorWalletProvider),

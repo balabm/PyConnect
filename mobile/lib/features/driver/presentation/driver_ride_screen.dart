@@ -327,8 +327,8 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
                     const SizedBox(height: 16),
                     TextButton.icon(
                       onPressed: _loading ? null : _cancelRide,
-                      icon: const Icon(Icons.cancel, color: AppTheme.coral),
-                      label: const Text('Cancel Ride', style: TextStyle(color: AppTheme.coral)),
+                      icon: const Icon(Icons.cancel, color: AppTheme.danger),
+                      label: const Text('Cancel Ride', style: TextStyle(color: AppTheme.danger)),
                     ),
                   ],
                   if (isCompleted)
@@ -368,7 +368,7 @@ class _RouteInfo extends StatelessWidget {
         children: [
           Row(children: [const Icon(Icons.my_location, color: AppTheme.sky, size: 20), const SizedBox(width: 8), Expanded(child: Text(pickup, maxLines: 2, overflow: TextOverflow.ellipsis))]),
           Padding(padding: const EdgeInsets.only(left: 10), child: Container(width: 2, height: 20, color: Theme.of(context).dividerColor)),
-          Row(children: [const Icon(Icons.location_on, color: AppTheme.coral, size: 20), const SizedBox(width: 8), Expanded(child: Text(dropoff, maxLines: 2, overflow: TextOverflow.ellipsis))]),
+          Row(children: [const Icon(Icons.location_on, color: AppTheme.emerald, size: 20), const SizedBox(width: 8), Expanded(child: Text(dropoff, maxLines: 2, overflow: TextOverflow.ellipsis))]),
           const SizedBox(height: 12),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Distance: $distance', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)), Text('ETA: $eta', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13))]),
         ],

@@ -455,7 +455,7 @@ class _WalletContent extends StatelessWidget {
             icon: const Icon(Icons.flash_on),
             label: const Text('Instant Withdraw (\u20B95 Fee)'),
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.coral,
+              backgroundColor: AppTheme.emerald,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -494,14 +494,14 @@ class _LedgerEntryTile extends StatelessWidget {
     return ListTile(
       leading: Icon(
         isEarning ? Icons.add_circle : Icons.remove_circle,
-        color: isEarning ? AppTheme.emerald : AppTheme.coral,
+        color: isEarning ? AppTheme.emerald : AppTheme.danger,
       ),
       title: Text(entry.transactionType),
       subtitle: Text(entry.reference ?? ''),
       trailing: Text(
         '${isEarning ? '+' : ''}\u20B9${entry.amount.toStringAsFixed(2)}',
         style: TextStyle(
-          color: isEarning ? AppTheme.emerald : AppTheme.coral,
+          color: isEarning ? AppTheme.emerald : AppTheme.danger,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -545,7 +545,7 @@ class _WalletFallback extends StatelessWidget {
             icon: const Icon(Icons.flash_on),
             label: const Text('Instant Withdraw (\u20B95 Fee)'),
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.coral,
+              backgroundColor: AppTheme.emerald,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),

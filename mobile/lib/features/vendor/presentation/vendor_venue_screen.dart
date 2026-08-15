@@ -48,7 +48,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
   Future<void> _save() async {
     if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Venue name is required'), backgroundColor: AppTheme.coral),
+        const SnackBar(content: Text('Venue name is required'), backgroundColor: AppTheme.emerald),
       );
       return;
     }
@@ -74,7 +74,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.coral),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
         );
       }
     } finally {
@@ -99,7 +99,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(color: AppTheme.coral),
+              const CircularProgressIndicator(color: AppTheme.emerald),
               const SizedBox(height: 16),
               Text('Loading venue...',
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
@@ -118,7 +118,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
                 const SizedBox(height: 24),
                 FilledButton.icon(
-                  style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+                  style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Retry'),
                   onPressed: () => ref.read(venueDetailProvider.notifier).load(),
@@ -243,12 +243,12 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: AppTheme.coral.withValues(alpha: 0.15),
+              color: AppTheme.emerald.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               venue.category,
-              style: const TextStyle(color: AppTheme.coral, fontSize: 12, fontWeight: FontWeight.w600),
+              style: const TextStyle(color: AppTheme.emerald, fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -295,7 +295,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.coral, width: 1.5),
+              borderSide: const BorderSide(color: AppTheme.emerald, width: 1.5),
             ),
           ),
         ),

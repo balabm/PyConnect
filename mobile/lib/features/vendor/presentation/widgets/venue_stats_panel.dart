@@ -50,7 +50,7 @@ class VenueStatsPanel extends StatelessWidget {
               Expanded(child: _MetricTile(
                 label: 'Total Today',
                 value: dashboard.totalBookingsToday,
-                color: AppTheme.coral,
+                color: AppTheme.emerald,
                 icon: Icons.receipt_long,
               )),
               const SizedBox(width: 8),

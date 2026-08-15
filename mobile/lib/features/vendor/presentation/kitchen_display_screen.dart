@@ -114,7 +114,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: AppTheme.coral),
+          const CircularProgressIndicator(color: AppTheme.emerald),
           const SizedBox(height: 16),
           Text('Loading kitchen board...',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
@@ -140,7 +140,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () {
@@ -193,7 +193,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
           children: [
             Expanded(child: _buildColumn('Incoming', incoming, AppTheme.info)),
             const SizedBox(width: 8),
-            Expanded(child: _buildColumn('Preparing', preparing, AppTheme.coral)),
+            Expanded(child: _buildColumn('Preparing', preparing, AppTheme.emerald)),
             const SizedBox(width: 8),
             Expanded(child: _buildColumn('Ready', ready, AppTheme.success)),
           ],

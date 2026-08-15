@@ -162,7 +162,7 @@ class _CreatePromotionFormState extends State<_CreatePromotionForm> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.coral),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
         );
       }
     } finally {
@@ -276,10 +276,10 @@ class _PromotionCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppTheme.coral.withValues(alpha: 0.1),
+              color: AppTheme.emerald.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.local_offer, color: AppTheme.coral),
+            child: const Icon(Icons.local_offer, color: AppTheme.emerald),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -304,7 +304,7 @@ class _PromotionCard extends StatelessWidget {
                   label: 'Discount',
                   value: '${promo.discountPercentage.toStringAsFixed(0)}%',
                   bold: true,
-                  valueColor: AppTheme.coral,
+                  valueColor: AppTheme.emerald,
                 ),
                 if (promo.expiresAt.isNotEmpty)
                   FareRow(
@@ -432,7 +432,7 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.coral),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
         );
       }
     } finally {
@@ -503,7 +503,7 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Text('Launch Flash Sale', style: TextStyle(fontSize: 16, color: Colors.white)),
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.coral),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
             ),
           ),
         ],
@@ -546,7 +546,7 @@ class _FlashPromoCard extends StatelessWidget {
                   label: 'Discount',
                   value: '${promo.discountPercentage.toStringAsFixed(0)}%',
                   bold: true,
-                  valueColor: AppTheme.coral,
+                  valueColor: AppTheme.emerald,
                 ),
                 FareRow(
                   label: 'Duration',
