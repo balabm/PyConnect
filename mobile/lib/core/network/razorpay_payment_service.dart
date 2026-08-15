@@ -52,9 +52,15 @@ class RazorpayPaymentService {
   /// Returns true when `USE_MOCK_PAYMENTS=true` is set in the .env file
   /// OR when no Razorpay key ID was provided via --dart-define.
   /// In both cases we bypass the real Razorpay SDK and simulate payment.
-  bool get useMockPayments =>
-      dotenv.maybeGet('USE_MOCK_PAYMENTS')?.toLowerCase() == 'true' ||
-      _razorpayKeyId.isEmpty;
+  bool get useMockPayments {
+    try {
+      return dotenv.maybeGet('USE_MOCK_PAYMENTS')?.toLowerCase() == 'true' ||
+          _razorpayKeyId.isEmpty;
+    } catch (_) {
+      // dotenv not loaded (release build without .env) — use mock if no key
+      return _razorpayKeyId.isEmpty;
+    }
+  }
 
   /// Razorpay Key ID. In production this comes from the backend or is
   /// injected via --dart-define. For now we read from the same config

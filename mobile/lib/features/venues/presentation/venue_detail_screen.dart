@@ -68,6 +68,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     final venue = _venue!;
     final vibe = Vibe.fromOccupancy(venue.occupancy);
     final occupancyPct = venue.occupancy.clamp(0, 100).toInt();
+    final isAtCapacity = occupancyPct >= 100;
 
     // Use curated fallback image when no venue image is available.
     final heroImageUrl = (venue.imageUrl != null && venue.imageUrl!.isNotEmpty)
@@ -223,6 +224,49 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  // Proactive capacity banner
+                  if (isAtCapacity)
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 250),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.danger.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.do_not_disturb, color: AppTheme.danger, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Sold Out — At Full Capacity',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.danger,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'This venue is fully booked for now. Check back later or try another spot.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.danger.withValues(alpha: 0.8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   if (venue.address != null)
                     FadeSlideIn(delay: const Duration(milliseconds: 300), child: _InfoTile(icon: Icons.place_outlined, text: venue.address!)),
                   if (venue.description != null) ...[
@@ -292,25 +336,95 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     child: _InfoTile(icon: Icons.checkroom, text: _dressCodeFor(venue.category)),
                   ),
                   const SizedBox(height: 28),
+                  // Menu Highlights
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 570),
+                    child: const SectionHeader(icon: Icons.restaurant_menu, title: 'Menu Highlights'),
+                  ),
+                  const SizedBox(height: 10),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 580),
+                    child: SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _menuHighlightsFor(venue.category).length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final item = _menuHighlightsFor(venue.category)[index];
+                          return _MenuHighlightCard(name: item);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Location snapshot
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 590),
+                    child: AppCard(
+                      child: Row(
+                        children: [
+                          Icon(Icons.map_outlined, color: AppTheme.emerald, size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Location',
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                if (venue.address != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    venue.address!,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.directions, color: AppTheme.emerald),
+                            tooltip: 'Get Directions',
+                            onPressed: () {
+                              AppHaptics.light();
+                              // In production: launch maps app with venue address
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
                   FadeSlideIn(
                     delay: const Duration(milliseconds: 600),
                     child: SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: () async {
-                          AppHaptics.light();
-                          final booked = await context.push<bool>(
-                            '/venues/${venue.id}/book',
-                            extra: venue,
-                          );
-                          if (booked == true && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Booking confirmed')),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.event_seat),
-                        label: const Text('Book cover / reservations'),
+                        onPressed: isAtCapacity
+                            ? null
+                            : () async {
+                                AppHaptics.light();
+                                final booked = await context.push<bool>(
+                                  '/venues/${venue.id}/book',
+                                  extra: venue,
+                                );
+                                if (booked == true && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Booking confirmed')),
+                                  );
+                                }
+                              },
+                        icon: Icon(isAtCapacity ? Icons.do_not_disturb : Icons.event_seat),
+                        label: Text(
+                          isAtCapacity ? 'Sold Out - At Full Capacity' : 'Book cover / reservations',
+                        ),
                       ),
                     ),
                   ),
@@ -404,6 +518,23 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     }
     return 'Casual';
   }
+
+  List<String> _menuHighlightsFor(String category) {
+    final c = category.toLowerCase();
+    if (['pub', 'bar', 'club', 'nightlife', 'lounge'].contains(c)) {
+      return const ['Cocktails', 'Beer Tower', 'Mocktails', 'Tapas', 'Shots'];
+    }
+    if (['restaurant'].contains(c)) {
+      return const ['Chef Special', 'Biryani', 'Pasta', 'Pizza', 'Desserts'];
+    }
+    if (['cafe'].contains(c)) {
+      return const ['Cold Brew', 'Cappuccino', 'Croissant', 'Cheesecake', 'Sandwich'];
+    }
+    if (['pizzeria'].contains(c)) {
+      return const ['Margherita', 'Pepperoni', 'Calzone', 'Garlic Bread', 'Tiramisu'];
+    }
+    return const ['Popular', 'Specials', 'Drinks', 'Desserts'];
+  }
 }
 
 class _InfoTile extends StatelessWidget {
@@ -421,6 +552,42 @@ class _InfoTile extends StatelessWidget {
           Icon(icon, size: 20, color: AppTheme.emerald),
           const SizedBox(width: 12),
           Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
+class _MenuHighlightCard extends StatelessWidget {
+  const _MenuHighlightCard({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 120,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.emerald.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.restaurant, color: AppTheme.emerald, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );

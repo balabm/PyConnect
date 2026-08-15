@@ -3,7 +3,10 @@ namespace PondyConnect.Api.Controllers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Homestays;
+using PondyConnect.Domain.Enums;
 
 [ApiController]
 [Route("api/homestays")]
@@ -11,10 +14,14 @@ using PondyConnect.Application.Features.Homestays;
 public sealed class HomestaysController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
 
-    public HomestaysController(IMediator mediator)
+    public HomestaysController(IMediator mediator, IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _mediator = mediator;
+        _context = context;
+        _currentUser = currentUser;
     }
 
     [HttpGet("search")]
@@ -80,5 +87,32 @@ public sealed class HomestaysController : ControllerBase
         {
             return BadRequest(new { Message = ex.Message });
         }
+    }
+
+    [HttpGet("my-bookings")]
+    [ProducesResponseType(typeof(IReadOnlyList<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<object>>> MyBookings(CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null)
+            return Unauthorized(new { Message = "Authentication required." });
+
+        var bookings = await _context.ServiceBookings
+            .Where(b => b.UserId == userId && b.ServiceType == ServiceType.Homestay)
+            .OrderByDescending(b => b.CreatedAt)
+            .Select(b => new
+            {
+                id = b.Id,
+                status = b.Status.ToString(),
+                checkInDate = b.CheckInDate,
+                checkOutDate = b.CheckOutDate,
+                homestayId = b.HomestayId,
+                totalAmount = b.TotalAmount,
+                createdAt = b.CreatedAt,
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(bookings);
     }
 }

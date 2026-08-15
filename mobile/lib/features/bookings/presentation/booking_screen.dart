@@ -102,12 +102,63 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
     final cover = _coverCharge(venue.category);
     final total = cover * _seats;
+    final occupancyPct = venue.occupancy.clamp(0, 100).toInt();
+    final isAtCapacity = occupancyPct >= 100;
+    final availableCapacity = venue.maxCapacity != null
+        ? (venue.maxCapacity! - (venue.maxCapacity! * occupancyPct ~/ 100))
+        : null;
+    final exceedsCapacity = availableCapacity != null && _seats > availableCapacity;
 
     return Scaffold(
       appBar: AppBar(title: Text('Book · ${venue.name}')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          // Proactive capacity banner
+          if (isAtCapacity)
+            Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.do_not_disturb, color: AppTheme.danger, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'This venue is at full capacity. Booking is currently unavailable.',
+                      style: TextStyle(color: AppTheme.danger, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (exceedsCapacity)
+            Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppTheme.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: AppTheme.warning, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Only $availableCapacity ${availableCapacity == 1 ? 'seat' : 'seats'} available. Reduce guest count.',
+                      style: TextStyle(color: AppTheme.warning, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _Section(
             title: 'How many?',
             child: _SeatStepper(
@@ -161,7 +212,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             const SizedBox(height: 12),
           ],
           FilledButton.icon(
-            onPressed: !_submitting
+            onPressed: !_submitting && !isAtCapacity && !exceedsCapacity
                 ? () async {
                     AppHaptics.light();
                     if (!isAuthenticated) {
@@ -181,9 +232,15 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.check_circle_outline),
+                : Icon(isAtCapacity ? Icons.do_not_disturb : Icons.check_circle_outline),
             label: Text(
-              isAuthenticated ? 'Confirm ₹$total' : 'Sign in to book',
+              isAtCapacity
+                  ? 'Sold Out'
+                  : exceedsCapacity
+                      ? 'Reduce guest count'
+                      : isAuthenticated
+                          ? 'Confirm ₹$total'
+                          : 'Sign in to book',
             ),
           ),
         ],

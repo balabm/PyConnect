@@ -159,4 +159,12 @@ class StaysApi {
     );
     return BookHomestayResponse.fromJson(body as Map<String, dynamic>);
   }
+
+  /// Fetches the current user's homestay bookings.
+  Future<List<Map<String, dynamic>>> listMyBookings() async {
+    final body = await _api.get('/api/homestays/my-bookings');
+    return (body as List)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+  }
 }

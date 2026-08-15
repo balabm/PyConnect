@@ -67,7 +67,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
   void initState() {
     super.initState();
     _pickupLocation = _defaultCenter;
-    _pickupAddress = 'Pondicherry';
+    _pickupAddress = 'Locating...';
     WidgetsBinding.instance.addPostFrameCallback((_) => _autoLocate());
   }
 
@@ -85,8 +85,18 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
           _pickupLocation = pos;
           _pickupAddress = address;
         });
+      } else if (mounted) {
+        // GPS not available — keep default center but show generic label
+        setState(() {
+          _pickupAddress = 'Pondicherry (tap map to set exact pickup)';
+        });
       }
     } catch (_) {
+      if (mounted) {
+        setState(() {
+          _pickupAddress = 'Pondicherry (tap map to set exact pickup)';
+        });
+      }
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -219,22 +229,25 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
             ),
           ),
 
-          // Floating selection mode indicator — positioned below AppBar
+          // Floating selection mode indicator — positioned safely below AppBar
           Positioned(
-            top: MediaQuery.of(context).padding.top + kToolbarHeight + 16,
+            top: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
             left: 16,
             right: 16,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: 1.0),
-              duration: const Duration(milliseconds: 300),
-              builder: (context, value, child) {
-                return Opacity(opacity: value, child: child);
-              },
-              child: MapSelectionModeIndicator(
-                isSelectingPickup: _selectingPickup,
-                canToggle: _dropoffLocation != null,
-                onToggle: () =>
-                    setState(() => _selectingPickup = !_selectingPickup),
+            child: SafeArea(
+              top: false,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 300),
+                builder: (context, value, child) {
+                  return Opacity(opacity: value, child: child);
+                },
+                child: MapSelectionModeIndicator(
+                  isSelectingPickup: _selectingPickup,
+                  canToggle: _dropoffLocation != null,
+                  onToggle: () =>
+                      setState(() => _selectingPickup = !_selectingPickup),
+                ),
               ),
             ),
           ),

@@ -7,29 +7,32 @@ import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 
-/// Providers that fetch food orders and ride history in parallel.
+/// Providers that fetch food orders, ride history, stays, and rentals in parallel.
 final _foodOrdersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  ref.watch(authTokenProvider);
   final api = ref.watch(foodApiProvider);
   return await api.listOrders();
 });
 
 final _rideHistoryProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  ref.watch(authTokenProvider);
   final api = ref.watch(ridesApiProvider);
   return await api.listRides();
 });
 
-/// Stub: my-stays bookings endpoint is not yet available.
-final _staysBookingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  return [];
+final _staysBookingsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  ref.watch(authTokenProvider);
+  return ref.watch(staysApiProvider).listMyBookings();
 });
 
-/// Stub: my-rentals endpoint is not yet available.
 final _rentalsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  return [];
+  ref.watch(authTokenProvider);
+  return ref.watch(rentalApiProvider).listRentals();
 });
 
-/// A unified activity feed aggregating food orders, ride history, and
-/// venue bookings into a single chronological list.
+/// A unified activity feed aggregating food orders, ride history, stays,
+/// and rentals into a single chronological list.
 class ActivityHubScreen extends ConsumerStatefulWidget {
   const ActivityHubScreen({super.key});
 
@@ -119,7 +122,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
     BuildContext context,
     AsyncValue<List<dynamic>> foodAsync,
     AsyncValue<List<dynamic>> rideAsync,
-    AsyncValue<List<dynamic>> staysAsync,
+    AsyncValue<List<Map<String, dynamic>>> staysAsync,
     AsyncValue<List<dynamic>> rentalsAsync,
   ) {
     // Loading state
@@ -127,7 +130,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       return const ShimmerList(count: 6, withImage: false);
     }
 
-    // Error state
+    // Error state — only show error if ALL providers failed
     final allError = foodAsync.hasError && rideAsync.hasError && staysAsync.hasError && rentalsAsync.hasError;
     if (allError) {
       return ErrorState(
@@ -141,18 +144,41 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       );
     }
 
-    // Stays and rentals tabs are stubs pending backend booking endpoints.
-    if (_filter == 'Stays' || _filter == 'Rentals') {
-      return EmptyState(
-        icon: _filter == 'Stays' ? Icons.bed_outlined : Icons.key_outlined,
-        title: 'No ${_filter.toLowerCase()} yet',
-        subtitle: '$_filter booking history will appear here once the backend endpoint is wired.',
-      );
-    }
-
     // Build unified activity items
     final items = <_ActivityItem>[];
 
+    // Stays
+    final stays = staysAsync.valueOrNull ?? [];
+    if (_filter == 'All' || _filter == 'Stays') {
+      for (final booking in stays) {
+        final status = (booking['status'] as String?) ?? '';
+        final statusLower = status.toLowerCase();
+        final isActive = statusLower == 'pending' ||
+            statusLower == 'confirmed' ||
+            statusLower == 'checkedin' ||
+            statusLower == 'checked_in';
+
+        final checkIn = booking['checkInDate'];
+        final checkOut = booking['checkOutDate'];
+        String subtitle = 'Stay booking';
+        if (checkIn != null && checkOut != null) {
+          subtitle = '$checkIn → $checkOut';
+        }
+
+        items.add(_ActivityItem(
+          type: _ActivityType.stay,
+          title: 'Homestay Booking',
+          subtitle: subtitle,
+          status: status,
+          amount: (booking['totalAmount'] as num?)?.toDouble(),
+          id: (booking['id'] as String?) ?? '',
+          isActive: isActive,
+          onTap: () => context.push('/stays'),
+        ));
+      }
+    }
+
+    // Food orders
     final foodOrders = foodAsync.valueOrNull ?? [];
     if (_filter == 'All' || _filter == 'Food') {
       for (final order in foodOrders) {
@@ -166,10 +192,13 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
             statusLower == 'outfordelivery' ||
             statusLower == 'out_for_delivery';
 
+        final itemCount = (map['items'] as List?)?.length ?? 0;
+        final vendorName = (map['vendorName'] as String?) ?? 'Food Order';
+
         items.add(_ActivityItem(
           type: _ActivityType.food,
-          title: (map['vendorName'] as String?) ?? 'Food Order',
-          subtitle: '${(map['items'] as List?)?.length ?? 0} items',
+          title: vendorName,
+          subtitle: '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
           status: status,
           amount: (map['totalAmount'] as num?)?.toDouble(),
           id: (map['id'] as String?) ?? '',
@@ -179,6 +208,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       }
     }
 
+    // Rides
     final rides = rideAsync.valueOrNull ?? [];
     if (_filter == 'All' || _filter == 'Rides') {
       for (final ride in rides) {
@@ -191,15 +221,53 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
             statusLower == 'inprogress' ||
             statusLower == 'in_progress';
 
+        final vehicleType = (map['vehicleType'] as String?) ?? 'Ride';
+
         items.add(_ActivityItem(
           type: _ActivityType.ride,
-          title: 'Ride',
+          title: '$vehicleType Ride',
           subtitle: '${map['pickupAddress'] ?? ''} → ${map['dropoffAddress'] ?? ''}',
           status: status,
           amount: (map['totalAmount'] as num?)?.toDouble(),
           id: (map['id'] as String?) ?? '',
           isActive: isActive,
           onTap: () => context.push('/rides/${map['id']}'),
+        ));
+      }
+    }
+
+    // Rentals
+    final rentals = rentalsAsync.valueOrNull ?? [];
+    if (_filter == 'All' || _filter == 'Rentals') {
+      for (final rental in rentals) {
+        final map = rental as Map<String, dynamic>;
+        final status = (map['status'] as String?) ?? '';
+        final statusLower = status.toLowerCase();
+        final isActive = statusLower == 'active' ||
+            statusLower == 'ongoing' ||
+            statusLower == 'pickedup' ||
+            statusLower == 'picked_up';
+
+        final scooterModel = (map['scooterModel'] as String?) ?? 'Scooter';
+        final startTime = map['startTime'] ?? map['createdAt'];
+        final endTime = map['endTime'];
+
+        String subtitle = scooterModel;
+        if (startTime != null && endTime != null) {
+          subtitle = '$scooterModel · $startTime → $endTime';
+        } else if (startTime != null) {
+          subtitle = '$scooterModel · from $startTime';
+        }
+
+        items.add(_ActivityItem(
+          type: _ActivityType.rental,
+          title: 'Scooter Rental',
+          subtitle: subtitle,
+          status: status,
+          amount: (map['totalAmount'] as num?)?.toDouble(),
+          id: (map['id'] as String?) ?? '',
+          isActive: isActive,
+          onTap: () => context.push('/transit'),
         ));
       }
     }
@@ -212,10 +280,20 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
     });
 
     if (items.isEmpty) {
-      return const EmptyState(
-        icon: Icons.receipt_long_outlined,
-        title: 'No activity yet',
-        subtitle: 'Start exploring to see your orders and rides here.',
+      return EmptyState(
+        icon: _filter == 'Stays'
+            ? Icons.bed_outlined
+            : _filter == 'Food'
+                ? Icons.restaurant_outlined
+                : _filter == 'Rides'
+                    ? Icons.two_wheeler_outlined
+                    : _filter == 'Rentals'
+                        ? Icons.key_outlined
+                        : Icons.receipt_long_outlined,
+        title: 'No ${_filter == 'All' ? 'activity' : _filter.toLowerCase()} yet',
+        subtitle: _filter == 'All'
+            ? 'Start exploring to see your orders and rides here.'
+            : 'Your ${_filter.toLowerCase()} history will appear here.',
       );
     }
 
@@ -231,7 +309,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
   }
 }
 
-enum _ActivityType { food, ride }
+enum _ActivityType { stay, food, ride, rental }
 
 class _ActivityItem {
   const _ActivityItem({
@@ -262,13 +340,17 @@ class _ActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final icon = switch (item.type) {
+      _ActivityType.stay => Icons.bed_outlined,
       _ActivityType.food => Icons.restaurant_outlined,
       _ActivityType.ride => Icons.two_wheeler_outlined,
+      _ActivityType.rental => Icons.key_outlined,
     };
 
     final iconColor = switch (item.type) {
+      _ActivityType.stay => AppTheme.info,
       _ActivityType.food => AppTheme.emerald,
-      _ActivityType.ride => AppTheme.emerald,
+      _ActivityType.ride => AppTheme.warning,
+      _ActivityType.rental => AppTheme.danger,
     };
 
     final statusVariant = item.isActive
@@ -276,7 +358,10 @@ class _ActivityCard extends StatelessWidget {
         : switch (item.status.toLowerCase()) {
             'completed' => BadgeVariant.success,
             'delivered' => BadgeVariant.success,
+            'checkedin' || 'checked_in' => BadgeVariant.success,
+            'returned' => BadgeVariant.success,
             'cancelled' => BadgeVariant.danger,
+            'expired' => BadgeVariant.danger,
             _ => BadgeVariant.info,
           };
 
@@ -335,7 +420,7 @@ class _ActivityCard extends StatelessWidget {
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -380,6 +465,12 @@ class _ActivityCard extends StatelessWidget {
       'accepted' => 'Driver assigned',
       'arrivedatpickup' => 'Driver arrived',
       'inprogress' || 'in_progress' => 'In progress',
+      'checkedin' || 'checked_in' => 'Checked in',
+      'active' => 'Active',
+      'ongoing' => 'Ongoing',
+      'pickedup' || 'picked_up' => 'Picked up',
+      'returned' => 'Returned',
+      'expired' => 'Expired',
       _ => status,
     };
   }
