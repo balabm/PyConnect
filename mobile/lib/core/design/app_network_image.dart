@@ -49,23 +49,10 @@ class AppNetworkImage extends StatelessWidget {
         height: height,
         width: width,
         color: fallbackColor ?? placeholderColor,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              fallbackIcon,
-              size: 36,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Image unavailable',
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        child: Icon(
+          fallbackIcon,
+          size: 32,
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
       ),
     );

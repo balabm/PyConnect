@@ -44,9 +44,30 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       if (mounted) {
         setState(() => _ride = ride);
         if (_routePoints == null) _fetchRoute(ride);
+        // Auto-fill ride OTP for testing when ride is accepted/arrived
+        _autofillRideOtp(ride);
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  /// Testing helper: peeks the ride-start OTP from the backend and
+  /// auto-fills the OTP input. Silent no-op in production.
+  Future<void> _autofillRideOtp(Map<String, dynamic> ride) async {
+    final status = (ride['status'] as String?).toString().toLowerCase();
+    if (status != 'accepted' && status != 'arrivedatpickup') return;
+    if (_otpController.text.isNotEmpty) return;
+
+    try {
+      final api = ref.read(ridesApiProvider);
+      final otp = await api.peekRideOtp(widget.rideId);
+      if (otp != null && otp.isNotEmpty && mounted) {
+        _otpController.text = otp;
+        setState(() {});
+      }
+    } catch (_) {
+      // Silent — autofill is a testing convenience
     }
   }
 

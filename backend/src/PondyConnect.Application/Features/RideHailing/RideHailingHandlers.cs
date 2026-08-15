@@ -430,6 +430,52 @@ public sealed class GetRideHandler : IRequestHandler<GetRideQuery, RideDetailRes
     }
 }
 
+/// <summary>
+/// Testing helper: returns the ride-start OTP for a given ride.
+/// Only available when the OTP service is in test/mock mode.
+/// Authorization: the rider or the assigned driver can peek.
+/// </summary>
+public sealed record PeekRideOtpQuery(Guid RideId) : IRequest<PeekRideOtpResponse>;
+
+public sealed record PeekRideOtpResponse(string? Otp);
+
+public sealed class PeekRideOtpHandler : IRequestHandler<PeekRideOtpQuery, PeekRideOtpResponse>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+
+    public PeekRideOtpHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    {
+        _context = context;
+        _currentUser = currentUser;
+    }
+
+    public async Task<PeekRideOtpResponse> Handle(PeekRideOtpQuery request, CancellationToken cancellationToken)
+    {
+        var ride = await _context.RideRequests.AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.RideId, cancellationToken)
+            ?? throw new InvalidOperationException("Ride not found.");
+
+        // Authorization: only the rider, the assigned driver, or an admin can peek.
+        var userId = _currentUser.UserId;
+        var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+        if (!isAdmin && userId.HasValue)
+        {
+            var isRider = ride.UserId == userId;
+            var isDriver = false;
+            if (ride.DriverId.HasValue)
+            {
+                isDriver = await _context.Drivers
+                    .AsNoTracking()
+                    .AnyAsync(d => d.Id == ride.DriverId.Value && d.UserId == userId, cancellationToken);
+            }
+            if (!isRider && !isDriver)
+                throw new UnauthorizedAccessException("You are not authorized to view this ride.");
+        }
+
+        return new PeekRideOtpResponse(ride.OtpCode);
+    }
+}
+
 public sealed record ListUserRidesQuery(int Page = 1, int PageSize = 20) : IRequest<IReadOnlyList<RideSummaryResponse>>;
 
 public sealed record RideSummaryResponse(Guid Id, string Status, decimal TotalAmount, DateTimeOffset RequestedAt, string PickupAddress, string DropoffAddress);

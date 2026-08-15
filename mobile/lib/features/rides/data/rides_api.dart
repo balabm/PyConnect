@@ -24,6 +24,20 @@ class RideHailingApi {
     await _api.post('/api/rides/$rideId/verify-otp', data: {'otp': otp});
   }
 
+  /// Testing helper: peeks the ride-start OTP from the backend.
+  /// Returns null if peek is disabled (production) or no OTP has been set.
+  Future<String?> peekRideOtp(String rideId) async {
+    try {
+      final body = await _api.get('/api/rides/$rideId/otp/peek');
+      if (body is Map<String, dynamic>) {
+        return body['otp'] as String?;
+      }
+    } catch (_) {
+      // Silent — peek is a testing convenience
+    }
+    return null;
+  }
+
   Future<void> completeWithMetrics(String rideId, double actualDistanceKm, int actualDurationMin) async {
     await _api.post('/api/rides/$rideId/complete-with-metrics', data: {
       'actualDistanceKm': actualDistanceKm,

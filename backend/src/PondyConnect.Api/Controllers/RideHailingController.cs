@@ -188,6 +188,24 @@ public sealed class RideHailingController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Testing helper: returns the ride-start OTP for the specified ride.
+    /// Only available when the OTP service is in test/mock mode.
+    /// The rider or the assigned driver can peek.
+    /// </summary>
+    [HttpGet("rides/{id:guid}/otp/peek")]
+    [Authorize]
+    [ProducesResponseType(typeof(PeekRideOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<PeekRideOtpResponse>> PeekRideOtp(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new PeekRideOtpQuery(id), ct);
+        if (result.Otp is null)
+            return NotFound(new { Message = "OTP not available for peek. Either no code was issued, the ride hasn't been accepted yet, or peek is disabled in production." });
+        return Ok(result);
+    }
+
     [HttpPost("rides/{id:guid}/complete-with-metrics")]
     [Authorize(Roles = "Driver")]
     public async Task<IActionResult> CompleteWithMetrics(Guid id, [FromBody] CompleteWithMetricsRequest request, CancellationToken ct)

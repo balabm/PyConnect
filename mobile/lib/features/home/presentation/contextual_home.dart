@@ -121,7 +121,7 @@ class _ContextualCardState extends State<_ContextualCard>
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return Column(
@@ -129,14 +129,14 @@ class _ContextualCardState extends State<_ContextualCard>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(7),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(widget.icon, color: Colors.white, size: 22),
+                      child: Icon(widget.icon, color: Colors.white, size: 20),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
@@ -271,9 +271,9 @@ class _MorningArrival extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.15,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.3,
             children: [
               FadeSlideIn(
                 delay: const Duration(milliseconds: 100),
@@ -320,7 +320,7 @@ class _AfternoonHeat extends StatelessWidget {
           const _HeroHeader(
             greeting: 'Beat the heat!',
             subtitle: 'AC cafes, chilled drinks & cool spots',
-            gradient: [AppTheme.coral, AppTheme.coralLight],
+            gradient: [AppTheme.lagoon, AppTheme.lagoonDark],
             icon: Icons.icecream,
           ),
           const SizedBox(height: 20),
@@ -337,9 +337,9 @@ class _AfternoonHeat extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.15,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.3,
             children: [
               FadeSlideIn(
                 delay: const Duration(milliseconds: 100),
@@ -348,7 +348,9 @@ class _AfternoonHeat extends StatelessWidget {
                   icon: Icons.local_cafe,
                   title: 'AC Cafes',
                   subtitle: 'Cool down with iced coffee & bites',
-                  gradient: AppTheme.sunsetGradient,
+                  gradient: LinearGradient(
+                    colors: [AppTheme.lagoon, AppTheme.lagoonDark],
+                  ),
                   route: '/venues?category=Cafe',
                 ),
               ),
@@ -359,8 +361,8 @@ class _AfternoonHeat extends StatelessWidget {
                   icon: Icons.restaurant,
                   title: 'Lunch',
                   subtitle: 'Wood-fired pizza & local cuisine',
-                  gradient: LinearGradient(
-                    colors: [AppTheme.coral, AppTheme.coralLight],
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.lagoonDark, AppTheme.night],
                   ),
                   route: '/food',
                 ),
@@ -405,9 +407,9 @@ class _EveningNightlife extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.15,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.3,
             children: [
               FadeSlideIn(
                 delay: const Duration(milliseconds: 100),
@@ -428,7 +430,7 @@ class _EveningNightlife extends StatelessWidget {
                   title: 'Live Crowd Density',
                   subtitle: 'Check real-time venue capacity',
                   gradient: LinearGradient(
-                    colors: [AppTheme.coral, AppTheme.gold],
+                    colors: [AppTheme.lagoonDark, AppTheme.lagoon],
                   ),
                   route: '/venues',
                 ),

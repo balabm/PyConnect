@@ -50,6 +50,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
   bool _loading = false;
   bool _selectingPickup = true;
   bool _locating = false;
+  String? _inlineError;
 
   static const _vehicles = [
     ('Bike', Icons.two_wheeler, 8.0, 15.0, 30.0, 2),
@@ -291,6 +292,39 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
                           children: [
                             // Address fields in a connected card
                             _buildAddressCard(),
+
+                            // Inline error pill
+                            if (_inlineError != null) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.danger.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.error_outline, size: 16, color: AppTheme.danger),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _inlineError!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.danger,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => setState(() => _inlineError = null),
+                                      child: Icon(Icons.close, size: 16, color: AppTheme.danger),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
 
                             if (hasRoute)
                               Consumer(
@@ -574,21 +608,11 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
       setState(() => _rideResult = result);
     } on AuthRequiredException {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please sign in to book a ride.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        setState(() => _inlineError = 'Please sign in to book a ride.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not request ride. Please try again.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        setState(() => _inlineError = 'Could not request ride. Please try again.');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
