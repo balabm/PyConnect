@@ -16,15 +16,34 @@ using PondyConnect.Domain.Enums;
 [Authorize(Roles = "Vendor")] // Default: all endpoints require Vendor role
 public sealed class VendorController : ControllerBase
 {
+    private static readonly string[] AllowedImageTypes = { "image/jpeg", "image/png", "image/webp" };
+    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+
     private readonly IMediator _mediator;
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IStorageService _storage;
 
-    public VendorController(IMediator mediator, IApplicationDbContext context, ICurrentUserService currentUser)
+    public VendorController(IMediator mediator, IApplicationDbContext context, ICurrentUserService currentUser, IStorageService storage)
     {
         _mediator = mediator;
         _context = context;
         _currentUser = currentUser;
+        _storage = storage;
+    }
+
+    /// <summary>
+    /// Validates that an uploaded file is an image within the allowed types
+    /// and size limit. Returns an error message if validation fails, null if OK.
+    /// </summary>
+    private static string? ValidateImageFile(IFormFile? file, string fieldName)
+    {
+        if (file is null) return null; // Optional fields are OK
+        if (file.Length > MaxFileSizeBytes)
+            return $"{fieldName} file exceeds the 10 MB size limit.";
+        if (!AllowedImageTypes.Contains(file.ContentType))
+            return $"{fieldName} file must be JPEG, PNG, or WebP.";
+        return null;
     }
 
     // -----------------------------------------------------------------------
@@ -105,11 +124,31 @@ public sealed class VendorController : ControllerBase
         if (vendor == null)
             return NotFound();
 
-        // For now, store the file names as URLs. In production, these would
-        // be uploaded to S3/private storage and the keys stored here.
-        var fssaiUrl = request.FssaiDoc != null ? $"vendor-kyc/{vendorId}/fssai-{Guid.NewGuid()}" : null;
-        var gstUrl = request.GstDoc != null ? $"vendor-kyc/{vendorId}/gst-{Guid.NewGuid()}" : null;
-        var panUrl = request.PanDoc != null ? $"vendor-kyc/{vendorId}/pan-{Guid.NewGuid()}" : null;
+        // Validate file types and sizes for any uploaded documents.
+        foreach (var (file, name) in new[] { (request.FssaiDoc, "FSSAI"), (request.GstDoc, "GST"), (request.PanDoc, "PAN") })
+        {
+            var error = ValidateImageFile(file, name);
+            if (error is not null)
+                return BadRequest(new { Message = error });
+        }
+
+        // Upload KYC documents to private storage — they contain sensitive
+        // business information and must never be publicly accessible.
+        string? fssaiUrl = null;
+        string? gstUrl = null;
+        string? panUrl = null;
+        if (request.FssaiDoc != null)
+            fssaiUrl = await _storage.UploadFileAsync(
+                request.FssaiDoc.OpenReadStream(), request.FssaiDoc.FileName, request.FssaiDoc.ContentType,
+                isPrivate: true, cancellationToken: cancellationToken);
+        if (request.GstDoc != null)
+            gstUrl = await _storage.UploadFileAsync(
+                request.GstDoc.OpenReadStream(), request.GstDoc.FileName, request.GstDoc.ContentType,
+                isPrivate: true, cancellationToken: cancellationToken);
+        if (request.PanDoc != null)
+            panUrl = await _storage.UploadFileAsync(
+                request.PanDoc.OpenReadStream(), request.PanDoc.FileName, request.PanDoc.ContentType,
+                isPrivate: true, cancellationToken: cancellationToken);
 
         vendor.SubmitKyc(
             request.FssaiNumber,

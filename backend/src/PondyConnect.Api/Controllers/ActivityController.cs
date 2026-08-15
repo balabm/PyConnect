@@ -70,21 +70,10 @@ public sealed class ActivityController : ControllerBase
         }
 
         // ── Food orders (title = vendor name, subtitle = item names) ──
+        // Use Include to load items in a single query (avoids N+1).
         var foodOrders = await _context.FoodOrders.AsNoTracking()
+            .Include(f => f.Items)
             .Where(f => f.UserId == userId.Value)
-            .Select(f => new
-            {
-                f.Id,
-                f.Status,
-                f.TotalAmount,
-                f.CreatedAt,
-                f.VendorId,
-                ItemCount = _context.FoodOrderItems.AsNoTracking().Count(i => i.FoodOrderId == f.Id),
-                ItemNames = _context.FoodOrderItems.AsNoTracking()
-                    .Where(i => i.FoodOrderId == f.Id)
-                    .Select(i => i.Name)
-                    .ToList()
-            })
             .ToListAsync(cancellationToken);
 
         var foodVendorIds = foodOrders.Select(f => f.VendorId).Distinct().ToList();
@@ -96,19 +85,21 @@ public sealed class ActivityController : ControllerBase
         {
             var title = vendorNames.TryGetValue(f.VendorId, out var name) ? name : "Food Order";
             // Show up to 3 item names, then "+N more" if there are more.
-            var names = f.ItemNames;
+            var items = f.Items;
+            var itemCount = items.Count;
+            var itemNames = items.Select(i => i.Name).ToList();
             string subtitle;
-            if (names.Count == 0)
+            if (itemNames.Count == 0)
             {
-                subtitle = $"{f.ItemCount} item{(f.ItemCount == 1 ? "" : "s")}";
+                subtitle = $"{itemCount} item{(itemCount == 1 ? "" : "s")}";
             }
-            else if (names.Count <= 3)
+            else if (itemNames.Count <= 3)
             {
-                subtitle = string.Join(", ", names);
+                subtitle = string.Join(", ", itemNames);
             }
             else
             {
-                subtitle = $"{string.Join(", ", names.Take(3))} +{names.Count - 3} more";
+                subtitle = $"{string.Join(", ", itemNames.Take(3))} +{itemNames.Count - 3} more";
             }
             activities.Add(new ActivityItem(
                 f.Id,

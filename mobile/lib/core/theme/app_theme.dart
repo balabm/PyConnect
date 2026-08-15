@@ -610,6 +610,12 @@ abstract final class AppTheme {
         color: accent,
         linearTrackColor: surfaceHover,
       ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+        ),
+      ),
     );
   }
 

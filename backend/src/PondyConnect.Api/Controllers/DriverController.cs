@@ -14,6 +14,9 @@ using PondyConnect.Api.Services;
 [Authorize]
 public sealed class DriverController : ControllerBase
 {
+    private static readonly string[] AllowedImageTypes = { "image/jpeg", "image/png", "image/webp" };
+    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+
     private readonly IMediator _mediator;
     private readonly DriverPayoutService _payoutService;
     private readonly DriverLocationStore _locationStore;
@@ -35,6 +38,19 @@ public sealed class DriverController : ControllerBase
         _dbContext = dbContext;
         _currentUser = currentUser;
         _storage = storage;
+    }
+
+    /// <summary>
+    /// Validates that an uploaded file is an image within the allowed types
+    /// and size limit. Returns an error message if validation fails, null if OK.
+    /// </summary>
+    private static string? ValidateImageFile(IFormFile file, string fieldName)
+    {
+        if (file.Length > MaxFileSizeBytes)
+            return $"{fieldName} file exceeds the 10 MB size limit.";
+        if (!AllowedImageTypes.Contains(file.ContentType))
+            return $"{fieldName} file must be JPEG, PNG, or WebP.";
+        return null;
     }
 
     /// <summary>
@@ -144,6 +160,14 @@ public sealed class DriverController : ControllerBase
             return BadRequest(new { Message = "RC image is required." });
         if (string.IsNullOrWhiteSpace(upiId))
             return BadRequest(new { Message = "UPI ID is required." });
+
+        // Validate file types and sizes to prevent malicious uploads.
+        foreach (var (file, name) in new[] { (aadhaar, "Aadhaar"), (drivingLicense, "Driving license"), (rc, "RC") })
+        {
+            var error = ValidateImageFile(file, name);
+            if (error is not null)
+                return BadRequest(new { Message = error });
+        }
 
         var userId = User.FindFirst("nameid")?.Value ?? User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userId))

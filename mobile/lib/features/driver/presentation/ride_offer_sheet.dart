@@ -60,24 +60,24 @@ class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStat
 
   Color get _serviceBadgeColor {
     final type = widget.offer.taskType.toLowerCase();
-    if (type.contains('food') || type.contains('essential')) return Colors.orange;
+    if (type.contains('food')) return Colors.orange;
     if (type.contains('ride') || type.contains('taxi')) return Colors.teal;
-    if (type.contains('quick') || type.contains('delivery')) return Colors.blue;
+    if (type.contains('essential') || type.contains('quick')) return Colors.blue;
     return AppTheme.emerald;
   }
 
   IconData get _serviceBadgeIcon {
     final type = widget.offer.taskType.toLowerCase();
-    if (type.contains('food') || type.contains('essential')) return Icons.restaurant;
+    if (type.contains('food')) return Icons.restaurant;
     if (type.contains('ride') || type.contains('taxi')) return Icons.local_taxi;
-    if (type.contains('quick') || type.contains('delivery')) return Icons.delivery_dining;
+    if (type.contains('essential') || type.contains('quick')) return Icons.delivery_dining;
     return Icons.local_taxi;
   }
 
   String get _serviceBadgeLabel {
     final type = widget.offer.taskType.toLowerCase();
     if (type.contains('food')) return 'Food Delivery';
-    if (type.contains('essential')) return 'Quick Essential';
+    if (type.contains('essential') || type.contains('quick')) return 'Quick Essential';
     if (type.contains('ride') || type.contains('taxi')) return 'Ride Request';
     if (type.contains('delivery')) return 'Delivery Task';
     return 'New Task';
