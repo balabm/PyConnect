@@ -224,10 +224,29 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
         final itemCount = (map['items'] as List?)?.length ?? 0;
         final vendorName = (map['vendorName'] as String?) ?? 'Food Order';
 
+        // Build subtitle from item names if available, fall back to count.
+        final itemsList = map['items'] as List? ?? [];
+        String subtitle;
+        if (itemsList.isEmpty) {
+          subtitle = '$itemCount ${itemCount == 1 ? 'item' : 'items'}';
+        } else {
+          final names = itemsList.map((i) {
+            final im = i as Map<String, dynamic>;
+            return (im['name'] as String?) ?? '';
+          }).where((n) => n.isNotEmpty).toList();
+          if (names.isEmpty) {
+            subtitle = '$itemCount ${itemCount == 1 ? 'item' : 'items'}';
+          } else if (names.length <= 3) {
+            subtitle = names.join(', ');
+          } else {
+            subtitle = '${names.take(3).join(', ')} +${names.length - 3} more';
+          }
+        }
+
         items.add(_ActivityItem(
           type: _ActivityType.food,
           title: vendorName,
-          subtitle: '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
+          subtitle: subtitle,
           status: status,
           amount: (map['totalAmount'] as num?)?.toDouble(),
           id: (map['id'] as String?) ?? '',

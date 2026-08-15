@@ -282,45 +282,96 @@ class _SettlementLogSection extends StatelessWidget {
   }
 }
 
-class _SettlementTable extends StatelessWidget {
+class _SettlementTable extends StatefulWidget {
   const _SettlementTable({required this.entries});
   final List<AdminSettlementLog> entries;
+
+  @override
+  State<_SettlementTable> createState() => _SettlementTableState();
+}
+
+class _SettlementTableState extends State<_SettlementTable> {
+  int _sortColumnIndex = 0;
+  bool _sortAscending = true;
+
+  List<AdminSettlementLog> get _sorted {
+    final list = List<AdminSettlementLog>.from(widget.entries);
+    list.sort((a, b) {
+      int cmp;
+      switch (_sortColumnIndex) {
+        case 0:
+          cmp = a.capturedAt.compareTo(b.capturedAt);
+        case 1:
+          cmp = a.amount.compareTo(b.amount);
+        case 2:
+          cmp = a.status.compareTo(b.status);
+        default:
+          cmp = (a.providerPaymentId.isNotEmpty
+                  ? a.providerPaymentId
+                  : a.paymentId)
+              .compareTo(b.providerPaymentId.isNotEmpty
+                  ? b.providerPaymentId
+                  : b.paymentId);
+      }
+      return _sortAscending ? cmp : -cmp;
+    });
+    return list;
+  }
 
   @override
   Widget build(BuildContext context) {
     return DataTable(
       columnSpacing: 24,
-      columns: const [
+      sortColumnIndex: _sortColumnIndex,
+      sortAscending: _sortAscending,
+      columns: [
         DataColumn(
-          label: Text('Date',
+          label: const Text('Date',
               style: TextStyle(
                   color: AdminColors.textMuted,
                   fontWeight: FontWeight.w600,
                   fontSize: 12)),
+          onSort: (i, asc) => setState(() {
+            _sortColumnIndex = i;
+            _sortAscending = asc;
+          }),
         ),
         DataColumn(
-          label: Text('Amount',
+          label: const Text('Amount',
               style: TextStyle(
                   color: AdminColors.textMuted,
                   fontWeight: FontWeight.w600,
                   fontSize: 12)),
+          numeric: true,
+          onSort: (i, asc) => setState(() {
+            _sortColumnIndex = i;
+            _sortAscending = asc;
+          }),
         ),
         DataColumn(
-          label: Text('Status',
+          label: const Text('Status',
               style: TextStyle(
                   color: AdminColors.textMuted,
                   fontWeight: FontWeight.w600,
                   fontSize: 12)),
+          onSort: (i, asc) => setState(() {
+            _sortColumnIndex = i;
+            _sortAscending = asc;
+          }),
         ),
         DataColumn(
-          label: Text('Reference ID',
+          label: const Text('Reference ID',
               style: TextStyle(
                   color: AdminColors.textMuted,
                   fontWeight: FontWeight.w600,
                   fontSize: 12)),
+          onSort: (i, asc) => setState(() {
+            _sortColumnIndex = i;
+            _sortAscending = asc;
+          }),
         ),
       ],
-      rows: entries.map((e) {
+      rows: _sorted.map((e) {
         final statusLower = e.status.toLowerCase();
         final color = statusLower == 'captured' || statusLower == 'succeeded'
             ? AdminColors.success

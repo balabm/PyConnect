@@ -69,7 +69,7 @@ public sealed class ActivityController : ControllerBase
                 s.CreatedAt));
         }
 
-        // ── Food orders (title = vendor name, subtitle = item count) ──
+        // ── Food orders (title = vendor name, subtitle = item names) ──
         var foodOrders = await _context.FoodOrders.AsNoTracking()
             .Where(f => f.UserId == userId.Value)
             .Select(f => new
@@ -79,7 +79,11 @@ public sealed class ActivityController : ControllerBase
                 f.TotalAmount,
                 f.CreatedAt,
                 f.VendorId,
-                ItemCount = _context.FoodOrderItems.AsNoTracking().Count(i => i.FoodOrderId == f.Id)
+                ItemCount = _context.FoodOrderItems.AsNoTracking().Count(i => i.FoodOrderId == f.Id),
+                ItemNames = _context.FoodOrderItems.AsNoTracking()
+                    .Where(i => i.FoodOrderId == f.Id)
+                    .Select(i => i.Name)
+                    .ToList()
             })
             .ToListAsync(cancellationToken);
 
@@ -91,12 +95,27 @@ public sealed class ActivityController : ControllerBase
         foreach (var f in foodOrders)
         {
             var title = vendorNames.TryGetValue(f.VendorId, out var name) ? name : "Food Order";
+            // Show up to 3 item names, then "+N more" if there are more.
+            var names = f.ItemNames;
+            string subtitle;
+            if (names.Count == 0)
+            {
+                subtitle = $"{f.ItemCount} item{(f.ItemCount == 1 ? "" : "s")}";
+            }
+            else if (names.Count <= 3)
+            {
+                subtitle = string.Join(", ", names);
+            }
+            else
+            {
+                subtitle = $"{string.Join(", ", names.Take(3))} +{names.Count - 3} more";
+            }
             activities.Add(new ActivityItem(
                 f.Id,
                 "Food",
                 f.Status.ToString(),
                 title,
-                $"{f.ItemCount} item{(f.ItemCount == 1 ? "" : "s")}",
+                subtitle,
                 f.TotalAmount,
                 f.CreatedAt));
         }

@@ -58,7 +58,64 @@ class _AdminLiveRidesScreenState extends ConsumerState<AdminLiveRidesScreen> {
           if (_showMap) {
             final deliveriesAsync = ref.watch(adminActiveDeliveriesProvider);
             final deliveries = deliveriesAsync.valueOrNull ?? [];
-            return _LiveOpsMap(rides: rides, deliveries: deliveries);
+            final driversAsync = ref.watch(adminDriverLocationsProvider);
+            final onlineDrivers = (driversAsync.valueOrNull ?? [])
+                .where((d) => d.isOnline)
+                .length;
+            return Stack(
+              children: [
+                _LiveOpsMap(rides: rides, deliveries: deliveries),
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AdminColors.surface.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AdminColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.circle, size: 10, color: AdminColors.success),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$onlineDrivers online',
+                          style: const TextStyle(
+                            color: AdminColors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(Icons.two_wheeler, size: 14, color: AdminColors.accent),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${rides.length} rides',
+                          style: const TextStyle(
+                            color: AdminColors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(Icons.shopping_bag_rounded, size: 14, color: Colors.orange),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${deliveries.length} deliveries',
+                          style: const TextStyle(
+                            color: AdminColors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
