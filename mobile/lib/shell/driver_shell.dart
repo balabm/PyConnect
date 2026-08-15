@@ -6,12 +6,14 @@ import 'package:geolocator/geolocator.dart';
 
 import '../core/theme/app_theme.dart';
 import '../features/driver/application/driver_providers.dart';
+import '../features/driver/application/driver_signalr_provider.dart';
 import '../features/driver/presentation/driver_home_screen.dart';
 import '../features/driver/presentation/driver_earnings_screen.dart';
 import '../features/driver/presentation/active_trip_screen.dart';
 import '../features/driver/presentation/driver_profile_screen.dart';
 import '../core/services/keep_awake_service.dart';
 import '../core/services/background_location_service.dart';
+import '../core/services/overlay_alert_service.dart';
 
 /// Root scaffold for the Driver app with bottom navigation.
 class DriverShell extends ConsumerStatefulWidget {
@@ -24,6 +26,13 @@ class DriverShell extends ConsumerStatefulWidget {
 class _DriverShellState extends ConsumerState<DriverShell> {
   Timer? _locationTimer;
   bool _isStartingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize overlay alert service for dispatch notifications
+    OverlayAlertService.instance.initialize();
+  }
 
   @override
   void dispose() {
@@ -42,6 +51,8 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         _locationTimer = null;
         KeepAwakeService.disable();
         BackgroundLocationService.instance.stop();
+        // Disconnect SignalR dispatch listener when going offline
+        await ref.read(driverSignalRProvider).disconnect();
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

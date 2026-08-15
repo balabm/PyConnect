@@ -266,6 +266,8 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
   late final TextEditingController _priceController;
   late final TextEditingController _categoryController;
   late final TextEditingController _descriptionController;
+  late final TextEditingController _prepTimeController;
+  late bool _isVeg;
   bool _submitting = false;
 
   @override
@@ -275,6 +277,10 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
     _priceController = TextEditingController(text: widget.item.price.toStringAsFixed(0));
     _categoryController = TextEditingController(text: widget.item.category);
     _descriptionController = TextEditingController(text: widget.item.description ?? '');
+    _prepTimeController = TextEditingController(
+      text: widget.item.prepTimeMinutes?.toString() ?? '',
+    );
+    _isVeg = widget.item.isVeg;
   }
 
   @override
@@ -283,6 +289,7 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
     _priceController.dispose();
     _categoryController.dispose();
     _descriptionController.dispose();
+    _prepTimeController.dispose();
     super.dispose();
   }
 
@@ -307,6 +314,10 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
               ? 'General'
               : _categoryController.text.trim(),
           newPrice: double.tryParse(_priceController.text.trim()),
+          isVeg: _isVeg,
+          prepTimeMinutes: _prepTimeController.text.trim().isEmpty
+              ? null
+              : int.tryParse(_prepTimeController.text.trim()),
         ),
       );
       if (mounted) Navigator.pop(context);
@@ -367,6 +378,37 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
               border: OutlineInputBorder(),
             ),
           ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _prepTimeController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Prep Time (minutes)',
+              hintText: 'e.g. 15',
+              prefixIcon: Icon(Icons.timer_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(
+                value: true,
+                icon: Icon(Icons.circle, size: 12),
+                label: Text('Veg'),
+              ),
+              ButtonSegment(
+                value: false,
+                icon: Icon(Icons.change_circle, size: 12),
+                label: Text('Non-Veg'),
+              ),
+            ],
+            selected: {_isVeg},
+            onSelectionChanged: (v) {
+              AppHaptics.light();
+              setState(() => _isVeg = v.first);
+            },
+          ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
@@ -404,7 +446,10 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
   final _priceController = TextEditingController();
   final _categoryController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _imageUrlController = TextEditingController();
+  final _prepTimeController = TextEditingController();
   bool _isLateNight = false;
+  bool _isVeg = true;
   bool _submitting = false;
 
   @override
@@ -413,6 +458,8 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
     _priceController.dispose();
     _categoryController.dispose();
     _descriptionController.dispose();
+    _imageUrlController.dispose();
+    _prepTimeController.dispose();
     super.dispose();
   }
 
@@ -436,7 +483,14 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
           description: _descriptionController.text.trim().isEmpty
               ? null
               : _descriptionController.text.trim(),
+          imageUrl: _imageUrlController.text.trim().isEmpty
+              ? null
+              : _imageUrlController.text.trim(),
           isLateNight: _isLateNight,
+          isVeg: _isVeg,
+          prepTimeMinutes: _prepTimeController.text.trim().isEmpty
+              ? null
+              : int.tryParse(_prepTimeController.text.trim()),
         ),
       );
       if (mounted) Navigator.pop(context);
@@ -499,6 +553,49 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
               labelText: 'Description (optional)',
               border: OutlineInputBorder(),
             ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _imageUrlController,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'Image URL (optional)',
+              hintText: 'https://...',
+              prefixIcon: Icon(Icons.image_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _prepTimeController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Prep Time (minutes)',
+              hintText: 'e.g. 15',
+              prefixIcon: Icon(Icons.timer_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Veg / Non-Veg toggle
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(
+                value: true,
+                icon: Icon(Icons.circle, size: 12),
+                label: Text('Veg'),
+              ),
+              ButtonSegment(
+                value: false,
+                icon: Icon(Icons.change_circle, size: 12),
+                label: Text('Non-Veg'),
+              ),
+            ],
+            selected: {_isVeg},
+            onSelectionChanged: (v) {
+              AppHaptics.light();
+              setState(() => _isVeg = v.first);
+            },
           ),
           const SizedBox(height: 12),
           SwitchListTile(

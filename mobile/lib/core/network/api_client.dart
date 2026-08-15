@@ -182,12 +182,26 @@ class ApiClient {
   /// TODO: Wire to backend refresh endpoint when available. Currently the
   /// backend issues 60-minute access tokens without a refresh token flow.
   /// When a `POST /api/auth/refresh` endpoint is added, this method should:
-  /// 1. Call the refresh endpoint with the stored refresh token.
-  /// 2. Update [_token] with the new access token.
-  /// 3. Persist the new token via the auth controller.
-  /// 4. Return `true` on success, `false` on failure.
+  /// Calls POST /api/auth/refresh with the current (still-valid) token
+  /// to obtain a fresh 60-minute access token.
+  /// Returns `true` on success, `false` on failure.
   Future<bool> _attemptTokenRefresh() async {
-    // No refresh endpoint available yet — return false to trigger re-auth.
+    if (_token == null || _token!.isEmpty) return false;
+    try {
+      final response = await _dio.post(
+        '/api/auth/refresh',
+        options: Options(headers: {'Authorization': 'Bearer $_token'}),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final newToken = response.data['token'] as String?;
+        if (newToken != null && newToken.isNotEmpty) {
+          _token = newToken;
+          return true;
+        }
+      }
+    } catch (_) {
+      // Refresh failed — fall through to re-auth
+    }
     return false;
   }
 

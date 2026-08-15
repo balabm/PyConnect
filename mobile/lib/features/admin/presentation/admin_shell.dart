@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/admin_providers.dart';
 
 /// The main admin shell with a navigation rail for switching between
@@ -280,7 +281,7 @@ class _AdminShellState extends ConsumerState<AdminShell>
 
   /// "More" sub-menu exposing secondary routes (Users, SOS, Tickets, Logs)
   /// so the existing routes remain reachable from the desktop rail without
-  /// crowding the 5 primary tabs.
+  /// crowding the 5 primary tabs. Also includes a Sign out action.
   Widget _buildMoreMenu(BuildContext context, bool hasCritical) {
     return PopupMenuButton<String>(
       tooltip: 'More sections',
@@ -296,37 +297,59 @@ class _AdminShellState extends ConsumerState<AdminShell>
         ],
       ),
       color: AdminColors.surface,
-      onSelected: (path) => context.go(path),
-      itemBuilder: (_) => _secondaryDestinations.map((d) {
-        final isSos = d.path == '/sos';
-        return PopupMenuItem<String>(
-          value: d.path,
+      onSelected: (value) {
+        if (value == '__logout__') {
+          ref.read(authControllerProvider.notifier).signOut();
+          return;
+        }
+        context.go(value);
+      },
+      itemBuilder: (_) => [
+        ..._secondaryDestinations.map((d) {
+          final isSos = d.path == '/sos';
+          return PopupMenuItem<String>(
+            value: d.path,
+            child: Row(
+              children: [
+                Icon(d.icon, color: AdminColors.textMuted, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  d.label,
+                  style: const TextStyle(color: AdminColors.textPrimary),
+                ),
+                if (isSos && hasCritical) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: AdminColors.danger,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 10,
+                      minHeight: 10,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: '__logout__',
           child: Row(
             children: [
-              Icon(d.icon, color: AdminColors.textMuted, size: 20),
-              const SizedBox(width: 12),
+              Icon(Icons.logout_rounded, color: AdminColors.danger, size: 20),
+              SizedBox(width: 12),
               Text(
-                d.label,
-                style: const TextStyle(color: AdminColors.textPrimary),
+                'Sign out',
+                style: TextStyle(color: AdminColors.danger),
               ),
-              if (isSos && hasCritical) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    color: AdminColors.danger,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 10,
-                    minHeight: 10,
-                  ),
-                ),
-              ],
             ],
           ),
-        );
-      }).toList(),
+        ),
+      ],
     );
   }
 }

@@ -591,20 +591,19 @@ enum _DriverFilter {
 /// Displays the driver's uploaded KYC documents as side-by-side thumbnails
 /// in a horizontal scroll. Each thumbnail is labelled (Aadhaar, DL, RC, etc.)
 /// and tappable to open a full-screen image viewer.
-///
-/// The current [AdminDriver] data model does not expose document URLs, so
-/// placeholder cards are shown with a TODO to wire real URLs when the
-/// backend exposes them.
 class _KycDocumentSection extends StatelessWidget {
   const _KycDocumentSection({required this.driver});
   final AdminDriver driver;
 
-  // TODO: Replace with real document URLs once the backend exposes them on
-  // the driver DTO (e.g. driver.kycDocuments / driver.documentUrls).
-  static const _driverDocTypes = ['Aadhaar', 'Driving Licence', 'RC Book', 'Photo'];
-
   @override
   Widget build(BuildContext context) {
+    final docs = <(String, String?)>[
+      ('Aadhaar', driver.aadhaarUrl),
+      ('Driving Licence', driver.drivingLicenseUrl),
+      ('RC Book', driver.rcUrl),
+      ('Insurance', driver.insuranceUrl),
+      ('Selfie', driver.selfieUrl),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -623,12 +622,10 @@ class _KycDocumentSection extends StatelessWidget {
           height: 110,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: _driverDocTypes.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemCount: docs.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, i) {
-              final label = _driverDocTypes[i];
-              // TODO: Resolve real URL per document type from driver data.
-              const url = null;
+              final (label, url) = docs[i];
               return _DocumentThumbnail(label: label, imageUrl: url);
             },
           ),

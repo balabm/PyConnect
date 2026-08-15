@@ -12,6 +12,7 @@ class Homestay {
     required this.maxGuests,
     required this.hasWifi,
     required this.isVerified,
+    this.imageUrls,
   });
 
   factory Homestay.fromJson(Map<String, dynamic> json) => Homestay(
@@ -25,6 +26,9 @@ class Homestay {
         maxGuests: (json['maxGuests'] as num).toInt(),
         hasWifi: json['hasWifi'] as bool,
         isVerified: json['isVerified'] as bool,
+        imageUrls: (json['imageUrls'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList(),
       );
 
   final String id;
@@ -37,6 +41,7 @@ class Homestay {
   final int maxGuests;
   final bool hasWifi;
   final bool isVerified;
+  final List<String>? imageUrls;
 }
 
 class AddOnSuggestion {

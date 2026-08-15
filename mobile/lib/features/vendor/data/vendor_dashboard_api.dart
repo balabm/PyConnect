@@ -239,6 +239,8 @@ class MenuItemModel {
     this.description,
     this.imageUrl,
     this.isLateNight = false,
+    this.isVeg = false,
+    this.prepTimeMinutes,
   });
 
   factory MenuItemModel.fromJson(Map<String, dynamic> json) => MenuItemModel(
@@ -250,6 +252,8 @@ class MenuItemModel {
         description: json['description'] as String?,
         imageUrl: json['imageUrl'] as String?,
         isLateNight: json['isLateNight'] as bool? ?? false,
+        isVeg: json['isVeg'] as bool? ?? false,
+        prepTimeMinutes: json['prepTimeMinutes'] as int?,
       );
 
   final String id;
@@ -260,6 +264,8 @@ class MenuItemModel {
   final String? description;
   final String? imageUrl;
   final bool isLateNight;
+  final bool isVeg;
+  final int? prepTimeMinutes;
 }
 
 class CreateMenuItemPayload {
@@ -270,6 +276,8 @@ class CreateMenuItemPayload {
     this.description,
     this.imageUrl,
     this.isLateNight = false,
+    this.isVeg = false,
+    this.prepTimeMinutes,
   });
 
   final String name;
@@ -278,6 +286,8 @@ class CreateMenuItemPayload {
   final String? description;
   final String? imageUrl;
   final bool isLateNight;
+  final bool isVeg;
+  final int? prepTimeMinutes;
 
   Map<String, dynamic> toJson() => {
         'name': name,
@@ -286,6 +296,8 @@ class CreateMenuItemPayload {
         if (description != null) 'description': description,
         if (imageUrl != null) 'imageUrl': imageUrl,
         'isLateNight': isLateNight,
+        'isVeg': isVeg,
+        if (prepTimeMinutes != null) 'prepTimeMinutes': prepTimeMinutes,
       };
 }
 
@@ -295,18 +307,24 @@ class UpdateMenuItemPayload {
     this.description,
     this.category,
     this.newPrice,
+    this.isVeg,
+    this.prepTimeMinutes,
   });
 
   final String? name;
   final String? description;
   final String? category;
   final double? newPrice;
+  final bool? isVeg;
+  final int? prepTimeMinutes;
 
   Map<String, dynamic> toJson() => {
         if (name != null) 'name': name,
         if (description != null) 'description': description,
         if (category != null) 'category': category,
         if (newPrice != null) 'newPrice': newPrice,
+        if (isVeg != null) 'isVeg': isVeg,
+        if (prepTimeMinutes != null) 'prepTimeMinutes': prepTimeMinutes,
       };
 }
 

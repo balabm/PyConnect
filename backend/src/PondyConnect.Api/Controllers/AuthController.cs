@@ -18,13 +18,15 @@ public sealed class AuthController : ControllerBase
     private readonly ICurrentUserService _currentUser;
     private readonly IApplicationDbContext _dbContext;
     private readonly IOtpService _otpService;
+    private readonly IJwtTokenFactory _jwtTokenFactory;
 
-    public AuthController(IMediator mediator, ICurrentUserService currentUser, IApplicationDbContext dbContext, IOtpService otpService)
+    public AuthController(IMediator mediator, ICurrentUserService currentUser, IApplicationDbContext dbContext, IOtpService otpService, IJwtTokenFactory jwtTokenFactory)
     {
         _mediator = mediator;
         _currentUser = currentUser;
         _dbContext = dbContext;
         _otpService = otpService;
+        _jwtTokenFactory = jwtTokenFactory;
     }
 
     [HttpGet("me")]
@@ -191,6 +193,23 @@ public sealed class AuthController : ControllerBase
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Ok(new { Message = "Liability waiver accepted.", AcceptedAt = user.WaiverAcceptedAt });
+    }
+
+    [HttpPost("refresh")]
+    [Authorize]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AuthResponse>> RefreshToken(CancellationToken cancellationToken)
+    {
+        // The current JWT must still be valid to reach this point.
+        // Issue a fresh 60-minute access token for the same user.
+        var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is null)
+            return Unauthorized(new { Message = "User not found." });
+
+        var token = _jwtTokenFactory.CreateAccessToken(user.Id, user.Phone, user.Role.ToString());
+        return Ok(new AuthResponse(token, user.Id, user.Phone, user.Name, user.Role.ToString()));
     }
 
     [HttpGet("otp/peek")]

@@ -19,12 +19,18 @@ class DispatchTaskCard extends StatelessWidget {
     'Ride': Icons.motorcycle,
     'FoodDelivery': Icons.delivery_dining,
     'EssentialsDrop': Icons.local_convenience_store,
+    'Rental': Icons.electric_scooter,
+    'ScooterRental': Icons.electric_scooter,
+    'LuggageCloak': Icons.luggage,
   };
 
   static const _taskTypeLabels = {
     'Ride': 'Ride',
     'FoodDelivery': 'Food Delivery',
     'EssentialsDrop': 'Essentials Drop',
+    'Rental': 'Scooter Rental',
+    'ScooterRental': 'Scooter Rental',
+    'LuggageCloak': 'Luggage Drop',
   };
 
   @override

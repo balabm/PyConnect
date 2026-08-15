@@ -183,7 +183,12 @@ public sealed record DriverSummaryResponse(
     double? Latitude,
     double? Longitude,
     DateTimeOffset? LastLocationAt,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? AadhaarUrl,
+    string? DrivingLicenseUrl,
+    string? RcUrl,
+    string? InsuranceUrl,
+    string? SelfieUrl);
 
 public sealed class ListDriversHandler : IRequestHandler<ListDriversQuery, PagedResult<DriverSummaryResponse>>
 {
@@ -234,7 +239,12 @@ public sealed class ListDriversHandler : IRequestHandler<ListDriversQuery, Paged
                 d.CurrentLocation.Latitude,
                 d.CurrentLocation.Longitude,
                 d.LastLocationAt,
-                d.CreatedAt))
+                d.CreatedAt,
+                d.AadhaarUrl,
+                d.DrivingLicenseUrl,
+                d.RcUrl,
+                d.InsuranceUrl,
+                d.SelfieUrl))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<DriverSummaryResponse>(items, totalCount, page, pageSize);

@@ -420,6 +420,11 @@ class AdminDriver {
     this.longitude,
     this.lastLocationAt,
     required this.createdAt,
+    this.aadhaarUrl,
+    this.drivingLicenseUrl,
+    this.rcUrl,
+    this.insuranceUrl,
+    this.selfieUrl,
   });
 
   factory AdminDriver.fromJson(Map<String, dynamic> json) => AdminDriver(
@@ -441,6 +446,11 @@ class AdminDriver {
             : DateTime.tryParse(json['lastLocationAt'] as String),
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
             DateTime.now(),
+        aadhaarUrl: json['aadhaarUrl'] as String?,
+        drivingLicenseUrl: json['drivingLicenseUrl'] as String?,
+        rcUrl: json['rcUrl'] as String?,
+        insuranceUrl: json['insuranceUrl'] as String?,
+        selfieUrl: json['selfieUrl'] as String?,
       );
 
   final String id;
@@ -458,6 +468,11 @@ class AdminDriver {
   final double? longitude;
   final DateTime? lastLocationAt;
   final DateTime createdAt;
+  final String? aadhaarUrl;
+  final String? drivingLicenseUrl;
+  final String? rcUrl;
+  final String? insuranceUrl;
+  final String? selfieUrl;
 }
 
 class ApproveDriverResult {

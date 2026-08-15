@@ -107,6 +107,9 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
           ],
         ),
         data: (items) {
+          // Split items into VIP and regular
+          final vipItems = items.where((i) => i.category == 'VIP').toList();
+          final regularItems = items.where((i) => i.category != 'VIP').toList();
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
@@ -114,6 +117,47 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               const SizedBox(height: 16),
               _buildGuestlistSection(),
               const SizedBox(height: 24),
+              // VIP Menu Section
+              if (vipItems.isNotEmpty) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
+                    const SizedBox(width: 8),
+                    const Text('VIP Menu',
+                        style: TextStyle(
+                            color: Color(0xFFFFD700),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD700).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Text(
+                        '${vipItems.length} items',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFFFFD700), fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...vipItems.map((item) => _DrinkCard(
+                      name: item.name,
+                      category: item.category,
+                      price: item.price,
+                      isAvailable: item.isAvailable,
+                      description: item.description,
+                      isVip: true,
+                      onToggle: () {
+                        AppHaptics.light();
+                        ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
+                      },
+                    )),
+                const SizedBox(height: 24),
+              ],
+              // Regular Drinks Menu
               const Row(
                 children: [
                   Icon(Icons.local_bar, color: AppTheme.emerald, size: 20),
@@ -126,10 +170,10 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              if (items.isEmpty)
+              if (regularItems.isEmpty && vipItems.isEmpty)
                 _buildEmpty()
               else
-                ...items.map((item) => _DrinkCard(
+                ...regularItems.map((item) => _DrinkCard(
                       name: item.name,
                       category: item.category,
                       price: item.price,
@@ -509,6 +553,7 @@ class _DrinkCard extends StatelessWidget {
     required this.isAvailable,
     required this.description,
     required this.onToggle,
+    this.isVip = false,
   });
 
   final String name;
@@ -517,6 +562,7 @@ class _DrinkCard extends StatelessWidget {
   final bool isAvailable;
   final String? description;
   final VoidCallback onToggle;
+  final bool isVip;
 
   @override
   Widget build(BuildContext context) {
@@ -526,16 +572,25 @@ class _DrinkCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
+        border: isVip
+            ? Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.3), width: 1)
+            : null,
       ),
       child: Row(
         children: [
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.emerald.withValues(alpha: 0.15),
+              color: isVip
+                  ? const Color(0xFFFFD700).withValues(alpha: 0.15)
+                  : AppTheme.emerald.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.local_bar, color: AppTheme.emerald, size: 24),
+            child: Icon(
+              isVip ? Icons.star : Icons.local_bar,
+              color: isVip ? const Color(0xFFFFD700) : AppTheme.emerald,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -632,6 +687,7 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
   final _priceController = TextEditingController();
   final _categoryController = TextEditingController(text: 'Cocktail');
   final _descriptionController = TextEditingController();
+  bool _isVip = false;
   bool _submitting = false;
 
   @override
@@ -652,7 +708,7 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
             CreateMenuItemPayload(
               name: _nameController.text,
               price: double.parse(_priceController.text),
-              category: _categoryController.text,
+              category: _isVip ? 'VIP' : _categoryController.text,
               description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
             ),
           );
@@ -691,6 +747,22 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
               Icons.category),
           const SizedBox(height: 12),
           _buildField(_descriptionController, 'Description (optional)', Icons.description, maxLines: 2),
+          const SizedBox(height: 12),
+          // VIP toggle
+          SwitchListTile(
+            title: const Text('VIP Menu Item', style: TextStyle(color: Colors.white)),
+            subtitle: Text(
+              'Mark as premium/VIP exclusive',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+            ),
+            value: _isVip,
+            activeThumbColor: AppTheme.emerald,
+            activeTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
+            onChanged: (v) {
+              AppHaptics.light();
+              setState(() => _isVip = v);
+            },
+          ),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
