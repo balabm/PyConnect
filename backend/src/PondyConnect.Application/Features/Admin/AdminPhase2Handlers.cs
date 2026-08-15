@@ -309,7 +309,11 @@ public sealed record SosAlertResponse(
     string Status,
     DateTimeOffset TriggeredAt,
     DateTimeOffset? ResolvedAt,
-    string? Notes);
+    string? Notes,
+    string? VehicleType,
+    string? VehiclePlate,
+    string? EmergencyContactName,
+    string? EmergencyContactPhone);
 
 public sealed class GetActiveSosAlertsHandler : IRequestHandler<GetActiveSosAlertsQuery, IReadOnlyList<SosAlertResponse>>
 {
@@ -319,27 +323,34 @@ public sealed class GetActiveSosAlertsHandler : IRequestHandler<GetActiveSosAler
 
     public async Task<IReadOnlyList<SosAlertResponse>> Handle(GetActiveSosAlertsQuery request, CancellationToken cancellationToken)
     {
-        return await _context.SosAlerts
-            .Where(s => s.Status == SosStatus.Active)
-            .OrderByDescending(s => s.TriggeredAt)
-            .Take(100)
-            .Join(
-                _context.Users,
-                s => s.UserId,
-                u => u.Id,
-                (s, u) => new SosAlertResponse(
-                    s.Id,
-                    s.RideId,
-                    s.UserId,
-                    u.Name,
-                    u.Phone,
-                    s.Location.Latitude,
-                    s.Location.Longitude,
-                    s.Status.ToString(),
-                    s.TriggeredAt,
-                    s.ResolvedAt,
-                    s.Notes))
-            .ToListAsync(cancellationToken);
+        // Join SOS → User for name/phone, then left-join RideRequest → Driver
+        // for vehicle details and emergency contacts.
+        var query = from s in _context.SosAlerts
+                    where s.Status == SosStatus.Active
+                    orderby s.TriggeredAt descending
+                    join u in _context.Users on s.UserId equals u.Id
+                    join r in _context.RideRequests on s.RideId equals r.Id into rideGroup
+                    from r in rideGroup.DefaultIfEmpty()
+                    join d in _context.Drivers on r.DriverId equals d.Id into driverGroup
+                    from d in driverGroup.DefaultIfEmpty()
+                    select new SosAlertResponse(
+                        s.Id,
+                        s.RideId,
+                        s.UserId,
+                        u.Name,
+                        u.Phone,
+                        s.Location.Latitude,
+                        s.Location.Longitude,
+                        s.Status.ToString(),
+                        s.TriggeredAt,
+                        s.ResolvedAt,
+                        s.Notes,
+                        d != null ? d.VehicleType.ToString() : null,
+                        d != null ? d.VehiclePlate : null,
+                        d != null ? d.EmergencyContactName : null,
+                        d != null ? d.EmergencyContactPhone : null);
+
+        return await query.Take(100).ToListAsync(cancellationToken);
     }
 }
 

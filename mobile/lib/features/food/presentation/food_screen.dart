@@ -586,7 +586,7 @@ class _MenuItemTile extends StatelessWidget {
             color: Theme.of(context).brightness == Brightness.light
                 ? AppTheme.cardShadow
                 : Colors.black.withValues(alpha: 0.2),
-            blurRadius: 8,
+            blurRadius: 12,
             offset: const Offset(0, 2),
           ),
         ],

@@ -469,7 +469,7 @@ class _ProductCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: AppTheme.cardShadow, blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: AppTheme.cardShadow, blurRadius: 12, offset: const Offset(0, 2)),
         ],
       ),
       child: Material(

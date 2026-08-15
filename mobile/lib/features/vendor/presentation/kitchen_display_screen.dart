@@ -42,6 +42,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   }
 
   Future<void> _loadOrders() async {
+    if (_loading) return; // Prevent duplicate concurrent API calls
+    setState(() => _loading = true);
     try {
       final orders = await ref.read(kdsApiProvider).getOrders();
       if (mounted) {

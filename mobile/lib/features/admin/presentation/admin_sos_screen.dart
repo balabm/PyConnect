@@ -108,6 +108,14 @@ class _SosAlertCard extends ConsumerWidget {
             _InfoRow(icon: Icons.access_time_rounded, label: 'Triggered', value: _timeAgo(alert.triggeredAt)),
             const SizedBox(height: 8),
             _InfoRow(icon: Icons.motorcycle_rounded, label: 'Ride ID', value: alert.rideId.substring(0, 8)),
+            if (alert.vehicleType != null && alert.vehicleType!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _InfoRow(icon: Icons.directions_car_rounded, label: 'Vehicle', value: '${alert.vehicleType}${alert.vehiclePlate != null && alert.vehiclePlate!.isNotEmpty ? ' \u2022 ${alert.vehiclePlate}' : ''}'),
+            ],
+            if (alert.emergencyContactName != null && alert.emergencyContactName!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _InfoRow(icon: Icons.contact_emergency_rounded, label: 'Emergency Contact', value: '${alert.emergencyContactName}${alert.emergencyContactPhone != null && alert.emergencyContactPhone!.isNotEmpty ? ' \u2022 ${alert.emergencyContactPhone}' : ''}'),
+            ],
             if (alert.notes != null) ...[
               const SizedBox(height: 8),
               _InfoRow(icon: Icons.note_rounded, label: 'Notes', value: alert.notes!),

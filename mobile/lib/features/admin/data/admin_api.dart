@@ -532,6 +532,10 @@ class AdminSosAlert {
     required this.triggeredAt,
     this.resolvedAt,
     this.notes,
+    this.vehicleType,
+    this.vehiclePlate,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
   });
 
   factory AdminSosAlert.fromJson(Map<String, dynamic> json) => AdminSosAlert(
@@ -549,6 +553,10 @@ class AdminSosAlert {
             ? null
             : DateTime.tryParse(json['resolvedAt'] as String),
         notes: json['notes'] as String?,
+        vehicleType: json['vehicleType'] as String?,
+        vehiclePlate: json['vehiclePlate'] as String?,
+        emergencyContactName: json['emergencyContactName'] as String?,
+        emergencyContactPhone: json['emergencyContactPhone'] as String?,
       );
 
   final String id;
@@ -562,6 +570,10 @@ class AdminSosAlert {
   final DateTime triggeredAt;
   final DateTime? resolvedAt;
   final String? notes;
+  final String? vehicleType;
+  final String? vehiclePlate;
+  final String? emergencyContactName;
+  final String? emergencyContactPhone;
 }
 
 class AdminSosEvent {

@@ -471,21 +471,40 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
       return;
     }
 
+    // Validate price is a valid number.
+    final price = double.tryParse(_priceController.text.trim());
+    if (price == null || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Price must be a valid positive number')),
+      );
+      return;
+    }
+
+    // Validate image URL format if provided.
+    final imageUrl = _imageUrlController.text.trim();
+    if (imageUrl.isNotEmpty) {
+      final uri = Uri.tryParse(imageUrl);
+      if (uri == null || !uri.hasAbsolutePath || !(uri.scheme == 'http' || uri.scheme == 'https')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image URL must be a valid http/https URL')),
+        );
+        return;
+      }
+    }
+
     setState(() => _submitting = true);
     try {
       await ref.read(vendorMenuProvider.notifier).createItem(
         CreateMenuItemPayload(
           name: _nameController.text.trim(),
-          price: double.parse(_priceController.text.trim()),
+          price: price,
           category: _categoryController.text.trim().isEmpty
               ? 'General'
               : _categoryController.text.trim(),
           description: _descriptionController.text.trim().isEmpty
               ? null
               : _descriptionController.text.trim(),
-          imageUrl: _imageUrlController.text.trim().isEmpty
-              ? null
-              : _imageUrlController.text.trim(),
+          imageUrl: imageUrl.isEmpty ? null : imageUrl,
           isLateNight: _isLateNight,
           isVeg: _isVeg,
           prepTimeMinutes: _prepTimeController.text.trim().isEmpty
