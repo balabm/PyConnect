@@ -152,7 +152,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
       VendorCategoryType.pubClub => const NavigationDestination(
           icon: Icon(Icons.table_restaurant_outlined, color: Color(0x80FFFFFF)),
           selectedIcon: Icon(Icons.table_restaurant, color: AppTheme.coral),
-          label: 'Tables & Crowd',
+          label: 'Table & Crowd Manager',
         ),
       VendorCategoryType.scooterRental => const NavigationDestination(
           icon: Icon(Icons.pedal_bike_outlined, color: Color(0x80FFFFFF)),

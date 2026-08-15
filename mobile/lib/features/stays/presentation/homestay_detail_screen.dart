@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
+import '../../../core/network/razorpay_payment_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/stays_providers.dart';
 import '../data/stays_api.dart';
@@ -31,6 +32,14 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
   DateTime? _checkOutDate;
   final _pageController = PageController();
   int _galleryPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(razorpayPaymentProvider).init();
+    });
+  }
 
   String _heroImageFor(String name) {
     final hash = name.hashCode;
