@@ -94,10 +94,10 @@ class _ReceiptBody extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _statusColor(status).withValues(alpha: 0.15),
+                      color: _statusColor(status, context).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(status, style: TextStyle(color: _statusColor(status), fontWeight: FontWeight.bold)),
+                    child: Text(status, style: TextStyle(color: _statusColor(status, context), fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 16),
                   Text('\u20B9$totalAmount', style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
@@ -210,13 +210,13 @@ class _ReceiptBody extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String s) {
+  Color _statusColor(String s, BuildContext context) {
     switch (s.toLowerCase()) {
       case 'completed': return AppTheme.success;
       case 'cancelled':
       case 'drivercancelled': return AppTheme.danger;
       case 'enroute': return AppTheme.info;
-      default: return AppTheme.darkTextSecondary;
+      default: return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 

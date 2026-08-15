@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/network/osrm_routing_service.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/presentation/quick_auth_sheet.dart';
 import 'widgets/map_selection_mode_indicator.dart';
 import 'widgets/nearby_drivers_section.dart';
 import 'widgets/payment_method_selector.dart';
@@ -127,7 +129,6 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
   Widget build(BuildContext context) {
     final hasRoute = _pickupLocation != null && _dropoffLocation != null;
     final screenHeight = MediaQuery.of(context).size.height;
-    final mapHeight = screenHeight * 0.42;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -178,7 +179,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
       ),
       body: Stack(
         children: [
-          // Map fills the screen behind the bottom sheet
+          // Map fills the entire screen behind the bottom sheet
           Positioned.fill(
             child: RideMap(
               pickup: _pickupLocation ?? _defaultCenter,
@@ -217,10 +218,10 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
             ),
           ),
 
-          // My-location FAB
+          // My-location FAB — positioned above the collapsed sheet
           Positioned(
             right: 16,
-            bottom: screenHeight * 0.4 + 12,
+            bottom: screenHeight * 0.42 + 12,
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.0, end: 1.0),
               duration: const Duration(milliseconds: 400),
@@ -242,25 +243,13 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
             ),
           ),
 
-          // Bottom sheet with rounded top — Uber/Swiggy style
-          AnimatedPositioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            top: mapHeight,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            child: TweenAnimationBuilder<Offset>(
-              tween: Tween<Offset>(
-                begin: const Offset(0, 0.1),
-                end: Offset.zero,
-              ),
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeOutCubic,
-              builder: (context, offset, child) {
-                return FractionalTranslation(translation: offset, child: child);
-              },
-              child: Container(
+          // Draggable bottom sheet — Uber/Swiggy style
+          DraggableScrollableSheet(
+            initialChildSize: 0.5,
+            minChildSize: 0.3,
+            maxChildSize: 0.85,
+            builder: (context, scrollController) {
+              return Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).scaffoldBackgroundColor,
                   borderRadius: const BorderRadius.only(
@@ -294,6 +283,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
                     // Scrollable content
                     Expanded(
                       child: SingleChildScrollView(
+                        controller: scrollController,
                         padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
                         child: Column(
@@ -458,8 +448,8 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
                     ),
                   ],
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -535,6 +525,17 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
         .valueOrNull;
     if (route == null) return;
 
+    // Check auth — if not signed in, show QuickAuthSheet before proceeding
+    final isAuthed = ref.read(authTokenProvider)?.isNotEmpty ?? false;
+    if (!isAuthed) {
+      final authenticated = await QuickAuthSheet.show(
+        context,
+        ref,
+        title: 'Sign in to book a ride',
+      );
+      if (authenticated != true || !mounted) return;
+    }
+
     final fare = _calculateFare(_selectedVehicle, route.distanceKm, route.durationMin);
     final vehicleName = _vehicles[_selectedVehicle].$1;
 
@@ -571,11 +572,20 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
         'paymentMethod': _selectedPayment + 1,
       });
       setState(() => _rideResult = result);
+    } on AuthRequiredException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please sign in to book a ride.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed: $e'),
+            content: Text('Could not request ride. Please try again.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -926,8 +936,8 @@ class _AddressRowState extends ConsumerState<_AddressRow> {
                     final result = _suggestions[index];
                     return ListTile(
                       dense: true,
-                      leading: const Icon(Icons.location_on,
-                          size: 18, color: AppTheme.darkTextSecondary),
+                      leading: Icon(Icons.location_on,
+                          size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       title: Text(
                         result.displayName as String,
                         maxLines: 2,

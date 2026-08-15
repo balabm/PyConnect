@@ -107,7 +107,7 @@ class RestaurantCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppTheme.darkTextSecondary),
+          Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ],
       ),
     );

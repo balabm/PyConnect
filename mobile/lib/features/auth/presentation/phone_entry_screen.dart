@@ -189,7 +189,7 @@ class PhoneEntryScreen extends ConsumerWidget {
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
-                                          color: AppTheme.night,
+                                          color: Theme.of(context).colorScheme.onSurface,
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -272,7 +272,7 @@ class PhoneEntryScreen extends ConsumerWidget {
                           if (_kShowGoogleSignIn && !isPartner)
                             OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.night,
+                                foregroundColor: Theme.of(context).colorScheme.onSurface,
                                 side: BorderSide(color: Theme.of(context).dividerColor),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(

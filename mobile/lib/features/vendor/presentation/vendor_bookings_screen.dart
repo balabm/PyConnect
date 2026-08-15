@@ -14,11 +14,11 @@ class VendorBookingsScreen extends ConsumerWidget {
     final bookingsAsync = ref.watch(vendorBookingsProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Bookings'),
-        backgroundColor: AppTheme.darkSurface,
-        foregroundColor: AppTheme.darkTextPrimary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
           IconButton(
             onPressed: () {
@@ -36,7 +36,7 @@ class VendorBookingsScreen extends ConsumerWidget {
         error: (e, _) => _buildError(context, ref, e.toString()),
         data: (bookings) {
           if (bookings.isEmpty) {
-            return _buildEmpty();
+            return _buildEmpty(context);
           }
           return RefreshIndicator(
             color: AppTheme.coral,
@@ -73,12 +73,12 @@ class VendorBookingsScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(
               'Could not load bookings',
-              style: TextStyle(color: AppTheme.darkTextPrimary, fontSize: 16),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
             ),
             const SizedBox(height: 4),
             Text(
               error,
-              style: TextStyle(color: AppTheme.darkTextSecondary, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -92,21 +92,21 @@ class VendorBookingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(BuildContext context) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.event_busy, size: 48, color: AppTheme.darkTextSecondary),
+          Icon(Icons.event_busy, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 12),
           Text(
             'No bookings today',
-            style: TextStyle(color: AppTheme.darkTextPrimary, fontSize: 16),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
           ),
           const SizedBox(height: 4),
           Text(
             'Bookings will appear here as customers reserve',
-            style: TextStyle(color: AppTheme.darkTextSecondary, fontSize: 13),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
           ),
         ],
       ),
@@ -126,10 +126,10 @@ class _BookingCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.darkSurface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _statusColor(booking.status).withValues(alpha: 0.3),
+          color: _statusColor(booking.status, context).withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -146,7 +146,7 @@ class _BookingCard extends StatelessWidget {
                     Text(
                       booking.serviceType,
                       style: TextStyle(
-                        color: AppTheme.darkTextPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -154,7 +154,7 @@ class _BookingCard extends StatelessWidget {
                     Text(
                       booking.customerName,
                       style: TextStyle(
-                        color: AppTheme.darkTextSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -167,11 +167,11 @@ class _BookingCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.schedule, size: 14, color: AppTheme.darkTextSecondary),
+              Icon(Icons.schedule, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(
                 _formatTime(booking.scheduledFor),
-                style: TextStyle(color: AppTheme.darkTextSecondary, fontSize: 12),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
               ),
               const Spacer(),
               Text(
@@ -206,7 +206,7 @@ class _BookingCard extends StatelessWidget {
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: Text(_statusLabel(next)),
               style: FilledButton.styleFrom(
-                backgroundColor: _statusColor(next),
+                backgroundColor: _statusColor(next, context),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 10),
               ),
@@ -279,7 +279,7 @@ class _BookingCard extends StatelessWidget {
     }
   }
 
-  Color _statusColor(String status) {
+  Color _statusColor(String status, BuildContext context) {
     switch (status) {
       case 'Pending':
       case 'Requested':
@@ -300,7 +300,7 @@ class _BookingCard extends StatelessWidget {
       case 'Cancelled':
         return AppTheme.danger;
       default:
-        return AppTheme.darkTextSecondary;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 
@@ -326,7 +326,7 @@ class _ServiceIcon extends StatelessWidget {
       'Transit' => (Icons.airport_shuttle, AppTheme.sky),
       'Luggage' => (Icons.luggage, AppTheme.gold),
       'Rental' => (Icons.pedal_bike, AppTheme.lagoon),
-      _ => (Icons.event, AppTheme.darkTextSecondary),
+      _ => (Icons.event, Theme.of(context).colorScheme.onSurfaceVariant),
     };
     return Container(
       width: 36,
@@ -352,7 +352,7 @@ class _StatusChip extends StatelessWidget {
       'CheckedIn' || 'EnRoute' || 'Active' || 'Dropped' => AppTheme.lagoon,
       'Completed' || 'Collected' || 'Returned' => AppTheme.success,
       'Cancelled' => AppTheme.danger,
-      _ => AppTheme.darkTextSecondary,
+      _ => Theme.of(context).colorScheme.onSurfaceVariant,
     };
 
     return Container(
@@ -379,14 +379,14 @@ class _PaymentChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: (isPaid ? AppTheme.lagoon : AppTheme.darkTextSecondary)
+        color: (isPaid ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant)
             .withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         isPaid ? 'Paid' : 'Unpaid',
         style: TextStyle(
-          color: isPaid ? AppTheme.lagoon : AppTheme.darkTextSecondary,
+          color: isPaid ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 10,
           fontWeight: FontWeight.w600,
         ),

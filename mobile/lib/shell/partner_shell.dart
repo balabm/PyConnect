@@ -220,9 +220,9 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -319,7 +319,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
         children: _screens,
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) {
           AppHaptics.selection();

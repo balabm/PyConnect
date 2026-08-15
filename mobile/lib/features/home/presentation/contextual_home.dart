@@ -385,10 +385,10 @@ class _EveningNightlife extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          const _HeroHeader(
+          _HeroHeader(
             greeting: 'Nightlife tonight!',
             subtitle: 'Pubs, clubs & live crowd in Pondy',
-            gradient: [AppTheme.night, Color(0xFF6A11CB)],
+            gradient: [Theme.of(context).colorScheme.onSurface, Color(0xFF6A11CB)],
             icon: Icons.nightlife,
           ),
           const SizedBox(height: 20),

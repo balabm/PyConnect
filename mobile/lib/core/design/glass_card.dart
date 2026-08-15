@@ -92,7 +92,7 @@ class DarkGlassCard extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           child: Material(
-            color: AppTheme.night.withValues(alpha: opacity),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: opacity),
             borderRadius: BorderRadius.circular(borderRadius),
             child: InkWell(
               onTap: onTap,

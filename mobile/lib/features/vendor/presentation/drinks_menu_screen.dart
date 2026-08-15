@@ -16,9 +16,9 @@ class DrinksMenuScreen extends ConsumerWidget {
     final menuAsync = ref.watch(vendorMenuProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Drinks Menu', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -115,7 +115,7 @@ class DrinksMenuScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (_) => const _AddDrinkSheet(),
     );
   }
@@ -144,7 +144,7 @@ class _DrinkCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.darkSurface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -343,7 +343,7 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
         labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
         prefixIcon: Icon(icon, color: Colors.white.withValues(alpha: 0.4)),
         filled: true,
-        fillColor: AppTheme.darkBackground,
+        fillColor: Theme.of(context).scaffoldBackgroundColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),

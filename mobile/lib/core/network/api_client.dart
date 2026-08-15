@@ -87,6 +87,16 @@ class ApiClient {
           }
           throw AuthRequiredException();
         }
+        // 403 — authenticated but lacking the required role.
+        // Surface a user-friendly "permission denied" message.
+        if (e.response?.statusCode == 403) {
+          final data = e.response?.data;
+          String msg = 'You do not have permission to perform this action.';
+          if (data is Map && data['message'] is String) {
+            msg = data['message'] as String;
+          }
+          throw ApiException(msg);
+        }
         attempt++;
         if (!_shouldRetry(e) || attempt > _maxRetries) {
           throw _friendlyException(e);

@@ -18,7 +18,7 @@ class VendorPromotionsScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: AppTheme.darkBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('Promotions & Flash Sales'),
           bottom: const TabBar(

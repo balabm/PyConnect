@@ -18,9 +18,9 @@ class ManageHubScreen extends ConsumerWidget {
     final category = VendorCategoryType.fromString(session?.category);
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Manage', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -32,7 +32,7 @@ class ManageHubScreen extends ConsumerWidget {
           children: [
             // Venue status card
             venueAsync.when(
-              loading: () => _buildShimmerCard(),
+              loading: () => _buildShimmerCard(context),
               error: (_, __) => _buildVenueCard(context, null),
               data: (venue) => _buildVenueCard(context, venue),
             ),
@@ -201,7 +201,7 @@ class ManageHubScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.darkSurface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: (isActive ? AppTheme.success : AppTheme.danger).withValues(alpha: 0.3),
@@ -277,11 +277,11 @@ class ManageHubScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildShimmerCard() {
+  Widget _buildShimmerCard(BuildContext context) {
     return Container(
       height: 80,
       decoration: BoxDecoration(
-        color: AppTheme.darkSurface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Center(
@@ -306,7 +306,7 @@ class ManageHubScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.darkSurface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -374,7 +374,7 @@ class _ManageTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.darkSurface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.15), width: 1),
         ),

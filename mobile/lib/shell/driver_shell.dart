@@ -191,7 +191,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
                 decoration: BoxDecoration(
                   color: isOnline
                       ? AppTheme.lagoon.withValues(alpha: 0.1)
-                      : AppTheme.night.withValues(alpha: 0.08),
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -200,7 +200,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
                     Icon(
                       isOnline ? Icons.circle : Icons.circle_outlined,
                       size: 10,
-                      color: isOnline ? AppTheme.lagoon : AppTheme.night.withValues(alpha: 0.4),
+                      color: isOnline ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -208,7 +208,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: isOnline ? AppTheme.lagoon : AppTheme.night.withValues(alpha: 0.5),
+                        color: isOnline ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ],

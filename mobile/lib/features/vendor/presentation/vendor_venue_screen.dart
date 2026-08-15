@@ -87,9 +87,9 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
     final venueAsync = ref.watch(venueDetailProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Venue Profile', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -284,7 +284,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
             hintText: hint,
             hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.25)),
             filled: true,
-            fillColor: AppTheme.darkSurface,
+            fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),

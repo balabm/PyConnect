@@ -209,14 +209,14 @@ class GradientChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: selected ? Colors.white : AppTheme.night,
+                color: selected ? Colors.white : Theme.of(context).colorScheme.onSurface,
               ),
               const SizedBox(width: 6),
             ],
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : AppTheme.night,
+                color: selected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),

@@ -6,6 +6,7 @@ import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../venues/application/venue_controller.dart';
 import '../../venues/data/venue_api.dart';
 
@@ -263,6 +264,17 @@ class _ExperienceBookingSheetState extends ConsumerState<_ExperienceBookingSheet
   }
 
   Future<void> _submit() async {
+    // Check auth — if not signed in, show QuickAuthSheet before proceeding
+    final isAuthed = ref.read(authTokenProvider)?.isNotEmpty ?? false;
+    if (!isAuthed) {
+      final authenticated = await QuickAuthSheet.show(
+        context,
+        ref,
+        title: 'Sign in to book',
+      );
+      if (authenticated != true || !mounted) return;
+    }
+
     setState(() { _submitting = true; _error = null; });
     final scheduledFor = DateTime(_when.year, _when.month, _when.day, 10);
     try {

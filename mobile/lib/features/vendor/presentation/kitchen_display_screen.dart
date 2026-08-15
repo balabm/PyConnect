@@ -100,7 +100,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _loading
           ? _buildLoading()
           : _error != null
@@ -262,7 +262,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppTheme.darkSurface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: urgencyColor.withValues(alpha: 0.3),

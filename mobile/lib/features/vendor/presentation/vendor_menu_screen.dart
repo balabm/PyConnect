@@ -15,7 +15,7 @@ class VendorMenuScreen extends ConsumerWidget {
     final menuAsync = ref.watch(vendorMenuProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Menu Management'),
         actions: [

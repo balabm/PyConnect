@@ -7,6 +7,7 @@ import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/razorpay_payment_service.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../venues/application/venue_controller.dart';
 import '../../venues/data/venue_api.dart';
 import '../data/booking_api.dart';
@@ -160,9 +161,17 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             const SizedBox(height: 12),
           ],
           FilledButton.icon(
-            onPressed: isAuthenticated && !_submitting
-                ? () {
+            onPressed: !_submitting
+                ? () async {
                     AppHaptics.light();
+                    if (!isAuthenticated) {
+                      final authenticated = await QuickAuthSheet.show(
+                        context,
+                        ref,
+                        title: 'Sign in to book',
+                      );
+                      if (authenticated != true || !mounted) return;
+                    }
                     _submit();
                   }
                 : null,
@@ -177,16 +186,6 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               isAuthenticated ? 'Confirm ₹$total' : 'Sign in to book',
             ),
           ),
-          if (!isAuthenticated) ...[
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                AppHaptics.light();
-                context.go('/auth');
-              },
-              child: const Text('Go to sign in'),
-            ),
-          ],
         ],
       ),
     );

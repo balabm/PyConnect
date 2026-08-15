@@ -52,11 +52,10 @@ class HomestayCard extends StatelessWidget {
               children: [
                 AppNetworkImage(
                   imageUrl: _heroImage,
-                  height: 200,
+                  height: 180,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  fallbackIcon: Icons.home,
-                  fallbackColor: AppTheme.lagoonDark,
+                  fallbackIcon: Icons.home_work_outlined,
                 ),
                 Positioned(
                   bottom: 0,

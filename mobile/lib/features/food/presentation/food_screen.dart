@@ -10,6 +10,7 @@ import '../../../core/network/razorpay_payment_service.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/presentation/quick_auth_sheet.dart';
 
 final menuProvider = FutureProvider.family<List<dynamic>, String>((ref, vendorId) async {
   final api = ref.watch(foodApiProvider);
@@ -258,6 +259,17 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   }
 
   Future<void> _checkout(List<dynamic> items, double subtotal) async {
+    // Check auth — if not signed in, show QuickAuthSheet before proceeding
+    final isAuthed = ref.read(authTokenProvider)?.isNotEmpty ?? false;
+    if (!isAuthed) {
+      final authenticated = await QuickAuthSheet.show(
+        context,
+        ref,
+        title: 'Sign in to order',
+      );
+      if (authenticated != true || !mounted) return;
+    }
+
     setState(() => _loading = true);
     try {
       final cartItems = _cart.entries.map((e) {

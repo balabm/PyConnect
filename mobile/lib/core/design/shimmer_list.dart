@@ -42,10 +42,9 @@ class _ShimmerListState extends State<ShimmerList>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? AppTheme.darkCard : Colors.grey.shade300;
-    final highlightColor = isDark ? AppTheme.darkSurface : Colors.grey.shade100;
-    final blockColor = isDark ? AppTheme.darkSurface : Colors.grey.shade400;
+    final baseColor = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final highlightColor = Theme.of(context).colorScheme.surface;
+    final blockColor = Theme.of(context).colorScheme.surface;
 
     return ListView.builder(
       shrinkWrap: true,

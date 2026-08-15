@@ -30,12 +30,9 @@ class AppNetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final placeholderColor = isDark
-        ? AppTheme.darkCard
-        : Theme.of(context).colorScheme.surfaceContainerHighest;
-    final shimmerBase = isDark ? AppTheme.darkCard : Colors.grey.shade300;
-    final shimmerHighlight = isDark ? AppTheme.darkSurface : Colors.grey.shade100;
+    final placeholderColor = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final shimmerBase = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final shimmerHighlight = Theme.of(context).colorScheme.surface;
 
     final image = CachedNetworkImage(
       imageUrl: imageUrl,
@@ -52,10 +49,23 @@ class AppNetworkImage extends StatelessWidget {
         height: height,
         width: width,
         color: fallbackColor ?? placeholderColor,
-        child: Icon(
-          fallbackIcon,
-          size: 48,
-          color: isDark ? AppTheme.darkTextSecondary : Colors.grey.shade400,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              fallbackIcon,
+              size: 36,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Image unavailable',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
     );

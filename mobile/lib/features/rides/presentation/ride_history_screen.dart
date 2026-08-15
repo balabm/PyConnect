@@ -68,7 +68,7 @@ class _RideCard extends StatelessWidget {
     final rideId = ride['rideId'] as String? ?? ride['id'] as String? ?? '';
     final vehicleType = ride['vehicleType'] as String? ?? 'Bike';
     final distanceKm = ride['distanceKm'] ?? 0;
-    final statusColor = _statusColor(status);
+    final statusColor = _statusColor(status, context);
 
     return Container(
       decoration: BoxDecoration(
@@ -164,7 +164,7 @@ class _RideCard extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String status) {
+  Color _statusColor(String status, BuildContext context) {
     switch (status.toLowerCase()) {
       case 'requested':
         return AppTheme.warning;
@@ -180,7 +180,7 @@ class _RideCard extends StatelessWidget {
       case 'cancelled':
         return AppTheme.danger;
       default:
-        return AppTheme.darkTextSecondary;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 
