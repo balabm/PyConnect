@@ -169,7 +169,7 @@ private sealed class FakeOtpService : IOtpService
     }
 
     [Fact]
-    public async Task Login_RejectsUnapprovedVendor()
+    public async Task Login_ReturnsPendingForUnapprovedVendor()
     {
         using var context = CreateContext();
         context.Vendors.Add(Vendor.Create("Unapproved Shop", VendorCategory.Cafe, contactPhone: "9999999999"));
@@ -177,7 +177,7 @@ private sealed class FakeOtpService : IOtpService
 
         var handler = new VerifyVendorOtpHandler(new FakeOtpService(), new FakeJwt(), new FakeUserStore(), context);
 
-        var act = () => handler.Handle(new VerifyVendorOtpCommand("9999999999", "123456", "Owner"), CancellationToken.None);
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        var result = await handler.Handle(new VerifyVendorOtpCommand("9999999999", "123456", "Owner"), CancellationToken.None);
+        result.Status.Should().Be("Pending");
     }
 }

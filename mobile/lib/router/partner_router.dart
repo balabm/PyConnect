@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/application/vendor_auth_controller.dart';
 import '../features/auth/presentation/otp_verify_screen.dart';
 import '../features/auth/presentation/phone_entry_screen.dart';
+import '../features/vendor/presentation/pending_approval_screen.dart';
 import '../features/scanner/presentation/scanner_screen.dart';
 import '../features/vendor/presentation/vendor_menu_screen.dart';
 import '../features/vendor/presentation/vendor_promotions_screen.dart';
@@ -27,8 +28,9 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: _PartnerAuthRefreshListenable(ref),
     redirect: (context, state) {
-      final authenticated =
-          ref.read(vendorAuthControllerProvider).valueOrNull?.isAuthenticated ?? false;
+      final session = ref.read(vendorAuthControllerProvider).valueOrNull;
+      final authenticated = session?.isAuthenticated ?? false;
+      final isApproved = session?.isApproved ?? false;
       final path = state.matchedLocation;
 
       // Allow /register for unauthenticated users (self-onboarding)
@@ -41,6 +43,14 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (authenticated && (path == '/auth' || path.startsWith('/auth'))) {
+        return isApproved ? '/' : '/pending-approval';
+      }
+
+      if (authenticated && !isApproved && path != '/pending-approval' && !path.startsWith('/pending-approval')) {
+        return '/pending-approval';
+      }
+
+      if (authenticated && isApproved && path == '/pending-approval') {
         return '/';
       }
 
@@ -50,6 +60,10 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (_, _) => const VendorRegistrationScreen(),
+      ),
+      GoRoute(
+        path: '/pending-approval',
+        builder: (_, _) => const PendingApprovalScreen(),
       ),
       GoRoute(
         path: '/auth',

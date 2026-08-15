@@ -24,7 +24,8 @@ public sealed record VendorOtpRequestedResponse(string Phone, int OtpExpirySecon
 
 /// <summary>
 /// Exchanges a verified OTP for a vendor-scoped JWT. The phone number must
-/// resolve to an approved vendor, otherwise the login is rejected.
+/// resolve to a registered vendor. Pending or rejected vendors receive a
+/// limited token so they can view their approval status.
 /// </summary>
 public sealed record VerifyVendorOtpCommand(
     string Phone,
@@ -57,4 +58,6 @@ public sealed record VendorLoginResponse(
     string Category,
     Guid UserId,
     string UserName,
-    string Phone);
+    string Phone,
+    string Status,
+    string? RejectionReason);

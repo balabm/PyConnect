@@ -57,6 +57,8 @@ class VendorLoginResult {
     required this.userId,
     required this.userName,
     required this.phone,
+    required this.status,
+    this.rejectionReason,
   });
 
   factory VendorLoginResult.fromJson(Map<String, dynamic> json) =>
@@ -68,6 +70,8 @@ class VendorLoginResult {
         userId: json['userId'] as String? ?? '',
         userName: json['userName'] as String? ?? '',
         phone: json['phone'] as String? ?? '',
+        status: json['status'] as String? ?? 'Pending',
+        rejectionReason: json['rejectionReason'] as String?,
       );
 
   final String accessToken;
@@ -77,4 +81,6 @@ class VendorLoginResult {
   final String userId;
   final String userName;
   final String phone;
+  final String status;
+  final String? rejectionReason;
 }

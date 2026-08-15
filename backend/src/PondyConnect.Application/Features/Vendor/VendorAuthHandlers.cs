@@ -54,9 +54,25 @@ public sealed class VerifyVendorOtpHandler : IRequestHandler<VerifyVendorOtpComm
         var owner = await _userResolver.GetOrCreateAsync(request.OwnerName ?? "Vendor", request.Phone, UserRole.Vendor, cancellationToken);
 
         var vendor = await _context.Vendors
-            .FirstOrDefaultAsync(v => v.ContactPhone == request.Phone && v.IsApproved && v.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(v => v.ContactPhone == request.Phone, cancellationToken);
         if (vendor is null)
-            throw new UnauthorizedAccessException("No approved vendor account is linked to this phone number.");
+            throw new UnauthorizedAccessException("No vendor profile is linked to this phone number. Please register first.");
+
+        string status;
+        string? rejectionReason = null;
+        if (!vendor.IsActive)
+        {
+            status = "Rejected";
+            rejectionReason = "Account has been deactivated. Contact support for details.";
+        }
+        else if (!vendor.IsApproved)
+        {
+            status = "Pending";
+        }
+        else
+        {
+            status = "Approved";
+        }
 
         var accessToken = _jwtTokenFactory.CreateAccessToken(owner.Id, owner.Phone, UserRole.Vendor.ToString());
 
@@ -67,6 +83,8 @@ public sealed class VerifyVendorOtpHandler : IRequestHandler<VerifyVendorOtpComm
             vendor.Category.ToString(),
             owner.Id,
             owner.Name,
-            owner.Phone);
+            owner.Phone,
+            status,
+            rejectionReason);
     }
 }
