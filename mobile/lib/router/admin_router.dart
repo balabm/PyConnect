@@ -1,0 +1,94 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/auth/application/auth_controller.dart';
+import '../features/auth/presentation/otp_verify_screen.dart';
+import '../features/auth/presentation/phone_entry_screen.dart';
+import '../features/admin/presentation/admin_shell.dart';
+import '../features/admin/presentation/admin_dashboard_screen.dart';
+import '../features/admin/presentation/admin_users_screen.dart';
+import '../features/admin/presentation/admin_drivers_screen.dart';
+import '../features/admin/presentation/admin_vendors_screen.dart';
+import '../features/admin/presentation/admin_live_rides_screen.dart';
+import '../features/admin/presentation/admin_sos_screen.dart';
+import '../features/admin/presentation/admin_tickets_screen.dart';
+import '../features/admin/presentation/admin_logs_screen.dart';
+
+final adminRouterProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    initialLocation: '/',
+    refreshListenable: _AdminAuthRefreshListenable(ref),
+    redirect: (context, state) {
+      final authenticated =
+          ref.read(authControllerProvider).valueOrNull?.isAuthenticated ?? false;
+      final path = state.matchedLocation;
+
+      if (!authenticated && path != '/auth' && !path.startsWith('/auth')) {
+        return '/auth';
+      }
+
+      if (authenticated && (path == '/auth' || path.startsWith('/auth'))) {
+        return '/';
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/auth',
+        builder: (_, _) => const PhoneEntryScreen(),
+        routes: [
+          GoRoute(
+            path: 'otp',
+            builder: (_, _) => const OtpVerifyScreen(),
+          ),
+        ],
+      ),
+      // ShellRoute wraps all admin sections with the navigation rail.
+      ShellRoute(
+        builder: (context, state, child) => AdminShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const AdminDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/users',
+            builder: (_, _) => const AdminUsersScreen(),
+          ),
+          GoRoute(
+            path: '/drivers',
+            builder: (_, _) => const AdminDriversScreen(),
+          ),
+          GoRoute(
+            path: '/vendors',
+            builder: (_, _) => const AdminVendorsScreen(),
+          ),
+          GoRoute(
+            path: '/rides',
+            builder: (_, _) => const AdminLiveRidesScreen(),
+          ),
+          GoRoute(
+            path: '/sos',
+            builder: (_, _) => const AdminSosScreen(),
+          ),
+          GoRoute(
+            path: '/tickets',
+            builder: (_, _) => const AdminTicketsScreen(),
+          ),
+          GoRoute(
+            path: '/logs',
+            builder: (_, _) => const AdminLogsScreen(),
+          ),
+        ],
+      ),
+    ],
+  );
+});
+
+class _AdminAuthRefreshListenable extends ChangeNotifier {
+  _AdminAuthRefreshListenable(Ref ref) {
+    ref.listen(authControllerProvider, (_, _) => notifyListeners());
+  }
+}

@@ -1,0 +1,38 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+artifacts/
+TestResults/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+
+# Rider
+.idea/
+
+# macOS
+.DS_Store
+
+# Environment / secrets
+appsettings.Development.json
+appsettings.Production.json
+.env*
+!.env.example
+*.pfx
+
+# NuGet
+*.nupkg
+
+# Node (if any Flutter tooling drops JS artifacts)
+node_modules/
+
+# Flutter (mobile app when present)
+/mobile/build/
+/mobile/.dart_tool/

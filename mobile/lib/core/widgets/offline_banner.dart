@@ -1,0 +1,123 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import '../config/app_config.dart';
+
+/// A simple connectivity checker that pings the API health endpoint.
+/// Polling starts in [start] and must be stopped in [dispose].
+class ConnectivityChecker extends ChangeNotifier {
+  ConnectivityChecker();
+
+  Dio? _dio;
+  bool _isOnline = true;
+  Timer? _timer;
+  bool _started = false;
+
+  bool get isOnline => _isOnline;
+
+  void start() {
+    if (_started) return;
+    _started = true;
+    _dio = Dio(BaseOptions(
+      baseUrl: AppConfig.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 5),
+    ));
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) => _check());
+  }
+
+  Future<void> _check() async {
+    try {
+      final response = await _dio!.get('/health');
+      final nowOnline = response.statusCode == 200;
+      if (nowOnline != _isOnline) {
+        _isOnline = nowOnline;
+        notifyListeners();
+      }
+    } on DioException catch (_) {
+      if (_isOnline) {
+        _isOnline = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _timer = null;
+    _dio?.close();
+    _dio = null;
+    super.dispose();
+  }
+}
+
+/// Banner shown at the top of the screen when the API is unreachable.
+/// Only starts polling in non-test (release/debug) environments.
+class OfflineBanner extends StatefulWidget {
+  const OfflineBanner({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<OfflineBanner> createState() => _OfflineBannerState();
+}
+
+class _OfflineBannerState extends State<OfflineBanner> {
+  final _checker = ConnectivityChecker();
+
+  @override
+  void initState() {
+    super.initState();
+    if (kReleaseMode) {
+      _checker.start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _checker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _checker,
+      builder: (context, child) {
+        return Column(
+          children: [
+            if (!_checker.isOnline)
+              Material(
+                color: Colors.amber.shade900,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No Internet Connection',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            Expanded(child: child!),
+          ],
+        );
+      },
+      child: widget.child,
+    );
+  }
+}

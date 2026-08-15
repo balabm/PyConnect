@@ -1,0 +1,63 @@
+# PY Connect — Consumer App Store Listing
+
+## App Name
+PY Connect
+
+## Short Description (80 chars max)
+Pondicherry's super-app: rides, food, stays, transit & local experiences
+
+## Full Description (4000 chars max)
+PY Connect is Pondicherry's all-in-one super-app designed for tourists and locals alike. Discover the best of White Town, Auroville, and the entire Pondicherry region with a single app that brings together rides, food delivery, stays, transit, and curated local experiences.
+
+RIDES & MOBILITY
+• Book auto-rickshaws and bike taxis with transparent, capped dynamic pricing (max 1.5x)
+• Real-time ride tracking with live driver location on the map
+• OTP-verified ride starts for safety and accountability
+• Contextual SOS button active only during your ride
+• Road-based routing for accurate ETAs
+
+FOOD & DINING
+• Order from Pondicherry's best cafes, restaurants, and pizzerias
+• Filter by dietary preferences: Veg, Non-Veg, Vegan, Halal
+• Real-time order tracking and live kitchen status
+• Exclusive deals and promotions from local partners
+
+STAYS & HOSPITALITY
+• Browse and book boutique stays, guesthouses, and heritage homes
+• Date-based search with instant availability
+• Curated for the White Town and Auroville experience
+
+TRANSIT & MOBILITY
+• Intercity and local transit options
+• Luggage cloak services at key pickup points
+• Scooter and bike rentals for exploring at your pace
+
+LOCAL EXPERIENCES
+• Curated experiences and activities around Pondicherry
+• Safety-first booking with verified providers
+• Context-aware recommendations based on your location and preferences
+
+WHY PY CONNECT?
+• Built specifically for Pondicherry — not a generic national app
+• Transparent pricing with no surge gouging
+• Driver-friendly economics with 0% commission model
+• Local partners, local drivers, local experiences
+• Secure payments powered by Razorpay
+• Dietary-aware food discovery
+
+Download PY Connect and experience Pondicherry like a local.
+
+## Category
+Travel & Local
+
+## Content Rating
+Everyone
+
+## Target Audience
+All ages
+
+## Privacy Policy URL
+https://pyconnect.run.place/privacy-policy
+
+## Keywords
+Pondicherry, Pondi, rides, food delivery, auto rickshaw, bike taxi, stays, transit, White Town, Auroville, local experiences, travel, tourism

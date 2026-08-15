@@ -1,0 +1,182 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/design/design.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/providers.dart';
+
+final foodOrderDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, orderId) async {
+  final api = ref.watch(foodApiProvider);
+  return await api.getOrder(orderId);
+});
+
+class FoodOrderDetailScreen extends ConsumerWidget {
+  const FoodOrderDetailScreen({super.key, required this.orderId});
+  final String orderId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orderAsync = ref.watch(foodOrderDetailProvider(orderId));
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Order Details')),
+      body: orderAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ErrorState(
+          message: e.toString(),
+          onRetry: () => ref.invalidate(foodOrderDetailProvider(orderId)),
+        ),
+        data: (order) => _OrderDetailBody(order: order),
+      ),
+    );
+  }
+}
+
+class _OrderDetailBody extends StatelessWidget {
+  const _OrderDetailBody({required this.order});
+  final Map<String, dynamic> order;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = order['status'] as String? ?? 'Unknown';
+    final items = order['items'] as List<dynamic>? ?? [];
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _StatusTimeline(status: status),
+        const SizedBox(height: 24),
+        Text('Items', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        for (final item in items)
+          _ItemRow(item: item as Map<String, dynamic>),
+        const Divider(height: 32),
+        _PricingSection(order: order),
+        const SizedBox(height: 16),
+        if (order['deliveryAddress'] != null) ...[
+          Text('Delivery Address', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 4),
+          Text(order['deliveryAddress'] as String, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ],
+    );
+  }
+}
+
+class _StatusTimeline extends StatelessWidget {
+  const _StatusTimeline({required this.status});
+  final String status;
+
+  static const _stages = ['Pending', 'Preparing', 'Ready', 'OutForDelivery', 'Delivered'];
+
+  @override
+  Widget build(BuildContext context) {
+    final currentIndex = _stages.indexWhere((s) => s.toLowerCase() == status.toLowerCase());
+    final isCancelled = status.toLowerCase() == 'cancelled';
+
+    if (isCancelled) {
+      return AppCard(
+        child: Row(
+          children: [
+            const Icon(Icons.cancel, color: AppTheme.coral),
+            const SizedBox(width: 12),
+            const Text('Order Cancelled', style: TextStyle(color: AppTheme.coral, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+    }
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Order Status', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(_stages.length * 2 - 1, (i) {
+              if (i.isOdd) {
+                final reached = i ~/ 2 < currentIndex;
+                return Expanded(
+                  child: Container(
+                    height: 2,
+                    color: reached ? AppTheme.lagoon : Theme.of(context).dividerColor,
+                  ),
+                );
+              }
+              final stageIndex = i ~/ 2;
+              final reached = stageIndex <= currentIndex;
+              return Icon(
+                reached ? Icons.check_circle : Icons.radio_button_unchecked,
+                color: reached ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 24,
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: _stages.map((s) {
+              final reached = _stages.indexOf(s) <= currentIndex;
+              return Text(
+                s.replaceAllMapped(RegExp(r'[A-Z]'), (m) => ' ${m.group(0)}').trim(),
+                style: TextStyle(fontSize: 9, color: reached ? AppTheme.lagoon : Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: reached ? FontWeight.bold : FontWeight.normal),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ItemRow extends StatelessWidget {
+  const _ItemRow({required this.item});
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item['name'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w500)),
+                if (item['specialInstructions'] != null)
+                  Text(item['specialInstructions'] as String, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          Text('x${item['quantity'] ?? 1}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const SizedBox(width: 12),
+          Text('\u20B9${item['unitPrice'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PricingSection extends StatelessWidget {
+  const _PricingSection({required this.order});
+  final Map<String, dynamic> order;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        children: [
+          FareRow(label: 'Subtotal', value: '\u20B9${order['subTotal']}'),
+          FareRow(label: 'Delivery Fee', value: '\u20B9${order['deliveryFee']}'),
+          if ((order['lateNightDriverBonus'] ?? 0) != 0)
+            FareRow(label: 'Late Night Bonus', value: '\u20B9${order['lateNightDriverBonus']}'),
+          FareRow(label: 'Platform Fee', value: '\u20B9${order['platformFee']}'),
+          const Divider(),
+          FareRow(label: 'Total', value: '\u20B9${order['totalAmount']}', bold: true),
+        ],
+      ),
+    );
+  }
+}

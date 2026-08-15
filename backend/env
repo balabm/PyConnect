@@ -1,0 +1,41 @@
+# PondyConnect — Production Environment Variables
+#
+# Copy this file to `.env` on your EC2 instance (next to docker-compose.prod.yml)
+# and fill in the real values. Docker Compose reads `.env` automatically.
+#
+# NEVER commit the real `.env` file to git.
+
+# --- Docker Hub ---
+DOCKERHUB_USERNAME=balabm
+
+# --- Database (AWS RDS PostgreSQL) ---
+POSTGRES_CONNECTION_STRING=Host=pyconnect.ch2i68eyk0ii.eu-north-1.rds.amazonaws.com;Port=5432;Database=postgres;Username=postgres;Password=pyconnect9943
+
+# --- JWT ---
+JWT_KEY=your-production-jwt-key-at-least-32-characters-long
+JWT_ISSUER=https://api.pondyconnect.in
+JWT_AUDIENCE=https://app.pondyconnect.in
+JWT_ACCESS_TOKEN_LIFETIME_MINUTES=60
+
+# --- SMS (Fast2SMS) ---
+SMS_PROVIDER=Fast2SMS
+SMS_USE_MOCK=false
+# Fast2SMS API key — get from https://www.fast2sms.com/dashboard/api
+SMS_API_KEY=0Ud7Svpo83EOyqcj1RXIVWfwkeGJPAt25M6bZBun94hTQNHirzwuYfcI1N5Mivqx3GgpOrZERb9WCyJs
+
+# --- Razorpay ---
+PAYMENTS_USE_MOCK=true
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
+RAZORPAY_WEBHOOK_SECRET=your-razorpay-webhook-secret
+
+# --- WhatsApp Business API ---
+WHATSAPP_ACCESS_TOKEN=your-whatsapp-access-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
+
+# --- Firebase ---
+FIREBASE_SERVICE_ACCOUNT_PATH=/app/firebase-service-account.json
+FIREBASE_IS_ENABLED=false
+
+# --- OSRM (optional, defaults to public instance) ---
+OSRM_BASE_URL=https://router.project-osrm.org

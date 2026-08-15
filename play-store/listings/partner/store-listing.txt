@@ -1,0 +1,76 @@
+# PY Connect Partner — Merchant App Store Listing
+
+## App Name
+PY Connect Partner
+
+## Short Description (80 chars max)
+Manage your Pondicherry business — orders, menu, bookings, and analytics
+
+## Full Description (4000 chars max)
+PY Connect Partner is the business management app for merchants and venues on Pondicherry's super-app platform. Whether you run a restaurant, cafe, pizzeria, pub, scooter rental, taxi service, or luggage cloak business, the Partner app gives you everything you need to manage your operations from a single dashboard.
+
+ZERO-TOUCH SELF-ONBOARDING
+• Register your business with the /register flow — no sales calls needed
+• Select your business category: Restaurant, Cafe, Pizzeria, Pub/Club, Scooter Rental, Taxi Operator, or Luggage Cloak
+• Upload KYC documents (FSSAI, GSTIN, PAN) directly in the app
+• Add your bank account for automated payouts
+• Submit for admin approval and go live
+
+CATEGORY-AWARE MENUS
+• Restaurants & Cafes: Full menu management with categories, add-ons, and dietary tags (Veg, Non-Veg, Vegan, Halal)
+• Pizzerias: Pizza builder with crust, size, and topping configurations
+• Pubs & Clubs: Drinks menu with cocktail, beer, and spirits management
+• Scooter Rentals: Fleet management with availability tracking and rental bookings
+• Taxi Operators: Fleet and ride management
+• Luggage Cloak: Bag capacity management and booking system
+
+ORDER MANAGEMENT
+• Real-time incoming orders with accept/decline
+• Kitchen Display System (KDS) for food preparation workflow
+• Order status updates: New → Preparing → Ready → Picked Up → Delivered
+• Push notifications for new orders
+• Active orders panel with live status tracking
+
+BOOKINGS & RENTALS
+• Manage incoming booking requests for stays, scooter rentals, and luggage cloak
+• Approve or decline bookings with one tap
+• Calendar view of upcoming bookings
+• Active rental tracking with pickup/return management
+
+PROMOTIONS & MARKETING
+• Create and manage promotional campaigns
+• Flash deals and time-limited offers
+• Track promotion performance with analytics
+
+ANALYTICS & INSIGHTS
+• Revenue dashboard with daily, weekly, and monthly views
+• Order volume and average order value
+• Top-selling items and categories
+• Customer ratings and feedback
+
+PAYMENTS & PAYOUTS
+• Automated payouts to your linked bank account
+• Transparent transaction history
+• Razorpay-secured payment processing
+
+VENUE MANAGEMENT
+• Update business profile, photos, and operating hours
+• Toggle venue status (Open/Closed) in real-time
+• Manage capacity and availability
+
+The PY Connect Partner app is your complete business command center for Pondicherry's growing super-app ecosystem. Join the platform and reach thousands of tourists and locals exploring Pondicherry.
+
+## Category
+Business
+
+## Content Rating
+Everyone
+
+## Target Audience
+All ages
+
+## Privacy Policy URL
+https://pyconnect.run.place/privacy-policy
+
+## Keywords
+Pondicherry, business, merchant, partner, POS, restaurant, cafe, orders, menu, fleet, rental, bookings, analytics

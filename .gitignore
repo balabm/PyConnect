@@ -1,0 +1,82 @@
+# ============================================================
+# PY Connect — Root .gitignore
+# ============================================================
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+
+# --- Secrets (NEVER commit) ---
+.env
+.env.*
+!.env.example
+*.pfx
+*.pem
+*.key
+firebase-service-account*.json
+**/google-services.json
+**/key.properties
+**/*.jks
+**/*.keystore
+appsettings.Development.json
+appsettings.Production.json
+
+# --- Backend (.NET) ---
+**/bin/
+**/obj/
+**/artifacts/
+**/TestResults/
+*.nupkg
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# --- Mobile (Flutter) ---
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/app/debug
+mobile/android/app/profile
+mobile/android/app/release
+mobile/coverage/
+mobile/app.*.symbols
+mobile/app.*.map.json
+
+# --- E2E (Playwright) ---
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/.playwright-mcp/
+
+# --- Playwright MCP ---
+.playwright-mcp/
+
+# --- Windsurf / IDE temp ---
+.windsurf/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Dev test artifacts (root level) ---
+/token*.json
+/verify_result.json
+/*.ps1
+

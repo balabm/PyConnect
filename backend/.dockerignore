@@ -1,0 +1,38 @@
+# Docker build context exclusions
+# Reduces build context size and avoids copying unnecessary files into the image.
+
+# Build artifacts
+**/bin/
+**/obj/
+
+# Local database files (SQLite dev artifacts)
+*.db
+*.db-shm
+*.db-wal
+
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Test projects (not needed in the runtime image)
+tests/
+
+# Documentation
+*.md
+.editorconfig
+
+# OS files
+Thumbs.db
+.DS_Store

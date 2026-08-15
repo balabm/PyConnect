@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- This value is the OAuth 2.0 web client ID from Google Cloud Console.
+         Replace it with the actual Web client ID before release. -->
+    <string name="default_web_client_id" translatable="false">REPLACE_WITH_WEB_CLIENT_ID</string>
+</resources>

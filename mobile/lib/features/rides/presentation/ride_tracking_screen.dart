@@ -1,0 +1,438 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
+
+import '../../../core/animations/haptic.dart';
+import '../../../core/design/design.dart';
+import '../../../core/providers.dart';
+import '../../../core/theme/app_theme.dart';
+import '../application/ride_signalr_provider.dart';
+import 'widgets/driver_info_card.dart';
+import 'widgets/fare_card.dart';
+import 'widgets/otp_card.dart';
+import 'widgets/ride_completed_banner.dart';
+import 'widgets/ride_map.dart';
+import 'widgets/ride_status_card.dart';
+import 'widgets/route_card.dart';
+import 'widgets/sos_button.dart';
+
+final rideDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, rideId) async {
+  final api = ref.watch(ridesApiProvider);
+  return await api.getRide(rideId);
+});
+
+class RideTrackingScreen extends ConsumerStatefulWidget {
+  const RideTrackingScreen({super.key, required this.rideId});
+  final String rideId;
+
+  @override
+  ConsumerState<RideTrackingScreen> createState() => _RideTrackingScreenState();
+}
+
+class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
+  Map<String, dynamic>? _ride;
+  DriverLocationUpdate? _driverLocation;
+  Map<String, dynamic>? _driverInfo;
+  bool _sosActive = false;
+  bool _cancelling = false;
+  List<LatLng>? _routePoints;
+  StreamSubscription? _driverAssignedSub;
+  StreamSubscription? _locationSub;
+  StreamSubscription? _arrivedSub;
+  StreamSubscription? _startedSub;
+  StreamSubscription? _completedSub;
+  StreamSubscription? _cancelledSub;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupSignalR();
+    // Fallback polling in case SignalR fails
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _refreshRide());
+  }
+
+  Future<void> _setupSignalR() async {
+    final signalR = ref.read(rideSignalRProvider);
+    try {
+      await signalR.joinRide(widget.rideId);
+
+      _driverAssignedSub = signalR.driverAssignedStream.listen((args) {
+        if (args.isNotEmpty) {
+          final data = args[0];
+          if (data is Map) {
+            setState(() {
+              _driverInfo = Map<String, dynamic>.from(data);
+            });
+          }
+        }
+      });
+
+      _locationSub = signalR.driverLocationUpdateStream.listen((args) {
+        if (args.isNotEmpty) {
+          final data = args[0];
+          if (data is Map) {
+            final lat = (data['latitude'] as num?)?.toDouble();
+            final lng = (data['longitude'] as num?)?.toDouble();
+            if (lat != null && lng != null) {
+              setState(() {
+                _driverLocation = DriverLocationUpdate(
+                  latitude: lat,
+                  longitude: lng,
+                  heading: (data['heading'] as num?)?.toDouble(),
+                  distanceToPickupKm: (data['distanceToPickupKm'] as num?)?.toDouble(),
+                  etaToPickupMin: (data['etaToPickupMin'] as num?)?.toInt(),
+                );
+              });
+            }
+          }
+        }
+      });
+
+      _arrivedSub = signalR.driverArrivedStream.listen((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Driver has arrived at pickup!'), backgroundColor: AppTheme.success),
+          );
+        }
+      });
+
+      _startedSub = signalR.rideStartedStream.listen((_) => _refreshRide());
+      _completedSub = signalR.rideCompletedStream.listen((_) => _refreshRide());
+      _cancelledSub = signalR.rideCancelledStream.listen((_) => _refreshRide());
+    } catch (_) {
+      // SignalR connection failed — fallback polling will keep data fresh
+    }
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _driverAssignedSub?.cancel();
+    _locationSub?.cancel();
+    _arrivedSub?.cancel();
+    _startedSub?.cancel();
+    _completedSub?.cancel();
+    _cancelledSub?.cancel();
+    ref.read(rideSignalRProvider).leaveRide(widget.rideId);
+    super.dispose();
+  }
+
+  Future<void> _refreshRide() async {
+    try {
+      final api = ref.read(ridesApiProvider);
+      final ride = await api.getRide(widget.rideId);
+      if (!mounted) return;
+      setState(() => _ride = ride);
+      // Fetch route polyline from OSRM if we have coordinates and haven't yet
+      if (_routePoints == null) {
+        _fetchRoute(ride);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchRoute(Map<String, dynamic> ride) async {
+    final pickupLat = (ride['pickupLat'] as num?)?.toDouble();
+    final pickupLng = (ride['pickupLng'] as num?)?.toDouble();
+    final dropoffLat = (ride['dropoffLat'] as num?)?.toDouble();
+    final dropoffLng = (ride['dropoffLng'] as num?)?.toDouble();
+    if (pickupLat == null || pickupLng == null || dropoffLat == null || dropoffLng == null) return;
+
+    // Prefer route points from backend if available
+    final routePointsFromServer = ride['routePoints'] as List<dynamic>?;
+    if (routePointsFromServer != null && routePointsFromServer.isNotEmpty) {
+      final points = routePointsFromServer
+          .whereType<Map>()
+          .map((p) => LatLng((p['lat'] as num).toDouble(), (p['lng'] as num).toDouble()))
+          .toList();
+      if (points.isNotEmpty && mounted) {
+        setState(() => _routePoints = points);
+        return;
+      }
+    }
+
+    // Fallback: compute route via OSRM
+    try {
+      final routing = ref.read(routingProvider);
+      final route = await routing.getRoute(
+        LatLng(pickupLat, pickupLng),
+        LatLng(dropoffLat, dropoffLng),
+      );
+      if (mounted && route != null) setState(() => _routePoints = route.points);
+    } catch (_) {}
+  }
+
+  Future<void> _cancelRide() async {
+    AppHaptics.heavy();
+    setState(() => _cancelling = true);
+    try {
+      final api = ref.read(ridesApiProvider);
+      final result = await api.cancelByRider(widget.rideId);
+      final fee = result['cancellationFee'];
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(fee != null && fee > 0
+                ? 'Ride cancelled. Cancellation fee: \u20B9$fee'
+                : 'Ride cancelled'),
+          ),
+        );
+        _refreshRide();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cancel failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
+  }
+
+  Future<void> _triggerSos() async {
+    AppHaptics.error();
+    try {
+      final api = ref.read(ridesApiProvider);
+      final loc = _driverLocation;
+      await api.triggerSos(widget.rideId, loc?.latitude ?? 11.9356, loc?.longitude ?? 79.8301);
+      if (mounted) {
+        setState(() => _sosActive = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('SOS triggered. Emergency contacts notified. Help is on the way.'),
+            backgroundColor: AppTheme.danger,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('SOS failed: $e')));
+      }
+    }
+  }
+
+  Future<void> _shareTrip() async {
+    AppHaptics.light();
+    try {
+      final api = ref.read(ridesApiProvider);
+      final result = await api.enableTripSharing(widget.rideId);
+      final token = result['tripShareToken'];
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Trip share link: /trip/$token')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Share failed: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rideAsync = ref.watch(rideDetailProvider(widget.rideId));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Track Ride'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Share Trip',
+            onPressed: _shareTrip,
+          ),
+        ],
+      ),
+      body: rideAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ErrorState(
+          message: e.toString(),
+          onRetry: () => ref.invalidate(rideDetailProvider(widget.rideId)),
+        ),
+        data: (ride) {
+          _ride ??= ride;
+          return _TrackingBody(
+            ride: _ride ?? ride,
+            driverLocation: _driverLocation,
+            driverInfo: _driverInfo,
+            sosActive: _sosActive,
+            onCancel: _cancelRide,
+            cancelling: _cancelling,
+            onSos: _triggerSos,
+            routePoints: _routePoints,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TrackingBody extends StatelessWidget {
+  const _TrackingBody({
+    required this.ride,
+    required this.driverLocation,
+    required this.driverInfo,
+    required this.sosActive,
+    required this.onCancel,
+    required this.cancelling,
+    required this.onSos,
+    required this.routePoints,
+  });
+
+  final Map<String, dynamic> ride;
+  final DriverLocationUpdate? driverLocation;
+  final Map<String, dynamic>? driverInfo;
+  final bool sosActive;
+  final VoidCallback onCancel;
+  final bool cancelling;
+  final VoidCallback onSos;
+  final List<LatLng>? routePoints;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = ride['status'] as String? ?? 'Unknown';
+    final vehicleType = ride['vehicleType'] as String? ?? 'Bike';
+    final fare = ride['fare'] ?? 0;
+    final totalAmount = ride['totalAmount'] ?? 0;
+    final platformBookingFee = ride['platformBookingFee'] ?? 0;
+    final distanceKm = ride['distanceKm'] ?? 0;
+    final estimatedDurationMin = ride['estimatedDurationMin'] ?? 0;
+    final paymentMethod = ride['paymentMethod'] as String? ?? 'Cash';
+    final surgeMultiplier = (ride['surgeMultiplier'] as num?)?.toDouble() ?? 1.0;
+    final surgeReason = ride['surgeReason'] as String?;
+
+    final isCompleted = status.toLowerCase() == 'completed';
+    final isCancelled = status.toLowerCase() == 'cancelled';
+    final canCancel = !isCompleted && !isCancelled && status.toLowerCase() != 'enroute';
+
+    final pickupLat = (ride['pickupLat'] as num?)?.toDouble() ?? 11.9356;
+    final pickupLng = (ride['pickupLng'] as num?)?.toDouble() ?? 79.8301;
+    final dropoffLat = (ride['dropoffLat'] as num?)?.toDouble() ?? 11.9370;
+    final dropoffLng = (ride['dropoffLng'] as num?)?.toDouble() ?? 79.8338;
+
+    return Stack(
+      children: [
+        ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Live map
+            SizedBox(
+              height: 250,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: RideMap(
+                  pickup: LatLng(pickupLat, pickupLng),
+                  dropoff: LatLng(dropoffLat, dropoffLng),
+                  driverLocation: driverLocation != null
+                      ? LatLng(driverLocation!.latitude, driverLocation!.longitude)
+                      : null,
+                  routePoints: routePoints,
+                  fitRoute: true,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            RideStatusCard(status: status),
+            const SizedBox(height: 16),
+            // OTP display for rider (show when driver assigned, before ride starts)
+            if (status.toLowerCase() == 'driverassigned' || status.toLowerCase() == 'arrivedatpickup')
+              OtpCard(ride: ride),
+            if (status.toLowerCase() == 'driverassigned' || status.toLowerCase() == 'arrivedatpickup')
+              const SizedBox(height: 16),
+            if (driverInfo != null || status.toLowerCase() != 'requested')
+              DriverInfoCard(
+                driverInfo: driverInfo,
+                vehicleType: vehicleType,
+                paymentMethod: paymentMethod,
+                etaToPickup: driverLocation?.etaToPickupMin,
+              ),
+            if (driverInfo != null) const SizedBox(height: 16),
+            RouteCard(ride: ride),
+            const SizedBox(height: 16),
+            FareCard(
+              fare: fare,
+              platformBookingFee: platformBookingFee,
+              totalAmount: totalAmount,
+              distanceKm: distanceKm,
+              estimatedDurationMin: estimatedDurationMin,
+              surgeMultiplier: surgeMultiplier,
+              surgeReason: surgeReason,
+            ),
+            const SizedBox(height: 24),
+            if (canCancel)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: cancelling ? null : onCancel,
+                  icon: cancelling
+                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.cancel, color: AppTheme.danger),
+                  label: const Text('Cancel Ride', style: TextStyle(color: AppTheme.danger)),
+                  style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.danger)),
+                ),
+              ),
+            if (isCompleted)
+              const RideCompletedBanner(),
+            if (isCompleted) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        final driverName = driverInfo?['driverName'] as String? ?? 'Driver';
+                        context.push('/rides/${ride['rideId'] ?? ride['id']}/rate?driver=$driverName');
+                      },
+                      icon: const Icon(Icons.star),
+                      label: const Text('Rate Ride'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final rideId = ride['rideId'] ?? ride['id'];
+                        context.push('/rides/$rideId/receipt');
+                      },
+                      icon: const Icon(Icons.receipt),
+                      label: const Text('Receipt'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (isCancelled)
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.danger.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: const Row(
+                  children: [
+                    Icon(Icons.cancel, color: AppTheme.danger, size: 32),
+                    SizedBox(width: 12),
+                    Text('Ride Cancelled', style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold, fontSize: 18)),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 80), // Space for SOS button
+          ],
+        ),
+        // SOS button floating at bottom
+        Positioned(
+          bottom: 16,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: SosButton(onTrigger: onSos, active: sosActive),
+          ),
+        ),
+      ],
+    );
+  }
+}

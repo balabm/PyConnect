@@ -1,0 +1,68 @@
+# PY Connect Captain — Driver App Store Listing
+
+## App Name
+PY Connect Captain
+
+## Short Description (80 chars max)
+Drive and earn in Pondicherry — 0% commission, transparent earnings
+
+## Full Description (4000 chars max)
+PY Connect Captain is the driver app for Pondicherry's homegrown ride-hailing and mobility platform. Join the Captain fleet and start earning by giving auto-rickshaw and bike taxi rides across Pondicherry and surrounding areas.
+
+WHY DRIVE WITH PY CONNECT?
+• 0% commission — you keep 100% of your earnings during our launch period
+• Transparent earnings with real-time wallet tracking
+• Instant payout requests directly to your bank account
+• No surge gouging — riders pay a fair, capped price (max 1.5x)
+• Built specifically for Pondicherry drivers, not a national generic app
+
+ZERO-TOUCH ONBOARDING
+• Self-register with your vehicle details and license plate
+• Upload KYC documents (Driving License, RC, Insurance, Selfie) directly in the app
+• Complete the 5-page interactive safety tutorial
+• Sign the digital Terms & Safety Agreement
+• Get approved and start driving — no office visits required
+
+SMART DISPATCH
+• Receive ride offers with pickup distance, trip distance, and estimated earnings upfront
+• Accept or decline rides with a single tap
+• OTP verification ensures the right rider boards your vehicle
+• Real-time navigation to pickup and dropoff locations
+• Concurrent top-N driver dispatch means faster match times
+
+SAFETY FIRST
+• In-app SOS button active during active rides
+• Digital safety agreement and tutorial completion required before going online
+• Rider and driver identity verification
+• Trip recording and audit trail for every ride
+
+EARNINGS & WALLET
+• Real-time wallet balance
+• Transparent trip-by-trip earnings breakdown
+• Instant payout to your linked bank account
+• Daily, weekly, and monthly earnings summaries
+
+BACKGROUND LOCATION
+The app uses background location to:
+• Match you with nearby ride requests while the app is in the background
+• Send your live location to riders during active rides for pickup navigation
+• Maintain your online status for dispatch while your screen is off
+
+Background location is only active while you are marked ONLINE and is disabled when you go offline. You can disable background location at any time by going offline.
+
+Become a PY Connect Captain today and join Pondicherry's own ride-hailing revolution.
+
+## Category
+Maps & Navigation
+
+## Content Rating
+Everyone
+
+## Target Audience
+All ages
+
+## Privacy Policy URL
+https://pyconnect.run.place/privacy-policy
+
+## Keywords
+Pondicherry, driver, captain, ride hailing, auto rickshaw, bike taxi, earnings, 0 commission, self onboarding, driving
