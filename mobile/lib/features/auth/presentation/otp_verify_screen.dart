@@ -62,6 +62,10 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
   /// fills the input boxes automatically. The backend only returns the code
   /// when the system is in SMS-mock/test mode. In production with a real SMS
   /// provider, the endpoint returns 404 and this is a silent no-op.
+  ///
+  /// Retries up to 5 times with 500ms delay — the OTP may not be cached
+  /// immediately after the request returns (especially on the deployed
+  /// backend with Redis/network latency).
   Future<void> _autofillOtp() async {
     if (_isAutofilling || _hasSubmitted) return;
     final phone = ref.read(otpRequestedForProvider);
@@ -70,19 +74,30 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     final isPartner = resolvedAppFlavor == AppFlavor.partner;
     _isAutofilling = true;
     try {
-      final code = isPartner
-          ? await ref.read(vendorAuthApiProvider).peekOtp(phone)
-          : await ref.read(authApiProvider).peekOtp(phone);
-      if (code != null && code.length == 6 && mounted) {
-        for (var i = 0; i < 6; i++) {
-          _controllers[i].text = code[i];
+      for (var attempt = 0; attempt < 5; attempt++) {
+        if (!mounted || _hasSubmitted) return;
+
+        final code = isPartner
+            ? await ref.read(vendorAuthApiProvider).peekOtp(phone)
+            : await ref.read(authApiProvider).peekOtp(phone);
+
+        if (code != null && code.length == 6 && mounted) {
+          for (var i = 0; i < 6; i++) {
+            _controllers[i].text = code[i];
+          }
+          setState(() {});
+          // Auto-submit after autofill.
+          if (!_hasSubmitted) {
+            _hasSubmitted = true;
+            _focusNodes[5].unfocus();
+            await _verify();
+          }
+          return;
         }
-        setState(() {});
-        // Auto-submit after autofill.
-        if (!_hasSubmitted) {
-          _hasSubmitted = true;
-          _focusNodes[5].unfocus();
-          await _verify();
+
+        // Wait before retrying — gives the backend cache time to settle.
+        if (attempt < 4) {
+          await Future.delayed(const Duration(milliseconds: 500));
         }
       }
     } catch (_) {
@@ -217,6 +232,39 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 12),
+              // Test mode hint — visible while OTP autofill is attempting
+              if (_isAutofilling)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.info.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.info.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.info,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Auto-filling OTP (test mode)...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.info,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 32),
               // Error
               if (error != null) ...[
@@ -327,6 +375,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                             _startCooldown();
                             // Re-attempt autofill after resend.
                             _hasSubmitted = false;
+                            _isAutofilling = false;
                             _autofillOtp();
                           }
                         },

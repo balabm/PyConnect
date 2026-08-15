@@ -53,18 +53,28 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
   }
 
   /// Testing helper: peeks the ride-start OTP from the backend and
-  /// auto-fills the OTP input. Silent no-op in production.
+  /// auto-fills the OTP input. Retries up to 5 times with 500ms delay.
+  /// Silent no-op in production.
   Future<void> _autofillRideOtp(Map<String, dynamic> ride) async {
     final status = (ride['status'] as String?).toString().toLowerCase();
     if (status != 'accepted' && status != 'arrivedatpickup') return;
     if (_otpController.text.isNotEmpty) return;
 
     try {
-      final api = ref.read(ridesApiProvider);
-      final otp = await api.peekRideOtp(widget.rideId);
-      if (otp != null && otp.isNotEmpty && mounted) {
-        _otpController.text = otp;
-        setState(() {});
+      for (var attempt = 0; attempt < 5; attempt++) {
+        if (!mounted || _otpController.text.isNotEmpty) return;
+
+        final api = ref.read(ridesApiProvider);
+        final otp = await api.peekRideOtp(widget.rideId);
+        if (otp != null && otp.isNotEmpty && mounted) {
+          _otpController.text = otp;
+          setState(() {});
+          return;
+        }
+
+        if (attempt < 4) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
     } catch (_) {
       // Silent — autofill is a testing convenience

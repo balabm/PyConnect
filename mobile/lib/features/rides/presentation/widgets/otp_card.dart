@@ -34,10 +34,19 @@ class _OtpCardState extends ConsumerState<OtpCard> {
     if (rideId == null) return;
 
     try {
-      final api = ref.read(ridesApiProvider);
-      final otp = await api.peekRideOtp(rideId);
-      if (otp != null && otp.isNotEmpty && mounted) {
-        setState(() => _peekedOtp = otp);
+      for (var attempt = 0; attempt < 5; attempt++) {
+        if (!mounted || _peekedOtp != null) return;
+
+        final api = ref.read(ridesApiProvider);
+        final otp = await api.peekRideOtp(rideId);
+        if (otp != null && otp.isNotEmpty && mounted) {
+          setState(() => _peekedOtp = otp);
+          return;
+        }
+
+        if (attempt < 4) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
     } catch (_) {
       // Silent — peek is a testing convenience
