@@ -180,12 +180,13 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _TaxiCard extends StatelessWidget {
+class _TaxiCard extends ConsumerWidget {
   const _TaxiCard({required this.booking});
   final BookingSummary booking;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasDriver = booking.driverName != null && booking.driverName!.isNotEmpty;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
@@ -194,45 +195,148 @@ class _TaxiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.warning.withValues(alpha: 0.2)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: AppTheme.warning.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.local_taxi, color: AppTheme.warning, size: 24),
+          Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.warning.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.local_taxi, color: AppTheme.warning, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(booking.customerName,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Text(booking.serviceType,
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('\u20B9${booking.amount.toStringAsFixed(0)}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(booking.status,
+                        style: const TextStyle(color: AppTheme.warning, fontSize: 10, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 12),
+          // Driver assignment row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
               children: [
-                Text(booking.customerName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
-                const SizedBox(height: 4),
-                Text(booking.serviceType,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                Icon(hasDriver ? Icons.badge : Icons.person_add_outlined,
+                    size: 16, color: hasDriver ? AppTheme.emerald : Colors.white.withValues(alpha: 0.4)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    hasDriver
+                        ? 'Driver: ${booking.driverName}${booking.vehiclePlate != null && booking.vehiclePlate!.isNotEmpty ? " • ${booking.vehiclePlate}" : ""}'
+                        : 'No driver assigned',
+                    style: TextStyle(
+                      color: hasDriver ? Colors.white : Colors.white.withValues(alpha: 0.4),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _showAssignDriverDialog(context, ref),
+                  child: Text(
+                    hasDriver ? 'Edit' : 'Assign',
+                    style: const TextStyle(color: AppTheme.emerald, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('\u20B9${booking.amount.toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.warning.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(booking.status,
-                    style: const TextStyle(color: AppTheme.warning, fontSize: 10, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  void _showAssignDriverDialog(BuildContext context, WidgetRef ref) {
+    final driverController = TextEditingController(text: booking.driverName ?? '');
+    final plateController = TextEditingController(text: booking.vehiclePlate ?? '');
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Assign Driver', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: driverController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Driver Name',
+                labelStyle: TextStyle(color: Colors.white54),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.emerald)),
               ),
-            ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: plateController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Vehicle Plate',
+                labelStyle: TextStyle(color: Colors.white54),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.emerald)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+            onPressed: () async {
+              try {
+                await ref.read(vendorDashboardApiProvider).assignTransitDriver(
+                  booking.bookingId,
+                  driverName: driverController.text.trim(),
+                  vehiclePlate: plateController.text.trim(),
+                );
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text('Failed to assign driver: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
           ),
         ],
       ),

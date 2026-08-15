@@ -295,6 +295,58 @@ public sealed class DriverController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Marks the driver as arrived at the store/restaurant for a food or
+    /// essentials delivery task. Persists the intermediate phase so the
+    /// delivery can be resumed if the app is killed.
+    /// </summary>
+    [HttpPost("tasks/{taskId:guid}/arrived-at-store")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> MarkArrivedAtStore(Guid taskId, CancellationToken ct)
+    {
+        var task = await _dbContext.DispatchTasks.FirstOrDefaultAsync(t => t.Id == taskId, ct);
+        if (task is null)
+            return NotFound(new { Message = "Task not found." });
+        try
+        {
+            task.MarkArrivedAtStore();
+            await _dbContext.SaveChangesAsync(ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Marks the order as picked up and the driver as en route to the
+    /// customer. Persists the intermediate phase so the delivery can be
+    /// resumed if the app is killed.
+    /// </summary>
+    [HttpPost("tasks/{taskId:guid}/out-for-delivery")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> MarkOutForDelivery(Guid taskId, CancellationToken ct)
+    {
+        var task = await _dbContext.DispatchTasks.FirstOrDefaultAsync(t => t.Id == taskId, ct);
+        if (task is null)
+            return NotFound(new { Message = "Task not found." });
+        try
+        {
+            task.MarkOutForDelivery();
+            await _dbContext.SaveChangesAsync(ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Self-onboarding: tutorial, safety agreement, extended KYC
     // -----------------------------------------------------------------------

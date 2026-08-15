@@ -230,6 +230,79 @@ public sealed class AuthController : ControllerBase
 
         return Ok(new { phone, code });
     }
+
+    // ── Phone number change flow ──
+
+    /// <summary>
+    /// Step 1 of phone change: sends an OTP to the NEW phone number to
+    /// verify that the user owns it. The user must be authenticated.
+    /// </summary>
+    [HttpPost("change-phone/request")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult> RequestPhoneChange(
+        [FromBody] RequestPhoneChangeRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request?.NewPhone) || request.NewPhone.Length < 10)
+            return BadRequest(new { Message = "A valid new phone number is required." });
+
+        // Ensure the new phone isn't already in use by another account.
+        var existing = await _dbContext.Users.AsNoTracking()
+            .AnyAsync(u => u.Phone == request.NewPhone && u.IsActive, cancellationToken);
+        if (existing)
+            return BadRequest(new { Message = "This phone number is already associated with an account." });
+
+        await _otpService.IssueCodeAsync(request.NewPhone, cancellationToken);
+        return Ok(new { Message = "OTP sent to the new phone number." });
+    }
+
+    /// <summary>
+    /// Step 2 of phone change: verifies the OTP sent to the new number
+    /// and updates the authenticated user's phone. Returns a fresh JWT
+    /// with the new phone claim.
+    /// </summary>
+    [HttpPost("change-phone/verify")]
+    [Authorize]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AuthResponse>> VerifyPhoneChange(
+        [FromBody] VerifyPhoneChangeRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request?.NewPhone) || request.NewPhone.Length < 10)
+            return BadRequest(new { Message = "A valid new phone number is required." });
+        if (string.IsNullOrWhiteSpace(request?.OtpCode))
+            return BadRequest(new { Message = "OTP code is required." });
+
+        var userId = _currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Not authenticated.");
+
+        var verified = await _otpService.VerifyCodeAsync(request.NewPhone, request.OtpCode, cancellationToken);
+        if (!verified)
+            return BadRequest(new { Message = "Invalid or expired OTP." });
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is null)
+            return Unauthorized(new { Message = "User not found." });
+
+        // Double-check the new phone wasn't claimed while OTP was in flight.
+        var claimed = await _dbContext.Users.AsNoTracking()
+            .AnyAsync(u => u.Phone == request.NewPhone && u.Id != userId && u.IsActive, cancellationToken);
+        if (claimed)
+            return BadRequest(new { Message = "This phone number is already associated with an account." });
+
+        user.ChangePhone(request.NewPhone);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Issue a fresh JWT with the updated phone claim.
+        var token = _jwtTokenFactory.CreateAccessToken(user.Id, user.Phone, user.Role.ToString());
+        return Ok(new AuthResponse(token, user.Id, user.Phone, user.Name, user.Role.ToString()));
+    }
 }
 
 public sealed record UpdateProfileRequest(string? Name);
+public sealed record RequestPhoneChangeRequest(string? NewPhone);
+public sealed record VerifyPhoneChangeRequest(string? NewPhone, string? OtpCode);

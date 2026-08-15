@@ -176,6 +176,20 @@ class ProfileScreen extends ConsumerWidget {
                       },
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  _SectionHeader(title: 'Account'),
+                  const SizedBox(height: 8),
+                  FadeSlideIn(
+                    child: _HistoryLink(
+                      icon: Icons.phone_android_outlined,
+                      title: 'Change Phone Number',
+                      subtitle: 'Verify a new number via OTP',
+                      onTap: () {
+                        AppHaptics.light();
+                        context.push('/change-phone');
+                      },
+                    ),
+                  ),
                   const Divider(height: 32),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(

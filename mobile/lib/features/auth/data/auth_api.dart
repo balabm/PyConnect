@@ -64,6 +64,23 @@ class AuthApi {
       return null;
     }
   }
+
+  /// Step 1 of phone change: sends an OTP to the new phone number.
+  Future<void> requestPhoneChange(String newPhone) async {
+    await _api.post('/api/auth/change-phone/request', data: {
+      'newPhone': newPhone,
+    });
+  }
+
+  /// Step 2 of phone change: verifies the OTP and updates the user's
+  /// phone. Returns a fresh JWT with the new phone claim.
+  Future<AuthResult> verifyPhoneChange(String newPhone, String otpCode) async {
+    final body = await _api.post('/api/auth/change-phone/verify', data: {
+      'newPhone': newPhone,
+      'otpCode': otpCode,
+    });
+    return AuthResult.fromJson(body as Map<String, dynamic>);
+  }
 }
 
 class OtpRequestedResult {

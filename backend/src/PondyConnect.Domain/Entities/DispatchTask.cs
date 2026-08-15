@@ -69,9 +69,35 @@ public sealed class DispatchTask : BaseEntity
         MarkUpdated();
     }
 
-    public void Complete()
+    /// <summary>
+    /// Marks the driver as arrived at the store/restaurant for pickup.
+    /// Only valid for food/essentials delivery tasks that are in progress.
+    /// </summary>
+    public void MarkArrivedAtStore()
     {
         if (Status != DispatchTaskStatus.InProgress && Status != DispatchTaskStatus.Assigned)
+            throw new InvalidOperationException("Task must be in progress before arriving at store.");
+
+        Status = DispatchTaskStatus.ArrivedAtStore;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Marks the order as picked up and the driver as en route to the customer.
+    /// Only valid after arriving at the store.
+    /// </summary>
+    public void MarkOutForDelivery()
+    {
+        if (Status != DispatchTaskStatus.ArrivedAtStore)
+            throw new InvalidOperationException("Task must be at store before going out for delivery.");
+
+        Status = DispatchTaskStatus.OutForDelivery;
+        MarkUpdated();
+    }
+
+    public void Complete()
+    {
+        if (Status is not (DispatchTaskStatus.InProgress or DispatchTaskStatus.Assigned or DispatchTaskStatus.OutForDelivery))
             throw new InvalidOperationException("Task cannot be completed from its current state.");
 
         Status = DispatchTaskStatus.Completed;

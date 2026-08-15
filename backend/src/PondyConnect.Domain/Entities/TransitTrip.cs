@@ -44,6 +44,16 @@ public sealed class TransitTrip : BaseEntity
 
     public DateTimeOffset? CompletedAt { get; private set; }
 
+    /// <summary>
+    /// Optional driver name assigned by the taxi vendor to this trip.
+    /// </summary>
+    public string? DriverName { get; private set; }
+
+    /// <summary>
+    /// Optional vehicle plate assigned by the taxi vendor to this trip.
+    /// </summary>
+    public string? VehiclePlate { get; private set; }
+
     private TransitTrip()
     {
         // EF Core constructor.
@@ -120,6 +130,17 @@ public sealed class TransitTrip : BaseEntity
         if (Status is TransitStatus.Completed or TransitStatus.Cancelled)
             throw new InvalidOperationException("Trip already completed or cancelled.");
         Status = TransitStatus.Cancelled;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Assigns a driver and optional vehicle plate to this trip.
+    /// Called by the taxi vendor when dispatching a vehicle.
+    /// </summary>
+    public void AssignDriver(string? driverName, string? vehiclePlate = null)
+    {
+        DriverName = driverName;
+        VehiclePlate = vehiclePlate;
         MarkUpdated();
     }
 

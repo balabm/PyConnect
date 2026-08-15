@@ -5,6 +5,8 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers.dart';
+import '../application/driver_providers.dart';
+import '../data/driver_api.dart';
 
 final driverEarningsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final api = ref.watch(ridesApiProvider);
@@ -35,12 +37,12 @@ class DriverEarningsScreen extends ConsumerWidget {
   }
 }
 
-class _EarningsBody extends StatelessWidget {
+class _EarningsBody extends ConsumerWidget {
   const _EarningsBody({required this.data});
   final Map<String, dynamic> data;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final todayEarnings = data['todayEarnings'] ?? 0;
     final weekEarnings = data['weekEarnings'] ?? 0;
     final monthEarnings = data['monthEarnings'] ?? 0;
@@ -49,6 +51,9 @@ class _EarningsBody extends StatelessWidget {
     final monthRides = data['monthRides'] ?? 0;
     final avgRating = (data['avgRating'] as num?)?.toDouble() ?? 5.0;
     final recentRides = data['recentRides'] as List<dynamic>? ?? [];
+
+    // Fetch driver profile for the profile section
+    final profileAsync = ref.watch(driverProfileProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -165,27 +170,53 @@ class _EarningsBody extends StatelessWidget {
                 final distance = ride['distanceKm'] ?? 0;
                 final duration = ride['durationMin'] ?? 0;
                 final completedAt = ride['completedAt'] as String? ?? '';
+                final rideId = ride['rideId'] as String? ?? ride['id'] as String?;
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const CircleAvatar(child: Icon(Icons.directions_car)),
                   title: Text('\u20B9$earnings', style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('$distance km · $duration min · ${_formatDate(completedAt)}', style: const TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.check_circle, color: AppTheme.emerald, size: 20),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle, color: AppTheme.emerald, size: 20),
+                      const SizedBox(width: 8),
+                      Icon(Icons.receipt_long, color: AppTheme.emerald.withValues(alpha: 0.6), size: 20),
+                    ],
+                  ),
+                  onTap: () => _showReceipt(context, ref, rideId, ride),
                 );
               },
             ),
           const SizedBox(height: 24),
-          // Profile section (merged from separate Profile tab)
+          // Profile section with actual driver data
           const Text('Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           AppCard(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _ProfileTile(
-                  icon: Icons.person_outline,
-                  title: 'Account Details',
-                  onTap: () {},
+                // Driver info from profile
+                profileAsync.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (profile) {
+                    if (profile == null) return const SizedBox.shrink();
+                    return Column(
+                      children: [
+                        _ProfileInfoRow(label: 'Name', value: profile.name),
+                        _ProfileInfoRow(label: 'Phone', value: profile.phone),
+                        _ProfileInfoRow(label: 'Vehicle', value: profile.vehicleType),
+                        if (profile.vehiclePlate != null && profile.vehiclePlate!.isNotEmpty)
+                          _ProfileInfoRow(label: 'Plate', value: profile.vehiclePlate!),
+                        _ProfileInfoRow(label: 'Rating', value: avgRating.toStringAsFixed(1)),
+                        const Divider(),
+                      ],
+                    );
+                  },
                 ),
                 _ProfileTile(
                   icon: Icons.document_scanner_outlined,
@@ -217,6 +248,149 @@ class _EarningsBody extends StatelessWidget {
     } catch (_) {
       return iso;
     }
+  }
+
+  /// Shows a receipt detail dialog for a completed ride.
+  /// Falls back to the data already in the recent rides list if the
+  /// receipt API call fails.
+  void _showReceipt(BuildContext context, WidgetRef ref, String? rideId, Map<String, dynamic> ride) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return _ReceiptDialog(rideId: rideId, ride: ride);
+      },
+    );
+  }
+}
+
+/// Dialog showing ride receipt details.
+class _ReceiptDialog extends ConsumerStatefulWidget {
+  const _ReceiptDialog({required this.rideId, required this.ride});
+  final String? rideId;
+  final Map<String, dynamic> ride;
+
+  @override
+  ConsumerState<_ReceiptDialog> createState() => _ReceiptDialogState();
+}
+
+class _ReceiptDialogState extends ConsumerState<_ReceiptDialog> {
+  Map<String, dynamic>? _receipt;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReceipt();
+  }
+
+  Future<void> _loadReceipt() async {
+    if (widget.rideId == null) {
+      // No ride ID — use the data we already have
+      setState(() { _loading = false; });
+      return;
+    }
+    try {
+      final api = ref.read(ridesApiProvider);
+      final receipt = await api.getReceipt(widget.rideId!);
+      if (mounted) setState(() { _receipt = receipt; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = _receipt ?? widget.ride;
+    final earnings = data['earnings'] ?? data['driverEarnings'] ?? data['totalAmount'] ?? 0;
+    final distance = data['distanceKm'] ?? data['distance'] ?? 0;
+    final duration = data['durationMin'] ?? data['duration'] ?? 0;
+    final completedAt = data['completedAt'] as String? ?? data['createdAt'] as String? ?? '';
+    final pickup = data['pickupAddress'] as String? ?? 'N/A';
+    final dropoff = data['dropoffAddress'] as String? ?? 'N/A';
+    final vehicleType = data['vehicleType'] as String? ?? '';
+    final paymentMethod = data['paymentMethod'] as String? ?? '';
+
+    return AlertDialog(
+      title: const Text('Ride Receipt'),
+      content: _loading
+          ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+          : SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ReceiptRow(label: 'Earnings', value: '\u20B9$earnings'),
+                  _ReceiptRow(label: 'Distance', value: '$distance km'),
+                  _ReceiptRow(label: 'Duration', value: '$duration min'),
+                  if (vehicleType.isNotEmpty) _ReceiptRow(label: 'Vehicle', value: vehicleType),
+                  if (paymentMethod.isNotEmpty) _ReceiptRow(label: 'Payment', value: paymentMethod),
+                  _ReceiptRow(label: 'Pickup', value: pickup),
+                  _ReceiptRow(label: 'Dropoff', value: dropoff),
+                  _ReceiptRow(label: 'Completed', value: _formatDate(completedAt)),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('Detailed receipt unavailable. Showing summary.', style: TextStyle(fontSize: 11, color: AppTheme.slate)),
+                    ),
+                ],
+              ),
+            ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      return '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso;
+    }
+  }
+}
+
+class _ReceiptRow extends StatelessWidget {
+  const _ReceiptRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 80, child: Text(label, style: TextStyle(fontSize: 13, color: AppTheme.slate))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileInfoRow extends StatelessWidget {
+  const _ProfileInfoRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(width: 70, child: Text(label, style: TextStyle(fontSize: 13, color: AppTheme.slate))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+        ],
+      ),
+    );
   }
 }
 

@@ -177,6 +177,26 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     state = const AsyncData(null);
   }
 
+  /// Refreshes the session with a new JWT (e.g. after a phone number
+  /// change). Persists the new token and updates the in-memory state.
+  Future<void> refreshWithToken(String newToken) async {
+    await ref.read(tokenStorageProvider).write(newToken);
+    ref.read(apiClientProvider).setToken(newToken);
+    ref.read(authTokenProvider.notifier).state = newToken;
+    try {
+      final me = await ref.read(authApiProvider).me();
+      state = AsyncData(AuthSession(
+        name: me.name,
+        phone: me.phone,
+        role: me.role,
+        token: newToken,
+        isProMember: me.isProMember,
+      ));
+    } catch (_) {
+      // Keep the old session if /me fails — the token is still valid.
+    }
+  }
+
   bool get isAuthenticated => state.valueOrNull?.isAuthenticated ?? false;
 }
 

@@ -29,6 +29,18 @@ class DriverApi {
     await _api.post('api/driver/tasks/$taskId/complete');
   }
 
+  /// Marks the driver as arrived at the store/restaurant for a food or
+  /// essentials delivery. Persists the phase for app-restart resume.
+  Future<void> markArrivedAtStore(String taskId) async {
+    await _api.post('api/driver/tasks/$taskId/arrived-at-store');
+  }
+
+  /// Marks the order as picked up and the driver as en route to customer.
+  /// Persists the phase for app-restart resume.
+  Future<void> markOutForDelivery(String taskId) async {
+    await _api.post('api/driver/tasks/$taskId/out-for-delivery');
+  }
+
   Future<DriverWalletModel> getWallet() async {
     final data = await _api.get('api/driver/wallet');
     return DriverWalletModel.fromJson(data as Map<String, dynamic>);

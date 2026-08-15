@@ -30,12 +30,39 @@ class _DriverShellState extends ConsumerState<DriverShell> {
   StreamSubscription? _rideOfferSub;
   StreamSubscription? _foodOfferSub;
 
+  /// Queue of pending ride offers that arrived while another offer sheet
+  /// was already open. When the current sheet closes, the next queued
+  /// offer is shown automatically.
+  final List<RideOfferModel> _offerQueue = [];
+
   @override
   void initState() {
     super.initState();
     // Initialize overlay alert service for dispatch notifications
     OverlayAlertService.instance.initialize();
     _listenForRideOffers();
+    _resumeActiveTask();
+  }
+
+  /// On app restart, check if the driver has an in-progress task and
+  /// restore it to the Active Trip tab so the driver can continue the
+  /// ride/delivery after an app kill or crash.
+  Future<void> _resumeActiveTask() async {
+    try {
+      final tasks = await ref.read(driverApiProvider).getAvailableTasks();
+      // Find a task assigned to this driver that is not Available/Completed/Cancelled
+      final activeTask = tasks.where((t) =>
+          t.status != 'Available' &&
+          t.status != 'Completed' &&
+          t.status != 'Cancelled' &&
+          t.driverId != null).firstOrNull;
+      if (activeTask != null && mounted) {
+        ref.read(activeTaskProvider.notifier).state = activeTask;
+        ref.read(driverSelectedTabProvider.notifier).state = 1;
+      }
+    } catch (_) {
+      // Non-fatal — driver can still go online normally
+    }
   }
 
   void _listenForRideOffers() {
@@ -76,10 +103,16 @@ class _DriverShellState extends ConsumerState<DriverShell> {
 
   /// Shows the [RideOfferSheet] as a non-dismissible bottom sheet so the
   /// driver can review the offer and accept/decline with a 30-second
-  /// countdown. Prevents duplicate sheets if one is already open.
+  /// countdown. If a sheet is already open, the offer is queued and
+  /// shown when the current sheet closes.
   bool _offerSheetOpen = false;
   void _showOfferSheet(RideOfferModel offer) {
-    if (!mounted || _offerSheetOpen) return;
+    if (!mounted) return;
+    if (_offerSheetOpen) {
+      // Queue the offer — it will be shown when the current sheet closes.
+      _offerQueue.add(offer);
+      return;
+    }
     _offerSheetOpen = true;
     final context = this.context;
     showModalBottomSheet<void>(
@@ -92,7 +125,6 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         offer: offer,
         onAccept: () async {
           Navigator.pop(sheetContext);
-          _offerSheetOpen = false;
           try {
             final api = ref.read(driverApiProvider);
             final accepted = await api.acceptTask(offer.rideId);
@@ -108,7 +140,6 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         },
         onDecline: () {
           Navigator.pop(sheetContext);
-          _offerSheetOpen = false;
           // Notify backend so the offer can be re-dispatched immediately.
           try {
             ref.read(driverSignalRProvider).declineRide(offer.rideId);
@@ -117,7 +148,14 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           }
         },
       ),
-    ).whenComplete(() => _offerSheetOpen = false);
+    ).whenComplete(() {
+      _offerSheetOpen = false;
+      // Drain the queue — show the next pending offer if any.
+      if (_offerQueue.isNotEmpty && mounted) {
+        final next = _offerQueue.removeAt(0);
+        _showOfferSheet(next);
+      }
+    });
   }
 
   @override

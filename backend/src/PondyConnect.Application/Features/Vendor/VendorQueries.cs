@@ -22,7 +22,9 @@ public sealed record VendorBookingSummary(
     DateTimeOffset ScheduledFor,
     string Status,
     decimal Amount,
-    string PaymentStatus);
+    string PaymentStatus,
+    string? DriverName = null,
+    string? VehiclePlate = null);
 
 public sealed record GetVendorBookingsQuery(
     DateOnly? Date = null,

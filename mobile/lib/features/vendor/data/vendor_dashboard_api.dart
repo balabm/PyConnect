@@ -41,6 +41,8 @@ class BookingSummary {
     required this.paymentStatus,
     this.guestCount,
     this.durationHours,
+    this.driverName,
+    this.vehiclePlate,
   });
 
   factory BookingSummary.fromJson(Map<String, dynamic> json) => BookingSummary(
@@ -54,6 +56,8 @@ class BookingSummary {
         guestCount: (json['guestCount'] as num?)?.toInt() ??
             (json['numberOfGuests'] as num?)?.toInt(),
         durationHours: (json['durationHours'] as num?)?.toDouble(),
+        driverName: json['driverName'] as String?,
+        vehiclePlate: json['vehiclePlate'] as String?,
       );
 
   final String bookingId;
@@ -65,6 +69,8 @@ class BookingSummary {
   final String paymentStatus;
   final int? guestCount;
   final double? durationHours;
+  final String? driverName;
+  final String? vehiclePlate;
 }
 
 class ActivatePriorityResult {
@@ -106,6 +112,19 @@ class VendorDashboardApi {
     return bookings
         .map((e) => BookingSummary.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Assigns a driver and optional vehicle plate to a transit trip.
+  /// Used by taxi operator vendors for fleet dispatch management.
+  Future<void> assignTransitDriver(
+    String tripId, {
+    String? driverName,
+    String? vehiclePlate,
+  }) async {
+    await _api.put('/api/vendor/transit/$tripId/assign-driver', data: {
+      'driverName': driverName,
+      'vehiclePlate': vehiclePlate,
+    });
   }
 
   Future<ActivatePriorityResult> activatePriority(String venueId) async {

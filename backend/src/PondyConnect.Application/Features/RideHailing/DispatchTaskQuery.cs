@@ -39,7 +39,10 @@ public sealed class GetAvailableTasksHandler : IRequestHandler<GetAvailableTasks
             throw new InvalidOperationException("Driver profile not found.");
 
         var tasks = await _context.DispatchTasks.AsNoTracking()
-            .Where(t => t.Status == DispatchTaskStatus.Available || (t.DriverId == driver.Id && t.Status != DispatchTaskStatus.Completed && t.Status != DispatchTaskStatus.Cancelled))
+            .Where(t => t.Status == DispatchTaskStatus.Available
+                || (t.DriverId == driver.Id
+                    && t.Status != DispatchTaskStatus.Completed
+                    && t.Status != DispatchTaskStatus.Cancelled))
             .ToListAsync(cancellationToken);
 
         return tasks

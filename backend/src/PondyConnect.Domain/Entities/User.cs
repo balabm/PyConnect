@@ -79,6 +79,19 @@ public sealed class User : BaseEntity
         MarkUpdated();
     }
 
+    /// <summary>
+    /// Changes the user's phone number after OTP verification of the new
+    /// number. Called by the phone change flow in AuthController.
+    /// </summary>
+    public void ChangePhone(string newPhone)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPhone);
+        if (newPhone.Length < 10)
+            throw new ArgumentException("Phone number must be at least 10 digits.", nameof(newPhone));
+        Phone = newPhone;
+        MarkUpdated();
+    }
+
     public void ChangeRole(UserRole role)
     {
         Role = role;

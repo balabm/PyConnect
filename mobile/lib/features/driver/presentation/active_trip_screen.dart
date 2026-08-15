@@ -71,9 +71,28 @@ class _DeliveryLifecycleScreenState
     extends ConsumerState<DeliveryLifecycleScreen> {
   _DeliveryPhase _phase = _DeliveryPhase.headingToStore;
   bool _completing = false;
+  bool _advancing = false;
 
   String get _storeLabel =>
       widget.task.taskType == 'EssentialsDrop' ? 'Store' : 'Restaurant';
+
+  @override
+  void initState() {
+    super.initState();
+    // Restore the phase from the backend status so the delivery can be
+    // resumed after an app kill/restart.
+    _phase = _phaseFromStatus(widget.task.status);
+  }
+
+  /// Maps the backend DispatchTaskStatus string to the local UI phase.
+  _DeliveryPhase _phaseFromStatus(String status) {
+    return switch (status) {
+      'ArrivedAtStore' => _DeliveryPhase.atStore,
+      'OutForDelivery' => _DeliveryPhase.enRouteToCustomer,
+      'Completed' => _DeliveryPhase.delivered,
+      _ => _DeliveryPhase.headingToStore,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -202,23 +221,50 @@ class _DeliveryLifecycleScreenState
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(
-        onPressed: () => _advancePhase(context),
-        icon: const Icon(Icons.arrow_forward),
+        onPressed: _advancing ? null : () => _advancePhase(context),
+        icon: _advancing
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            : const Icon(Icons.arrow_forward),
         label: Text(label),
       ),
     );
   }
 
-  void _advancePhase(BuildContext context) {
+  Future<void> _advancePhase(BuildContext context) async {
     AppHaptics.medium();
-    setState(() {
-      _phase = switch (_phase) {
-        _DeliveryPhase.headingToStore => _DeliveryPhase.atStore,
-        _DeliveryPhase.atStore => _DeliveryPhase.enRouteToCustomer,
-        _DeliveryPhase.enRouteToCustomer => _DeliveryPhase.delivered,
-        _DeliveryPhase.delivered => _DeliveryPhase.delivered,
-      };
-    });
+    if (_advancing) return;
+    setState(() => _advancing = true);
+
+    final nextPhase = switch (_phase) {
+      _DeliveryPhase.headingToStore => _DeliveryPhase.atStore,
+      _DeliveryPhase.atStore => _DeliveryPhase.enRouteToCustomer,
+      _DeliveryPhase.enRouteToCustomer => _DeliveryPhase.delivered,
+      _DeliveryPhase.delivered => _DeliveryPhase.delivered,
+    };
+
+    // Persist the phase transition to the backend so it can be resumed.
+    try {
+      if (nextPhase == _DeliveryPhase.atStore) {
+        await ref.read(driverApiProvider).markArrivedAtStore(widget.task.id);
+      } else if (nextPhase == _DeliveryPhase.enRouteToCustomer) {
+        await ref.read(driverApiProvider).markOutForDelivery(widget.task.id);
+      }
+    } catch (e) {
+      // Backend persist failed — still advance locally so the driver can
+      // continue, but warn them.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Phase update failed: $e. Continuing anyway.')),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _phase = nextPhase;
+        _advancing = false;
+      });
+    }
   }
 
   Future<void> _completeDelivery(BuildContext context) async {

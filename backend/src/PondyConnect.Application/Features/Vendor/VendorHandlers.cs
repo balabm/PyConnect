@@ -187,7 +187,7 @@ public sealed class GetVendorBookingsHandler : IRequestHandler<GetVendorBookings
             allSummaries.Add(new VendorBookingSummary(b.Id, "Nightlife", "User", "N/A", b.ScheduledFor, b.Status.ToString(), b.TotalAmount, b.PaymentStatus.ToString()));
         
         foreach (var t in transitTrips)
-            allSummaries.Add(new VendorBookingSummary(t.Id, "Transit", "User", "N/A", t.ArrivalAt, t.Status.ToString(), t.Price, t.PaymentStatus.ToString()));
+            allSummaries.Add(new VendorBookingSummary(t.Id, "Transit", "User", "N/A", t.ArrivalAt, t.Status.ToString(), t.Price, t.PaymentStatus.ToString(), t.DriverName, t.VehiclePlate));
         
         foreach (var l in luggageDropOffs)
             allSummaries.Add(new VendorBookingSummary(l.Id, "Luggage", "User", "N/A", l.ScheduledFor, l.Status.ToString(), l.TotalAmount, l.PaymentStatus.ToString()));

@@ -737,6 +737,46 @@ public sealed class VendorController : ControllerBase
             qrPayload));
     }
 
+    // ── Transit trip driver assignment (taxi operator vendors) ──
+
+    /// <summary>
+    /// Assigns a driver and optional vehicle plate to a transit trip
+    /// owned by the authenticated vendor. Used by taxi operators to
+    /// manage their fleet dispatch.
+    /// </summary>
+    [HttpPut("transit/{tripId:guid}/assign-driver")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> AssignTransitDriver(
+        Guid tripId,
+        [FromBody] AssignTransitDriverRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Authenticated phone not found." });
+
+        var vendorId = await _context.Vendors.AsNoTracking()
+            .Where(v => v.ContactPhone == phone)
+            .Select(v => v.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (vendorId == Guid.Empty)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        var trip = await _context.TransitTrips
+            .FirstOrDefaultAsync(t => t.Id == tripId, cancellationToken);
+        if (trip is null)
+            return NotFound(new { Message = "Transit trip not found." });
+        if (trip.VendorId != vendorId)
+            return Forbid();
+
+        trip.AssignDriver(request.DriverName, request.VehiclePlate);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { Message = "Driver assigned.", trip.Id, request.DriverName, request.VehiclePlate });
+    }
+
 }
 
 public sealed record ValidateTicketRequest(string QrPayload);
@@ -756,6 +796,8 @@ public sealed record UpdateOccupancyRequest(Guid VenueId, int OccupancyPercentag
 public sealed record CreateClaimCheckRequest(string CustomerName, int BagCount);
 
 public sealed record ClaimCheckResponse(Guid ClaimCheckId, string CustomerName, int BagCount, string QrPayload);
+
+public sealed record AssignTransitDriverRequest(string? DriverName, string? VehiclePlate);
 
 // --- Self-onboarding request/response records ---
 
