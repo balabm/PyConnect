@@ -93,6 +93,7 @@ public sealed class AdminController : ControllerBase
     // === Vendor Onboarding ===
 
     [HttpGet("vendors")]
+    [HttpGet("vendors/pending")]
     [ProducesResponseType(typeof(IReadOnlyList<VendorSummaryResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -165,6 +166,7 @@ public sealed class AdminController : ControllerBase
     // === Phase 2: Dashboard Stats ===
 
     [HttpGet("dashboard-stats")]
+    [HttpGet("analytics")]
     [ProducesResponseType(typeof(DashboardStatsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -235,6 +237,7 @@ public sealed class AdminController : ControllerBase
     // === Phase 2: Driver Management ===
 
     [HttpGet("drivers")]
+    [HttpGet("drivers/pending")]
     [ProducesResponseType(typeof(PagedResult<DriverSummaryResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

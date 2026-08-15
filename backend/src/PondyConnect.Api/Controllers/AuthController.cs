@@ -65,6 +65,7 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("otp/request")]
+    [HttpPost("otp")]
     [ProducesResponseType(typeof(OtpRequestedResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<OtpRequestedResponse>> RequestOtp([FromBody] RequestOtpCommand command)

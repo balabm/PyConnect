@@ -256,7 +256,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet),
-            label: 'Earnings',
+            label: 'Earnings & Profile',
           ),
         ],
       ),

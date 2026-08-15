@@ -12,7 +12,9 @@ public sealed record TicketValidationResponse(
     bool IsValid,
     string ServiceType,
     string UserName,
-    string Message);
+    string Message,
+    bool IsDuplicate = false,
+    string? PreviousScanAt = null);
 
 public sealed class ValidateTicketHandler : IRequestHandler<ValidateTicketCommand, TicketValidationResponse>
 {
@@ -38,7 +40,7 @@ public sealed class ValidateTicketHandler : IRequestHandler<ValidateTicketComman
                 return new TicketValidationResponse(false, booking.ServiceType.ToString(), string.Empty, "Payment not captured.");
 
             if (booking.Status == BookingStatus.CheckedIn || booking.Status == BookingStatus.Completed)
-                return new TicketValidationResponse(false, booking.ServiceType.ToString(), string.Empty, "Already used.");
+                return new TicketValidationResponse(false, booking.ServiceType.ToString(), string.Empty, "Already used.", IsDuplicate: true, PreviousScanAt: booking.UpdatedAt?.ToString("o"));
 
             if (booking.Status != BookingStatus.Confirmed)
                 return new TicketValidationResponse(false, booking.ServiceType.ToString(), string.Empty, "Booking not confirmed.");
@@ -73,7 +75,7 @@ public sealed class ValidateTicketHandler : IRequestHandler<ValidateTicketComman
                 return new TicketValidationResponse(false, "Long Weekend Pass", string.Empty, "Pass cancelled.");
 
             if (bundle.Status == BundleStatus.FullyRedeemed)
-                return new TicketValidationResponse(false, "Long Weekend Pass", string.Empty, "Already used.");
+                return new TicketValidationResponse(false, "Long Weekend Pass", string.Empty, "Already used.", IsDuplicate: true, PreviousScanAt: bundle.UpdatedAt?.ToString("o"));
 
             var user = await _context.Users.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == bundle.UserId, cancellationToken);

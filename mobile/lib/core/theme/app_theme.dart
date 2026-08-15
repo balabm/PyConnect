@@ -141,11 +141,11 @@ abstract final class AppTheme {
         fillColor: searchFill,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
+          borderSide: const BorderSide(color: Color(0xFFF3F4F6), width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
+          borderSide: const BorderSide(color: Color(0xFFF3F4F6), width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -161,7 +161,7 @@ abstract final class AppTheme {
         backgroundColor: white,
         selectedColor: emerald.withValues(alpha: 0.1),
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: charcoal),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
+        side: const BorderSide(color: Color(0xFFF3F4F6)),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
@@ -174,7 +174,7 @@ abstract final class AppTheme {
         ),
       ),
       dividerTheme: const DividerThemeData(
-        color: Color(0xFFE5E7EB),
+        color: Color(0xFFF3F4F6),
         thickness: 1,
         space: 1,
       ),

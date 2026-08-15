@@ -222,6 +222,32 @@ class _SearchBar extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              // Location filter
+              Row(
+                children: [
+                  Icon(Icons.place, size: 20, color: AppTheme.emerald),
+                  const SizedBox(width: 8),
+                  const Text('Location'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      hint: const Text('All areas'),
+                      items: const [
+                        DropdownMenuItem(value: '', child: Text('All areas')),
+                        DropdownMenuItem(value: 'White Town', child: Text('White Town')),
+                        DropdownMenuItem(value: 'Heritage French Quarter', child: Text('Heritage French Quarter')),
+                        DropdownMenuItem(value: 'Auroville Road', child: Text('Auroville Road')),
+                        DropdownMenuItem(value: 'Beach Road', child: Text('Beach Road')),
+                      ],
+                      onChanged: (value) {
+                        // Location filter is handled client-side via the list filter
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

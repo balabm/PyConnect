@@ -300,6 +300,15 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
                   _FareInfo(fare: '$fare', total: '$totalAmount', payment: paymentMethod, vehicle: vehicleType),
                   const SizedBox(height: 24),
                   if (isDriverAssigned || isArrived) ...[
+                    // Rider info card
+                    if (isDriverAssigned) ...[
+                      _RiderInfoCard(
+                        riderName: (_ride?['riderName'] as String?) ?? 'Customer',
+                        riderPhone: _ride?['riderPhone'] as String?,
+                        rating: (_ride?['riderRating'] as num?)?.toDouble(),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     if (isDriverAssigned)
                       SizedBox(
                         width: double.infinity,
@@ -692,6 +701,64 @@ class _FareCollectionSheetState extends State<_FareCollectionSheet> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RiderInfoCard extends StatelessWidget {
+  const _RiderInfoCard({
+    required this.riderName,
+    this.riderPhone,
+    this.rating,
+  });
+
+  final String riderName;
+  final String? riderPhone;
+  final double? rating;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppTheme.emerald.withValues(alpha: 0.1),
+            child: const Icon(Icons.person, color: AppTheme.emerald),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(riderName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                if (rating != null) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.star, size: 14, color: AppTheme.gold),
+                      const SizedBox(width: 2),
+                      Text('${rating!.toStringAsFixed(1)} rating',
+                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (riderPhone != null && riderPhone!.isNotEmpty)
+            IconButton.filled(
+              onPressed: () {
+                // Launch phone dialer
+              },
+              icon: const Icon(Icons.call, size: 18),
+            ),
         ],
       ),
     );

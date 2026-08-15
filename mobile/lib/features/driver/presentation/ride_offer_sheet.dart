@@ -58,6 +58,31 @@ class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStat
     super.dispose();
   }
 
+  Color get _serviceBadgeColor {
+    final type = widget.offer.taskType.toLowerCase();
+    if (type.contains('food') || type.contains('essential')) return Colors.orange;
+    if (type.contains('ride') || type.contains('taxi')) return Colors.teal;
+    if (type.contains('quick') || type.contains('delivery')) return Colors.blue;
+    return AppTheme.emerald;
+  }
+
+  IconData get _serviceBadgeIcon {
+    final type = widget.offer.taskType.toLowerCase();
+    if (type.contains('food') || type.contains('essential')) return Icons.restaurant;
+    if (type.contains('ride') || type.contains('taxi')) return Icons.local_taxi;
+    if (type.contains('quick') || type.contains('delivery')) return Icons.delivery_dining;
+    return Icons.local_taxi;
+  }
+
+  String get _serviceBadgeLabel {
+    final type = widget.offer.taskType.toLowerCase();
+    if (type.contains('food')) return 'Food Delivery';
+    if (type.contains('essential')) return 'Quick Essential';
+    if (type.contains('ride') || type.contains('taxi')) return 'Ride Request';
+    if (type.contains('delivery')) return 'Delivery Task';
+    return 'New Task';
+  }
+
   @override
   Widget build(BuildContext context) {
     final progress = _secondsLeft / (widget.offer.expiresIn > 0 ? widget.offer.expiresIn : 30);
@@ -88,13 +113,27 @@ class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStat
                 },
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                  child: Icon(Icons.local_taxi, color: Theme.of(context).colorScheme.primary, size: 24),
+                  decoration: BoxDecoration(color: _serviceBadgeColor.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: Icon(_serviceBadgeIcon, color: _serviceBadgeColor, size: 24),
                 ),
               ),
               const SizedBox(width: 12),
-              Text('New Ride Offer!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+              Text(_serviceBadgeLabel, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
             ],
+          ),
+          // Service badge
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: _serviceBadgeColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _serviceBadgeColor.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              _serviceBadgeLabel,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _serviceBadgeColor),
+            ),
           ),
           if (widget.offer.isSos) ...[
             const SizedBox(height: 8),
@@ -105,18 +144,34 @@ class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStat
             ),
           ],
           const SizedBox(height: 20),
-          // Countdown progress
-            ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation(_secondsLeft <= 5 ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.primary),
-              minHeight: 6,
-            ),
+          // Circular countdown timer
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 64,
+                height: 64,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 4,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation(
+                    _secondsLeft <= 5 ? Theme.of(context).colorScheme.secondary : _serviceBadgeColor,
+                  ),
+                ),
+              ),
+              Text(
+                '$_secondsLeft',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: _secondsLeft <= 5 ? Theme.of(context).colorScheme.secondary : _serviceBadgeColor,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
-          Text('$_secondsLeft seconds to respond', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+          Text('seconds to respond', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
           const SizedBox(height: 20),
           // Route info
           _RouteRow(icon: Icons.my_location, color: AppTheme.sky, text: widget.offer.pickupAddress),

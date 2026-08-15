@@ -47,6 +47,7 @@ public sealed class DriverController : ControllerBase
     }
 
     [HttpPost("online")]
+    [HttpPost("go-online")]
     public async Task<IActionResult> GoOnline(CancellationToken ct)
     {
         await _mediator.Send(new ToggleDriverOnlineCommand(true), ct);
@@ -65,6 +66,7 @@ public sealed class DriverController : ControllerBase
     }
 
     [HttpPost("offline")]
+    [HttpPost("go-offline")]
     public async Task<IActionResult> GoOffline(CancellationToken ct)
     {
         await _mediator.Send(new ToggleDriverOnlineCommand(false), ct);
@@ -177,6 +179,7 @@ public sealed class DriverController : ControllerBase
     }
 
     [HttpGet("wallet")]
+    [HttpGet("earnings")]
     [ProducesResponseType(typeof(DriverWalletResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<DriverWalletResponse>> GetWallet(CancellationToken ct)
     {

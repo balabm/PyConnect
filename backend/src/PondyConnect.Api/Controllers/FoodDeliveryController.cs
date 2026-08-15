@@ -78,6 +78,7 @@ public sealed class FoodDeliveryController : ControllerBase
     }
 
     [HttpGet("orders")]
+    [HttpGet("orders/my-orders")]
     [Authorize]
     [ProducesResponseType(typeof(IReadOnlyList<FoodOrderSummaryResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<FoodOrderSummaryResponse>>> ListOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)

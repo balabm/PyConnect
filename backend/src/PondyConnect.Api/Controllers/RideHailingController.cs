@@ -36,6 +36,7 @@ public sealed class RideHailingController : ControllerBase
     }
 
     [HttpPost("rides")]
+    [HttpPost("rides/request")]
     [Authorize]
     [RequireWaiver]
     [EnableRateLimiting("OrderPolicy")]
@@ -146,6 +147,7 @@ public sealed class RideHailingController : ControllerBase
     }
 
     [HttpGet("rides")]
+    [HttpGet("rides/my-rides")]
     [Authorize]
     [ProducesResponseType(typeof(IReadOnlyList<RideSummaryResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<RideSummaryResponse>>> ListRides([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)

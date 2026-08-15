@@ -151,6 +151,7 @@ class RideOfferModel {
     required this.surgeMultiplier,
     required this.surgeReason,
     required this.expiresIn,
+    this.taskType = 'Ride',
   });
 
   final String rideId;
@@ -165,6 +166,7 @@ class RideOfferModel {
   final double surgeMultiplier;
   final String? surgeReason;
   final int expiresIn;
+  final String taskType;
 
   factory RideOfferModel.fromJson(Map<String, dynamic> json) {
     return RideOfferModel(

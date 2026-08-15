@@ -28,6 +28,7 @@ public sealed class AdminFinanceController : ControllerBase
     /// driver payouts due and total transaction count.
     /// </summary>
     [HttpGet("summary")]
+    [HttpGet]
     [ProducesResponseType(typeof(AdminFinanceSummaryResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminFinanceSummaryResponse>> GetSummary(CancellationToken cancellationToken)
     {
