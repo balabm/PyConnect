@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/network/api_client.dart';
@@ -1159,6 +1161,55 @@ class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
   List<GeocodingResult> _results = [];
   bool _isSearching = false;
   Timer? _debounce;
+  List<Map<String, dynamic>> _recentLocations = [];
+  static const _recentKey = 'recent_dropoff_locations';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentLocations();
+  }
+
+  Future<void> _loadRecentLocations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_recentKey);
+    if (raw != null) {
+      try {
+        final list = jsonDecode(raw) as List<dynamic>;
+        if (mounted) {
+          setState(() => _recentLocations = list.cast<Map<String, dynamic>>());
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _saveRecentLocation(LatLng location, String address) async {
+    final prefs = await SharedPreferences.getInstance();
+    final entry = {
+      'latitude': location.latitude,
+      'longitude': location.longitude,
+      'address': address,
+      'savedAt': DateTime.now().toIso8601String(),
+    };
+    // Remove duplicates by address, prepend, cap at 5
+    _recentLocations.removeWhere((e) => e['address'] == address);
+    _recentLocations.insert(0, entry);
+    if (_recentLocations.length > 5) {
+      _recentLocations = _recentLocations.sublist(0, 5);
+    }
+    await prefs.setString(_recentKey, jsonEncode(_recentLocations));
+  }
+
+  void _selectRecentLocation(Map<String, dynamic> loc) {
+    AppHaptics.light();
+    final lat = (loc['latitude'] as num?)?.toDouble() ?? 11.9356;
+    final lng = (loc['longitude'] as num?)?.toDouble() ?? 79.8301;
+    final address = loc['address'] as String? ?? 'Recent location';
+    Navigator.of(context).pop({
+      'location': LatLng(lat, lng),
+      'address': address,
+    });
+  }
 
   @override
   void dispose() {
@@ -1199,6 +1250,7 @@ class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
 
   void _selectResult(GeocodingResult result) {
     AppHaptics.light();
+    _saveRecentLocation(result.location, result.displayName);
     Navigator.of(context).pop({
       'location': result.location,
       'address': result.displayName,
@@ -1210,6 +1262,7 @@ class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
     final lat = (loc['latitude'] as num?)?.toDouble() ?? 11.9356;
     final lng = (loc['longitude'] as num?)?.toDouble() ?? 79.8301;
     final address = loc['address'] as String? ?? loc['label'] as String? ?? 'Saved location';
+    _saveRecentLocation(LatLng(lat, lng), address);
     Navigator.of(context).pop({
       'location': LatLng(lat, lng),
       'address': address,
@@ -1308,8 +1361,32 @@ class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
               ),
               error: (_, __) => const SizedBox.shrink(),
             ),
-            // Recent locations placeholder
+            // Recent locations (shown when no active search results)
+            if (_results.isEmpty && _recentLocations.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                child: Text(
+                  'Recent Locations',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.slate,
+                  ),
+                ),
+              ),
+              ..._recentLocations.map((loc) => ListTile(
+                    leading: Icon(Icons.history, color: AppTheme.slate, size: 22),
+                    title: Text(
+                      loc['address'] as String? ?? 'Recent location',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => _selectRecentLocation(loc),
+                  )),
+            ],
+            // Empty state placeholder (only when no recents and no saved places)
             if (_results.isEmpty &&
+                _recentLocations.isEmpty &&
                 savedLocationsAsync.maybeWhen(data: (l) => l.isEmpty, orElse: () => false))
               Expanded(
                 child: Center(

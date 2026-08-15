@@ -37,6 +37,15 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   String _searchQuery = '';
   String? _categoryFilter;
 
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Razorpay SDK early so it's ready at checkout.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(razorpayPaymentProvider).init();
+    });
+  }
+
   static const _categories = ['Pizza', 'Pasta', 'Burger', 'Dessert', 'Drink'];
 
   List<dynamic> _filterItems(List<dynamic> items) {

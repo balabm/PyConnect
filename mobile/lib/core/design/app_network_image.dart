@@ -16,6 +16,7 @@ class AppNetworkImage extends StatelessWidget {
     this.borderRadius,
     this.fallbackIcon = Icons.image_outlined,
     this.fallbackColor,
+    this.assetFallback,
   });
 
   final String imageUrl;
@@ -25,6 +26,10 @@ class AppNetworkImage extends StatelessWidget {
   final double? borderRadius;
   final IconData fallbackIcon;
   final Color? fallbackColor;
+  /// Optional local asset path (e.g. 'assets/placeholder.png') shown when
+  /// the network image fails to load. When null, a branded gradient
+  /// placeholder with [fallbackIcon] is used.
+  final String? assetFallback;
 
   @override
   Widget build(BuildContext context) {
@@ -43,15 +48,13 @@ class AppNetworkImage extends StatelessWidget {
         height: height,
         width: width,
       ),
-      errorWidget: (context, url, error) => Container(
+      errorWidget: (context, url, error) => _FallbackWidget(
         height: height,
         width: width,
-        color: fallbackColor ?? placeholderColor,
-        child: Icon(
-          fallbackIcon,
-          size: 32,
-          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-        ),
+        backgroundColor: fallbackColor ?? placeholderColor,
+        icon: fallbackIcon,
+        assetFallback: assetFallback,
+        fit: fit,
       ),
     );
 
@@ -62,6 +65,65 @@ class AppNetworkImage extends StatelessWidget {
       );
     }
     return image;
+  }
+}
+
+/// Fallback widget shown when a network image fails to load.
+/// Uses a local asset when [assetFallback] is provided, otherwise renders
+/// a branded gradient placeholder with an icon.
+class _FallbackWidget extends StatelessWidget {
+  const _FallbackWidget({
+    this.height,
+    this.width,
+    required this.backgroundColor,
+    required this.icon,
+    this.assetFallback,
+    this.fit = BoxFit.cover,
+  });
+
+  final double? height;
+  final double? width;
+  final Color backgroundColor;
+  final IconData icon;
+  final String? assetFallback;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    if (assetFallback != null) {
+      return Image.asset(
+        assetFallback!,
+        fit: fit,
+        height: height,
+        width: width,
+        errorBuilder: (_, __, ___) => _buildIconFallback(context),
+      );
+    }
+    return _buildIconFallback(context);
+  }
+
+  Widget _buildIconFallback(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [const Color(0xFF1F2937), const Color(0xFF111827)]
+              : [const Color(0xFFF3F4F6), const Color(0xFFE5E7EB)],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          icon,
+          size: 32,
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+        ),
+      ),
+    );
   }
 }
 

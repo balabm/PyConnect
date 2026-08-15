@@ -36,6 +36,12 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       // Invalidate auth so the router redirect sends the user to /auth.
       ref.invalidate(authControllerProvider);
     },
+    onTokenRefreshed: (newToken) async {
+      // Persist the refreshed token so it survives app restarts.
+      client.setToken(newToken);
+      await ref.read(tokenStorageProvider).write(newToken);
+      ref.read(authTokenProvider.notifier).state = newToken;
+    },
   );
   return client;
 });

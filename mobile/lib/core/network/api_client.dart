@@ -9,6 +9,7 @@ class ApiClient {
     String? baseUrl,
     String? initialToken,
     this.onUnauthorized,
+    this.onTokenRefreshed,
     this._maxRetries = 3,
     this._baseDelay = const Duration(milliseconds: 500),
   })  : _dio = Dio(
@@ -36,6 +37,9 @@ class ApiClient {
   }
 
   final void Function()? onUnauthorized;
+  /// Called with the new access token after a successful silent refresh,
+  /// so the caller can persist it to secure storage.
+  final Future<void> Function(String newToken)? onTokenRefreshed;
   final int _maxRetries;
   final Duration _baseDelay;
 
@@ -81,10 +85,7 @@ class ApiClient {
           // Only attempt refresh if we actually had a token — a 401 without
           // a token means the request raced ahead of AuthController.build().
           if (_token != null && _token!.isNotEmpty && attempt == 1) {
-            // Attempt silent token refresh.
-            // TODO: Wire to backend refresh endpoint when available.
-            // For now, this infrastructure is in place — if a refresh
-            // endpoint is added, call it here and retry the request.
+            // Attempt silent token refresh via POST /api/auth/refresh.
             final refreshed = await _attemptTokenRefresh();
             if (refreshed) {
               // Retry the original request with the new token.
@@ -177,14 +178,9 @@ class ApiClient {
     return Duration(milliseconds: exponential.toInt() + jitter);
   }
 
-  /// Attempts a silent token refresh.
-  ///
-  /// TODO: Wire to backend refresh endpoint when available. Currently the
-  /// backend issues 60-minute access tokens without a refresh token flow.
-  /// When a `POST /api/auth/refresh` endpoint is added, this method should:
-  /// Calls POST /api/auth/refresh with the current (still-valid) token
-  /// to obtain a fresh 60-minute access token.
-  /// Returns `true` on success, `false` on failure.
+  /// Attempts a silent token refresh by calling POST /api/auth/refresh
+  /// with the current (still-valid) token to obtain a fresh 60-minute
+  /// access token. Returns `true` on success, `false` on failure.
   Future<bool> _attemptTokenRefresh() async {
     if (_token == null || _token!.isEmpty) return false;
     try {
@@ -193,9 +189,14 @@ class ApiClient {
         options: Options(headers: {'Authorization': 'Bearer $_token'}),
       );
       if (response.statusCode == 200 && response.data != null) {
-        final newToken = response.data['token'] as String?;
+        final data = response.data;
+        // Backend returns AuthResponse with `accessToken` (camelCase JSON).
+        final newToken = (data['accessToken'] as String?) ??
+            (data['token'] as String?); // fallback for alternate schemas
         if (newToken != null && newToken.isNotEmpty) {
           _token = newToken;
+          // Persist the refreshed token so it survives app restarts.
+          await onTokenRefreshed?.call(newToken);
           return true;
         }
       }

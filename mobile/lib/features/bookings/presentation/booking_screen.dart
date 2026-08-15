@@ -34,6 +34,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Initialize Razorpay SDK early so it's ready when the user checks out.
+    ref.read(razorpayPaymentProvider).init();
     _resolveVenue();
   }
 

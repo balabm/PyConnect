@@ -37,19 +37,30 @@ class PaymentExternalWallet extends PaymentResult {
 /// 2. Call [startPayment] with the order details and user prefill.
 /// 3. Listen to the returned [Future] for success/error/external wallet.
 class RazorpayPaymentService {
-  RazorpayPaymentService(this._api) {
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-    _isInitialized = true;
-  }
+  /// Creates the service. Razorpay SDK initialization is deferred to
+  /// [init] so it can be called from a screen's `initState` or lazily
+  /// before the first checkout. This avoids constructing the native
+  /// plugin before the Flutter engine is ready.
+  RazorpayPaymentService(this._api);
 
   final ApiClient _api;
-  late final Razorpay _razorpay;
+  Razorpay? _razorpay;
   bool _isInitialized = false;
 
   Completer<PaymentResult>? _completer;
+
+  /// Initializes the Razorpay SDK and registers event handlers.
+  /// Safe to call multiple times — subsequent calls are no-ops.
+  /// Should be called from a payment screen's `initState` or before
+  /// the first [openCheckout] call.
+  void init() {
+    if (_isInitialized) return;
+    _razorpay = Razorpay();
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleSuccess);
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handleError);
+    _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    _isInitialized = true;
+  }
 
   /// Returns true when `USE_MOCK_PAYMENTS=true` is set in the .env file
   /// OR when no Razorpay key ID was provided via --dart-define.
@@ -165,14 +176,9 @@ class RazorpayPaymentService {
     };
 
     try {
-      if (!_isInitialized) {
-        _razorpay = Razorpay();
-        _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleSuccess);
-        _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleError);
-        _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-        _isInitialized = true;
-      }
-      _razorpay.open(options);
+      // Lazy-init the SDK if the screen didn't call init() in initState.
+      if (!_isInitialized) init();
+      _razorpay!.open(options);
     } catch (e) {
       // Any SDK initialization failure (NotInitializedError, missing
       // native plugin, platform issues) falls back to mock payment so
@@ -234,6 +240,6 @@ class RazorpayPaymentService {
 
   /// Clears the Razorpay instance. Call in dispose.
   void clear() {
-    _razorpay.clear();
+    _razorpay?.clear();
   }
 }

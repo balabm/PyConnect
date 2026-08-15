@@ -10,7 +10,6 @@ import '../features/driver/application/driver_signalr_provider.dart';
 import '../features/driver/presentation/driver_home_screen.dart';
 import '../features/driver/presentation/driver_earnings_screen.dart';
 import '../features/driver/presentation/active_trip_screen.dart';
-import '../features/driver/presentation/driver_profile_screen.dart';
 import '../core/services/keep_awake_service.dart';
 import '../core/services/background_location_service.dart';
 import '../core/services/overlay_alert_service.dart';
