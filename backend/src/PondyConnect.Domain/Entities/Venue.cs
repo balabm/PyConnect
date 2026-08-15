@@ -202,6 +202,21 @@ public sealed class Venue : BaseEntity
         MarkUpdated();
     }
 
+    /// <summary>
+    /// Sets the current occupancy as a percentage of max capacity (0–100).
+    /// Used by vendors to report live crowd levels via the partner app.
+    /// </summary>
+    public void SetOccupancyPercentage(int occupancyPercentage)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(occupancyPercentage, 0, nameof(occupancyPercentage));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(occupancyPercentage, 100, nameof(occupancyPercentage));
+
+        CurrentCapacity = (int)Math.Round(MaxCapacity * (occupancyPercentage / 100.0));
+        if (CurrentCapacity > MaxCapacity)
+            CurrentCapacity = MaxCapacity;
+        MarkUpdated();
+    }
+
     public void AddAvailability(DayOfWeek dayOfWeek, TimeOnly opensAt, TimeOnly closesAt)
     {
         if (opensAt >= closesAt)

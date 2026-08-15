@@ -138,6 +138,7 @@ class KycDocumentSlot {
     this.file,
     this.status = KycDocStatus.pending,
     this.errorMessage,
+    this.cameraOnly = false,
   });
 
   final String label;
@@ -147,6 +148,8 @@ class KycDocumentSlot {
   final File? file;
   final KycDocStatus status;
   final String? errorMessage;
+  /// If true, only the camera source is offered (no gallery option).
+  final bool cameraOnly;
 
   KycDocumentSlot copyWith({
     File? file,
@@ -160,6 +163,7 @@ class KycDocumentSlot {
       file: file ?? this.file,
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
+      cameraOnly: cameraOnly,
     );
   }
 }

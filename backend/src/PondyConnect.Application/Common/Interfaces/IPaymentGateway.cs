@@ -22,6 +22,17 @@ public interface IPaymentGateway
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Verifies a client-side payment signature (Razorpay checkout).
+    /// The signature is an HMAC-SHA256 of <c>order_id|payment_id</c> keyed
+    /// by the provider key secret.
+    /// </summary>
+    Task<bool> VerifyPaymentSignatureAsync(
+        string razorpayOrderId,
+        string razorpayPaymentId,
+        string signature,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Refunds a captured payment.
     /// </summary>
     Task<RefundResult> RefundAsync(

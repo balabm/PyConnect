@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
@@ -99,6 +101,146 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
                     ],
                   ),
                 ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppTheme.emerald,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.qr_code),
+        label: const Text('New Bag Drop'),
+        onPressed: _showBagDropDialog,
+      ),
+    );
+  }
+
+  void _showBagDropDialog() {
+    AppHaptics.light();
+    final nameController = TextEditingController();
+    final bagCountController = TextEditingController(text: '1');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('New Bag Drop', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Customer Name',
+                labelStyle: TextStyle(color: Colors.white54),
+                hintText: 'Enter customer name',
+                hintStyle: TextStyle(color: Colors.white24),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: bagCountController,
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Bag Count',
+                labelStyle: TextStyle(color: Colors.white54),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+            onPressed: () {
+              final name = nameController.text.trim();
+              final bagCount = int.tryParse(bagCountController.text) ?? 1;
+              if (name.isEmpty) return;
+              Navigator.pop(ctx);
+              _showClaimCheckQR(name, bagCount);
+            },
+            child: const Text('Generate Claim Check'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClaimCheckQR(String customerName, int bagCount) {
+    // Generate a unique claim check ID
+    final claimCheckId = 'PC-CLM-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
+    final qrPayload = 'pyconnect:claim-check:$claimCheckId';
+
+    // TODO: Persist bag drop to backend via vendor API when endpoint is wired.
+    // For now, show the QR claim check to the partner.
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Claim Check QR',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Customer: $customerName · $bagCount ${bagCount == 1 ? 'bag' : 'bags'}',
+                style: const TextStyle(fontSize: 13, color: AppTheme.slate),
+              ),
+              const SizedBox(height: 20),
+              QrImageView(
+                data: qrPayload,
+                version: QrVersions.auto,
+                size: 220,
+                backgroundColor: Colors.white,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  claimCheckId,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.charcoal),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.print, size: 18),
+                    label: const Text('Print'),
+                    onPressed: () {
+                      // TODO: Implement print/share functionality
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Print support coming soon')),
+                      );
+                    },
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _loadData();
+                    },
+                    child: const Text('Done'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

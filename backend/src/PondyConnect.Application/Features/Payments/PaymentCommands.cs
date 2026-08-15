@@ -45,6 +45,16 @@ public sealed record VerifyPaymentWebhookResponse(
     string? PaymentId = null,
     PaymentStatus? Status = null);
 
+public sealed record VerifyPaymentCommand(
+    Guid PaymentId,
+    string RazorpayPaymentId,
+    string RazorpayOrderId,
+    string RazorpaySignature) : IRequest<VerifyPaymentResponse>;
+
+public sealed record VerifyPaymentResponse(
+    bool Verified,
+    string? ErrorMessage = null);
+
 public sealed record RefundPaymentCommand(
     Guid PaymentId,
     decimal Amount,

@@ -17,7 +17,10 @@ final driverOnlineStatusProvider = StateProvider<bool>((ref) => false);
 
 // ── KYC Upload State ──
 
-/// The three KYC document slots the driver must fill.
+/// The KYC document slots the driver must fill.
+/// Slots 0-2 are uploaded via the primary KYC endpoint; slots 3-4
+/// (Commercial Insurance + Driver Selfie) are uploaded via the
+/// extended KYC endpoint.
 final kycSlotsProvider =
     StateNotifierProvider<KycSlotsNotifier, List<KycDocumentSlot>>((ref) {
   return KycSlotsNotifier();
@@ -40,6 +43,17 @@ class KycSlotsNotifier extends StateNotifier<List<KycDocumentSlot>> {
             label: 'Vehicle RC',
             icon: Icons.directions_car_outlined,
             fieldName: 'rc',
+          ),
+          KycDocumentSlot(
+            label: 'Commercial Insurance',
+            icon: Icons.policy_outlined,
+            fieldName: 'insurance',
+          ),
+          KycDocumentSlot(
+            label: 'Driver Selfie',
+            icon: Icons.face_outlined,
+            fieldName: 'selfie',
+            cameraOnly: true,
           ),
         ]);
 
@@ -100,11 +114,22 @@ class KycSlotsNotifier extends StateNotifier<List<KycDocumentSlot>> {
         icon: Icons.directions_car_outlined,
         fieldName: 'rc',
       ),
+      KycDocumentSlot(
+        label: 'Commercial Insurance',
+        icon: Icons.policy_outlined,
+        fieldName: 'insurance',
+      ),
+      KycDocumentSlot(
+        label: 'Driver Selfie',
+        icon: Icons.face_outlined,
+        fieldName: 'selfie',
+        cameraOnly: true,
+      ),
     ];
   }
 }
 
-/// Whether all three KYC documents have a file selected.
+/// Whether all KYC documents (5 slots) have a file selected.
 final kycAllFilesSelectedProvider = Provider<bool>((ref) {
   final slots = ref.watch(kycSlotsProvider);
   return slots.every((s) => s.file != null);
@@ -133,7 +158,7 @@ final dispatchTaskStreamProvider =
 
   // Merge SignalR ride offer stream with periodic API polling fallback.
   // The SignalR stream pushes new ride offers as they arrive in real-time.
-  // The timer polls every 15 seconds as a fallback for when SignalR is not
+  // The timer polls every 5 seconds as a fallback for when SignalR is not
   // connected or for non-ride tasks (food delivery, essentials).
   final controller = StreamController<List<DispatchTaskModel>>.broadcast();
 
@@ -143,7 +168,7 @@ final dispatchTaskStreamProvider =
   });
 
   Timer? timer;
-  timer = Timer.periodic(const Duration(seconds: 15), (_) async {
+  timer = Timer.periodic(const Duration(seconds: 5), (_) async {
     try {
       final tasks = await api.getAvailableTasks();
       if (!controller.isClosed) {

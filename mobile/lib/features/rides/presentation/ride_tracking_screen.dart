@@ -39,6 +39,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
   bool _sosActive = false;
   bool _cancelling = false;
   List<LatLng>? _routePoints;
+  List<LatLng>? _driverRoutePoints;
   StreamSubscription? _driverAssignedSub;
   StreamSubscription? _locationSub;
   StreamSubscription? _arrivedSub;
@@ -163,6 +164,42 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
       );
       if (mounted && route != null) setState(() => _routePoints = route.points);
     } catch (_) {}
+
+    // Fetch driver→pickup route for dual-layer polyline
+    _fetchDriverRoute(ride, pickupLat, pickupLng);
+  }
+
+  /// Fetches the driver→pickup route for the dual-layer polyline overlay.
+  Future<void> _fetchDriverRoute(
+    Map<String, dynamic> ride,
+    double pickupLat,
+    double pickupLng,
+  ) async {
+    if (_driverRoutePoints != null) return;
+
+    // Try driver's current location from the ride data
+    final driverLat = (ride['driverLat'] as num?)?.toDouble() ??
+        (ride['currentLat'] as num?)?.toDouble();
+    final driverLng = (ride['driverLng'] as num?)?.toDouble() ??
+        (ride['currentLng'] as num?)?.toDouble();
+
+    // Fall back to driver location update stream
+    final dLoc = _driverLocation;
+    final dLat = driverLat ?? dLoc?.latitude;
+    final dLng = driverLng ?? dLoc?.longitude;
+
+    if (dLat == null || dLng == null) return;
+
+    try {
+      final routing = ref.read(routingProvider);
+      final route = await routing.getRoute(
+        LatLng(dLat, dLng),
+        LatLng(pickupLat, pickupLng),
+      );
+      if (mounted && route != null) {
+        setState(() => _driverRoutePoints = route.points);
+      }
+    } catch (_) {}
   }
 
   Future<void> _cancelRide() async {
@@ -264,6 +301,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
             cancelling: _cancelling,
             onSos: _triggerSos,
             routePoints: _routePoints,
+            driverRoutePoints: _driverRoutePoints,
           );
         },
       ),
@@ -281,6 +319,7 @@ class _TrackingBody extends StatelessWidget {
     required this.cancelling,
     required this.onSos,
     required this.routePoints,
+    this.driverRoutePoints,
   });
 
   final Map<String, dynamic> ride;
@@ -291,6 +330,7 @@ class _TrackingBody extends StatelessWidget {
   final bool cancelling;
   final VoidCallback onSos;
   final List<LatLng>? routePoints;
+  final List<LatLng>? driverRoutePoints;
 
   @override
   Widget build(BuildContext context) {
@@ -331,6 +371,7 @@ class _TrackingBody extends StatelessWidget {
                       ? LatLng(driverLocation!.latitude, driverLocation!.longitude)
                       : null,
                   routePoints: routePoints,
+                  driverRoutePoints: driverRoutePoints,
                   fitRoute: true,
                 ),
               ),

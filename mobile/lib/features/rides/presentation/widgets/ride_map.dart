@@ -6,11 +6,9 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../core/theme/app_theme.dart';
 
-/// Fallback CartoDB Dark Matter raster tiles (free, no API key).
-/// Gives a premium Uber-style muted-slate dark map aesthetic.
-const _fallbackDarkRaster =
-    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const _fallbackSubdomains = ['a', 'b', 'c', 'd'];
+/// OpenStreetMap standard raster tiles (free, no API key).
+/// Not blocked by common ad blockers (unlike CartoDB basemaps).
+const _osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 /// Active trip polyline color — bright teal for high contrast on dark map.
 const _activeRouteColor = Color(0xFF00E676);
@@ -31,6 +29,7 @@ class RideMap extends StatefulWidget {
     this.driverLocation,
     this.userLocation,
     this.routePoints,
+    this.driverRoutePoints,
     this.zoom = 14.0,
     this.onMapTap,
     this.fitRoute = false,
@@ -41,6 +40,9 @@ class RideMap extends StatefulWidget {
   final LatLng? driverLocation;
   final LatLng? userLocation;
   final List<LatLng>? routePoints;
+  /// Route from the driver's current location to the pickup point.
+  /// Rendered as a dashed muted-color line distinct from the main route.
+  final List<LatLng>? driverRoutePoints;
   final double zoom;
   final void Function(LatLng)? onMapTap;
   final bool fitRoute;
@@ -78,6 +80,7 @@ class _RideMapState extends State<RideMap> {
   void _fitBounds() {
     final points = <LatLng>[widget.pickup, widget.dropoff];
     if (widget.routePoints != null) points.addAll(widget.routePoints!);
+    if (widget.driverRoutePoints != null) points.addAll(widget.driverRoutePoints!);
     if (widget.driverLocation != null) points.add(widget.driverLocation!);
 
     final latitudes = points.map((p) => p.latitude).toList();
@@ -102,8 +105,6 @@ class _RideMapState extends State<RideMap> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final markers = <Marker>[
       // User location puck — glowing blue/teal dot (Uber-style)
       if (widget.userLocation != null)
@@ -174,21 +175,32 @@ class _RideMapState extends State<RideMap> {
         keepAlive: true,
       ),
       children: [
-        // Dark tile layer — CartoDB Dark Matter (free, no API key)
-        // Gives a premium Uber-style muted-slate dark map aesthetic
-        if (isDark)
-          TileLayer(
-            urlTemplate: _fallbackDarkRaster,
-            subdomains: _fallbackSubdomains,
-            userAgentPackageName: 'com.pondyconnect.app',
-            retinaMode: true,
-          )
-        else
-          TileLayer(
-            urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-            subdomains: const ['a', 'b', 'c'],
-            userAgentPackageName: 'com.pondyconnect.app',
-            retinaMode: true,
+        // Tile layer — OpenStreetMap standard raster tiles.
+        // Not blocked by ad blockers (CartoDB basemaps are).
+        // Wrapped in a Builder so it rebuilds reactively on theme changes.
+        Builder(
+          builder: (context) {
+            return TileLayer(
+              urlTemplate: _osmTiles,
+              userAgentPackageName: 'com.pondyconnect.app',
+            );
+          },
+        ),
+        // Driver → Pickup polyline — dashed muted line (slate/grey)
+        if (widget.driverRoutePoints != null &&
+            widget.driverRoutePoints!.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: widget.driverRoutePoints!,
+                color: AppTheme.slate.withValues(alpha: 0.6),
+                strokeWidth: 4,
+                pattern: StrokePattern.dashed(
+                  segments: const [8, 8],
+                ),
+                strokeCap: StrokeCap.round,
+              ),
+            ],
           ),
         // Route polyline — glow effect + bright teal line
         if (widget.routePoints != null && widget.routePoints!.isNotEmpty) ...[
@@ -338,12 +350,13 @@ class _UserPuckState extends State<_UserPuck>
     return AnimatedBuilder(
       animation: _pulse,
       builder: (_, child) {
-        final scale = 1.0 + (_pulse.value * 0.4);
-        final opacity = (1.0 - _pulse.value) * 0.5;
+        // Scale from 1x to 2x and fade opacity from 0.4 to 0
+        final scale = 1.0 + _pulse.value; // 1.0 → 2.0
+        final opacity = 0.4 * (1.0 - _pulse.value); // 0.4 → 0.0
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Pulsing glow ring
+            // Pulsing ring — same color as the user puck
             Transform.scale(
               scale: scale,
               child: Container(
@@ -351,7 +364,7 @@ class _UserPuckState extends State<_UserPuck>
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _userPuckGlowColor.withValues(alpha: opacity),
+                  color: _userPuckColor.withValues(alpha: opacity),
                 ),
               ),
             ),

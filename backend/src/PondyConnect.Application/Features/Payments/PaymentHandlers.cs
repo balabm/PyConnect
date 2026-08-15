@@ -171,6 +171,74 @@ public sealed class VerifyPaymentWebhookHandler : IRequestHandler<VerifyPaymentW
     }
 }
 
+public sealed class VerifyPaymentHandler : IRequestHandler<VerifyPaymentCommand, VerifyPaymentResponse>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly IPaymentGateway _gateway;
+    private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<VerifyPaymentHandler> _logger;
+
+    public VerifyPaymentHandler(
+        IApplicationDbContext context,
+        IPaymentGateway gateway,
+        ICurrentUserService currentUser,
+        ILogger<VerifyPaymentHandler> logger)
+    {
+        _context = context;
+        _gateway = gateway;
+        _currentUser = currentUser;
+        _logger = logger;
+    }
+
+    public async Task<VerifyPaymentResponse> Handle(VerifyPaymentCommand request, CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("User not authenticated.");
+
+        var payment = await _context.Payments
+            .FirstOrDefaultAsync(p => p.Id == request.PaymentId, cancellationToken);
+        if (payment is null)
+            throw new InvalidOperationException("Payment not found.");
+
+        // Verify ownership of the underlying booking so a user cannot verify
+        // (and capture) another user's payment.
+        var owns = payment.ServiceBookingId.HasValue
+            ? await _context.ServiceBookings.AnyAsync(b => b.Id == payment.ServiceBookingId.Value && b.UserId == userId, cancellationToken)
+            : payment.TransitTripId.HasValue
+                ? await _context.TransitTrips.AnyAsync(t => t.Id == payment.TransitTripId.Value && t.UserId == userId, cancellationToken)
+                : payment.LuggageDropOffId.HasValue
+                    ? await _context.LuggageDropOffs.AnyAsync(l => l.Id == payment.LuggageDropOffId.Value && l.UserId == userId, cancellationToken)
+                    : payment.ScooterRentalId.HasValue
+                        ? await _context.ScooterRentals.AnyAsync(r => r.Id == payment.ScooterRentalId.Value && r.UserId == userId, cancellationToken)
+                        : payment.FoodOrderId.HasValue
+                            ? await _context.FoodOrders.AnyAsync(f => f.Id == payment.FoodOrderId.Value && f.UserId == userId, cancellationToken)
+                            : false;
+
+        if (!owns)
+            throw new UnauthorizedAccessException("Access denied to this payment.");
+
+        // Razorpay client-side signature is HMAC-SHA256 of "order_id|payment_id"
+        // keyed by the provider key secret.
+        var isValid = await _gateway.VerifyPaymentSignatureAsync(
+            request.RazorpayOrderId,
+            request.RazorpayPaymentId,
+            request.RazorpaySignature,
+            cancellationToken);
+
+        if (!isValid)
+        {
+            _logger.LogWarning("Payment signature verification failed for payment {PaymentId}", request.PaymentId);
+            return new VerifyPaymentResponse(false, "Invalid signature");
+        }
+
+        // Signature valid: mark the payment as captured.
+        payment.MarkCaptured(request.RazorpayPaymentId);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Payment {PaymentId} verified and captured for user {UserId}", payment.Id, userId);
+        return new VerifyPaymentResponse(true);
+    }
+}
+
 public sealed class RefundPaymentHandler : IRequestHandler<RefundPaymentCommand, RefundPaymentResponse>
 {
     private readonly IApplicationDbContext _context;

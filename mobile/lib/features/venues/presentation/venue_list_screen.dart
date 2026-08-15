@@ -25,9 +25,19 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
   String _searchQuery = '';
   String? _categoryFilter;
 
-  static const _categories = ['All', 'Nightlife', 'Bar', 'Club', 'Cafe', 'Restaurant', 'Lounge', 'Pub'];
+  static const _categories = ['All', 'Restobars', 'Cafes', 'Pizzerias', 'Beach Clubs', 'Colonial Dining'];
 
-  static const _nightlifeCategories = {'Bar', 'Club', 'Pub'};
+  /// Maps MasterPlan category names to the venue categories returned by the API.
+  static const _categoryMapping = {
+    'Restobars': ['Restaurant', 'Restobar', 'Bar', 'Pub', 'Nightlife', 'Club', 'Lounge'],
+    'Cafes': ['Cafe'],
+    'Pizzerias': ['Pizzeria', 'Pizza'],
+    'Beach Clubs': ['Beach Club', 'Pub', 'Bar'],
+    'Colonial Dining': ['Restaurant', 'Lounge', 'Fine Dining'],
+  };
+
+  /// Categories that count as "nightlife" for the default filter.
+  static const _nightlifeCategories = ['Bar', 'Club', 'Pub', 'Nightlife', 'Restobar', 'Lounge'];
 
   /// Curated Pondicherry fallback images by category.
   /// Used when a venue has no imageUrl or the URL fails to load.
@@ -73,7 +83,7 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
   void initState() {
     super.initState();
     if (widget.initialFilter == 'nightlife') {
-      _categoryFilter = 'Nightlife';
+      _categoryFilter = 'Restobars';
     } else if (widget.initialCategory != null) {
       _categoryFilter = widget.initialCategory;
     }
@@ -85,7 +95,7 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
       final catLower = v.category.toLowerCase();
       final matchesCategory = _categoryFilter == null ||
           _categoryFilter == 'All' ||
-          (_categoryFilter == 'Nightlife' && _nightlifeCategories.any((c) => c.toLowerCase() == catLower)) ||
+          (_categoryMapping[_categoryFilter]?.any((c) => c.toLowerCase() == catLower) ?? false) ||
           catLower == _categoryFilter!.toLowerCase();
       return matchesSearch && matchesCategory;
     }).toList();

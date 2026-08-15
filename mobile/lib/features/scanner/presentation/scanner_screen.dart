@@ -340,7 +340,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  '${_result?.serviceType} - ${_result?.userName}',
+                  _friendlyPassType(_result?.serviceType ?? ''),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -348,12 +348,51 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   ),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  'Customer: ${_result?.userName}',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (_result?.message != null && _result!.message.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _result!.message,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Maps a backend service type string to a friendly pass type label.
+  static String _friendlyPassType(String serviceType) {
+    final lower = serviceType.toLowerCase();
+    if (lower.contains('pub') || lower.contains('entry') || lower.contains('nightlife')) {
+      return 'Pub Entry Pass';
+    }
+    if (lower.contains('homestay') || lower.contains('stay') || lower.contains('hotel')) {
+      return 'Homestay Check-In';
+    }
+    if (lower.contains('cloak') || lower.contains('luggage') || lower.contains('bag')) {
+      return 'Cloakroom Bag Drop';
+    }
+    if (lower.contains('scooter') || lower.contains('rental') || lower.contains('bike')) {
+      return 'Scooter Handover';
+    }
+    if (serviceType.isEmpty) return 'Valid Pass';
+    return serviceType;
   }
 
   Widget _buildErrorOverlay() {

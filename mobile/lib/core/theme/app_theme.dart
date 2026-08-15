@@ -112,7 +112,7 @@ abstract final class AppTheme {
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: cardBackground,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -651,5 +651,6 @@ abstract final class AppRadius {
   static const double md = 12;
   static const double lg = 16;
   static const double xl = 20;
+  static const double xxl = 24;
   static const double pill = 999;
 }

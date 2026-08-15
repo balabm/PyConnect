@@ -14,6 +14,7 @@ import '../features/admin/presentation/admin_live_rides_screen.dart';
 import '../features/admin/presentation/admin_sos_screen.dart';
 import '../features/admin/presentation/admin_tickets_screen.dart';
 import '../features/admin/presentation/admin_logs_screen.dart';
+import '../features/admin/presentation/admin_finance_screen.dart';
 
 final adminRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -80,6 +81,10 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/logs',
             builder: (_, _) => const AdminLogsScreen(),
+          ),
+          GoRoute(
+            path: '/finance',
+            builder: (_, _) => const AdminFinanceScreen(),
           ),
         ],
       ),

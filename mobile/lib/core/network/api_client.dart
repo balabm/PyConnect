@@ -76,13 +76,24 @@ class ApiClient {
         final response = await request();
         return _unwrap(response);
       } on DioException catch (e) {
-        // 401 — never retry, never leak raw DioException to the UI.
-        // Fire the onUnauthorized callback and throw a typed exception.
+        // 401 — attempt silent token refresh before clearing auth state.
         if (e.response?.statusCode == 401) {
-          // Only clear auth state if we actually had a token — a 401 without
-          // a token means the request raced ahead of AuthController.build()
-          // and we should not wipe the (not-yet-set) credentials.
-          if (_token != null && _token!.isNotEmpty) {
+          // Only attempt refresh if we actually had a token — a 401 without
+          // a token means the request raced ahead of AuthController.build().
+          if (_token != null && _token!.isNotEmpty && attempt == 1) {
+            // Attempt silent token refresh.
+            // TODO: Wire to backend refresh endpoint when available.
+            // For now, this infrastructure is in place — if a refresh
+            // endpoint is added, call it here and retry the request.
+            final refreshed = await _attemptTokenRefresh();
+            if (refreshed) {
+              // Retry the original request with the new token.
+              attempt++;
+              continue;
+            }
+            // Refresh failed — clear auth state and throw.
+            onUnauthorized?.call();
+          } else if (_token != null && _token!.isNotEmpty) {
             onUnauthorized?.call();
           }
           throw AuthRequiredException();
@@ -164,6 +175,20 @@ class ApiClient {
     final exponential = _baseDelay.inMilliseconds * pow(2, attempt - 1);
     final jitter = Random().nextInt(200); // 0-200ms jitter
     return Duration(milliseconds: exponential.toInt() + jitter);
+  }
+
+  /// Attempts a silent token refresh.
+  ///
+  /// TODO: Wire to backend refresh endpoint when available. Currently the
+  /// backend issues 60-minute access tokens without a refresh token flow.
+  /// When a `POST /api/auth/refresh` endpoint is added, this method should:
+  /// 1. Call the refresh endpoint with the stored refresh token.
+  /// 2. Update [_token] with the new access token.
+  /// 3. Persist the new token via the auth controller.
+  /// 4. Return `true` on success, `false` on failure.
+  Future<bool> _attemptTokenRefresh() async {
+    // No refresh endpoint available yet — return false to trigger re-auth.
+    return false;
   }
 
   static dynamic _unwrap(Response<dynamic> response) {

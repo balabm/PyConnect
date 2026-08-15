@@ -31,7 +31,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   void initState() {
     super.initState();
     _loadOrders();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) => _loadOrders());
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadOrders());
   }
 
   @override

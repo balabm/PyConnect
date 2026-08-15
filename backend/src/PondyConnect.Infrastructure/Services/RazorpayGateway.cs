@@ -97,6 +97,23 @@ public sealed class RazorpayGateway : IPaymentGateway
         }
     }
 
+    public Task<bool> VerifyPaymentSignatureAsync(
+        string razorpayOrderId,
+        string razorpayPaymentId,
+        string signature,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.KeySecret))
+            return Task.FromResult(false);
+
+        var payload = $"{razorpayOrderId}|{razorpayPaymentId}";
+        var expected = ComputeHmacSha256(payload, _options.KeySecret);
+        var isValid = CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(expected),
+            Encoding.UTF8.GetBytes(signature));
+        return Task.FromResult(isValid);
+    }
+
     public async Task<RefundResult> RefundAsync(
         string providerPaymentId,
         decimal amount,

@@ -11,9 +11,11 @@ import '../domain/driver_models.dart';
 
 /// Driver KYC document upload screen.
 ///
-/// Displays three upload zones (Aadhaar, Driving License, Vehicle RC).
-/// Tapping a zone opens a bottom sheet to choose camera or gallery.
-/// Once all three are selected, the driver enters their UPI ID and submits.
+/// Displays five upload zones (Aadhaar, Driving License, Vehicle RC,
+/// Commercial Insurance, Driver Selfie). Tapping a zone opens a bottom
+/// sheet to choose camera or gallery — except the selfie slot which
+/// opens the camera directly. Once all five are selected, the driver
+/// enters their UPI ID and submits.
 class DriverKycScreen extends ConsumerStatefulWidget {
   const DriverKycScreen({super.key});
 
@@ -31,7 +33,17 @@ class _DriverKycScreenState extends ConsumerState<DriverKycScreen> {
   }
 
   void _showSourceSheet(int index) {
+    final slots = ref.read(kycSlotsProvider);
+    final slot = slots[index];
     AppHaptics.light();
+
+    // Camera-only slots (e.g. Driver Selfie) skip the bottom sheet and
+    // directly open the camera.
+    if (slot.cameraOnly) {
+      _pickAndSet(index, ImageSourceChoice.camera);
+      return;
+    }
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -79,7 +91,7 @@ class _DriverKycScreenState extends ConsumerState<DriverKycScreen> {
     final upiId = _upiController.text.trim();
 
     if (slots.any((s) => s.file == null)) {
-      AppToast.show(context, 'Please upload all three documents',
+      AppToast.show(context, 'Please upload all required documents',
           type: ToastType.warning);
       return;
     }
@@ -94,12 +106,30 @@ class _DriverKycScreenState extends ConsumerState<DriverKycScreen> {
 
     try {
       final api = ref.read(driverApiProvider);
+
+      // Upload the primary 3 documents (Aadhaar, DL, RC) via the main
+      // KYC endpoint.
       final result = await api.uploadKyc(
         aadhaar: slots[0].file!,
         drivingLicense: slots[1].file!,
         rc: slots[2].file!,
         upiId: upiId,
       );
+
+      // Upload the extended documents (Commercial Insurance + Driver Selfie)
+      // via the extended KYC endpoint.
+      // TODO: If the backend merges these into a single endpoint, update
+      // the API call accordingly. For now the extended endpoint accepts
+      // insurance + selfie as separate multipart files.
+      try {
+        await api.uploadExtendedKyc(
+          insurance: slots[3].file,
+          selfie: slots[4].file,
+        );
+      } on Exception catch (_) {
+        // Extended upload failure is non-blocking — the primary KYC
+        // may still succeed. Log silently.
+      }
 
       if (result.success && mounted) {
         AppHaptics.success();

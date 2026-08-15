@@ -39,6 +39,8 @@ class BookingSummary {
     required this.status,
     required this.amount,
     required this.paymentStatus,
+    this.guestCount,
+    this.durationHours,
   });
 
   factory BookingSummary.fromJson(Map<String, dynamic> json) => BookingSummary(
@@ -49,6 +51,9 @@ class BookingSummary {
         status: json['status'] as String? ?? '',
         amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
         paymentStatus: json['paymentStatus'] as String? ?? '',
+        guestCount: (json['guestCount'] as num?)?.toInt() ??
+            (json['numberOfGuests'] as num?)?.toInt(),
+        durationHours: (json['durationHours'] as num?)?.toDouble(),
       );
 
   final String bookingId;
@@ -58,6 +63,8 @@ class BookingSummary {
   final String status;
   final double amount;
   final String paymentStatus;
+  final int? guestCount;
+  final double? durationHours;
 }
 
 class ActivatePriorityResult {

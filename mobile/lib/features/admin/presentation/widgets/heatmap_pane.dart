@@ -7,7 +7,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../application/admin_providers.dart';
 
 /// Live map pane showing real driver locations on an interactive map.
-/// Uses CartoDB Positron (light) / Dark Matter (dark) tiles — free, no API key.
+/// Uses OpenStreetMap standard raster tiles — free, no API key, and not
+/// blocked by common ad blockers (unlike CartoDB basemaps).
 class HeatmapPane extends ConsumerStatefulWidget {
   const HeatmapPane({super.key});
 
@@ -21,6 +22,9 @@ class _HeatmapPaneState extends ConsumerState<HeatmapPane> {
   // Pondicherry center
   static const _pondyCenter = LatLng(11.9356, 79.8301);
 
+  // OpenStreetMap standard raster tiles — not blocked by ad blockers.
+  static const _osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
   @override
   void initState() {
     super.initState();
@@ -30,14 +34,6 @@ class _HeatmapPaneState extends ConsumerState<HeatmapPane> {
   @override
   Widget build(BuildContext context) {
     final driversAsync = ref.watch(adminDriverLocationsProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final tileUrl = isDark
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-    final tileSubdomains = isDark
-        ? const ['a', 'b', 'c', 'd']
-        : const ['a', 'b', 'c'];
 
     return Stack(
       children: [
@@ -51,10 +47,8 @@ class _HeatmapPaneState extends ConsumerState<HeatmapPane> {
           ),
           children: [
             TileLayer(
-              urlTemplate: tileUrl,
-              subdomains: tileSubdomains,
+              urlTemplate: _osmTiles,
               userAgentPackageName: 'com.pondyconnect.admin',
-              retinaMode: true,
             ),
             driversAsync.when(
               loading: () => const MarkerLayer(markers: []),

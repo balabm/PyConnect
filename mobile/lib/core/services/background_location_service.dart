@@ -31,7 +31,7 @@ class BackgroundLocationService {
         isForegroundMode: true,
         notificationChannelId: 'driver_location_tracking',
         initialNotificationTitle: 'PY Connect Captain',
-        initialNotificationContent: 'Location tracking is active',
+        initialNotificationContent: 'You are online and receiving requests.',
         foregroundServiceNotificationId: 8888,
       ),
       iosConfiguration: IosConfiguration(

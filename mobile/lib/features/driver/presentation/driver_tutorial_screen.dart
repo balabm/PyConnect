@@ -26,6 +26,10 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
   bool _hasAgreed = false;
   bool _isSubmitting = false;
 
+  /// Signature strokes captured on the signature pad.
+  /// Each stroke is a list of [Offset] points; null entries separate strokes.
+  List<Offset?> _signaturePoints = [];
+
   static const _pages = [
     _TutorialPage(
       icon: Icons.waving_hand_outlined,
@@ -93,6 +97,16 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
     ),
   ];
 
+  /// Total number of pages including the signature pad page.
+  int get _pageCount => _pages.length + 1;
+
+  /// Whether the user is on the signature pad page (last page).
+  bool get _isSignaturePage => _currentPage == _pages.length;
+
+  /// Whether the user has drawn at least one stroke on the signature pad.
+  bool get _hasSignature =>
+      _signaturePoints.any((p) => p != null);
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -100,7 +114,7 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
   }
 
   void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
+    if (_currentPage < _pageCount - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -122,6 +136,11 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
   Future<void> _completeTutorial() async {
     if (!_hasAgreed) {
       AppToast.show(context, 'Please agree to the terms to continue',
+          type: ToastType.warning);
+      return;
+    }
+    if (!_hasSignature) {
+      AppToast.show(context, 'Please sign on the signature pad to continue',
           type: ToastType.warning);
       return;
     }
@@ -179,19 +198,24 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
         children: [
           // Progress indicator
           LinearProgressIndicator(
-            value: (_currentPage + 1) / _pages.length,
+            value: (_currentPage + 1) / _pageCount,
             backgroundColor: Theme.of(context).dividerColor,
             valueColor: AlwaysStoppedAnimation<Color>(
-              _pages[_currentPage].color,
+              _isSignaturePage
+                  ? AppTheme.warning
+                  : _pages[_currentPage].color,
             ),
           ),
           // Page view
           Expanded(
             child: PageView.builder(
               controller: _pageController,
-              itemCount: _pages.length,
+              itemCount: _pageCount,
               onPageChanged: (i) => setState(() => _currentPage = i),
               itemBuilder: (_, i) {
+                if (i == _pages.length) {
+                  return _buildSignaturePage();
+                }
                 final page = _pages[i];
                 return _buildPage(page, i);
               },
@@ -209,22 +233,24 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
                       child: const Text('Back'),
                     ),
                   const Spacer(),
-                  if (_currentPage < _pages.length - 1)
+                  if (_currentPage < _pageCount - 1)
                     FilledButton(
                       onPressed: _nextPage,
                       child: const Text('Next'),
                     )
                   else
                     FilledButton(
-                      onPressed: _isSubmitting ? null : _completeTutorial,
+                      onPressed: (_isSubmitting || !_hasSignature)
+                          ? null
+                          : _completeTutorial,
                       child: _isSubmitting
                           ? SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: _pages[_currentPage].color),
+                                  strokeWidth: 2, color: AppTheme.warning),
                             )
-                          : const Text('I Agree — Start Driving'),
+                          : const Text('I Agree & Sign'),
                     ),
                 ],
               ),
@@ -314,6 +340,78 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
       ),
     );
   }
+
+  /// Builds the signature pad page shown after the 5 tutorial cards.
+  Widget _buildSignaturePage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: AppSpacing.lg),
+          Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: AppTheme.warning.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.draw, size: 56, color: AppTheme.warning),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Sign the Agreement',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Draw your signature below to confirm you agree to all terms',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          // Signature pad canvas
+          _SignaturePad(
+            points: _signaturePoints,
+            onPointsChanged: (points) =>
+                setState(() => _signaturePoints = points),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Clear + I Agree & Sign buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _hasSignature
+                      ? () {
+                          AppHaptics.light();
+                          setState(() => _signaturePoints = []);
+                        }
+                      : null,
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Clear'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: (_hasSignature && !_isSubmitting)
+                      ? _completeTutorial
+                      : null,
+                  icon: const Icon(Icons.check),
+                  label: const Text('I Agree & Sign'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TutorialPage {
@@ -332,4 +430,114 @@ class _TutorialPage {
   final List<String> points;
   final Color color;
   final bool isAgreementPage;
+}
+
+/// A custom signature pad that captures finger/stylus strokes as a list of
+/// [Offset] points. Null entries in the list separate individual strokes.
+class _SignaturePad extends StatelessWidget {
+  const _SignaturePad({
+    required this.points,
+    required this.onPointsChanged,
+  });
+
+  final List<Offset?> points;
+  final ValueChanged<List<Offset?>> onPointsChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 220,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).dividerColor,
+          width: 1.5,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            // Signature line
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 36,
+              child: Container(
+                height: 1,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              ),
+            ),
+            // "Sign here" hint
+            if (points.every((p) => p == null))
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 14,
+                child: Text(
+                  '✕ Sign here',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            // Drawing surface
+            GestureDetector(
+              onPanStart: (details) {
+                final renderBox = context.findRenderObject() as RenderBox;
+                final pos = renderBox.globalToLocal(details.globalPosition);
+                onPointsChanged([...points, pos]);
+              },
+              onPanUpdate: (details) {
+                final renderBox = context.findRenderObject() as RenderBox;
+                final pos = renderBox.globalToLocal(details.globalPosition);
+                onPointsChanged([...points, pos]);
+              },
+              onPanEnd: (_) {
+                // Add a null separator to break strokes
+                onPointsChanged([...points, null]);
+              },
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _SignaturePainter(points: points),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Paints the captured signature strokes on the canvas.
+class _SignaturePainter extends CustomPainter {
+  const _SignaturePainter({required this.points});
+
+  final List<Offset?> points;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+
+    // Draw each stroke segment
+    for (var i = 0; i < points.length - 1; i++) {
+      final current = points[i];
+      final next = points[i + 1];
+      if (current != null && next != null) {
+        canvas.drawLine(current, next, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SignaturePainter oldDelegate) =>
+      oldDelegate.points != points;
 }

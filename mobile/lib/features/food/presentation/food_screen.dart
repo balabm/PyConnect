@@ -174,6 +174,10 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                                   }
                                 });
                               },
+                              onCardTap: () {
+                                AppHaptics.light();
+                                _showCustomizationSheet(item, originalIndex, qty);
+                              },
                             ),
                           );
                         },
@@ -210,6 +214,21 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     );
   }
 
+  Future<void> _showCustomizationSheet(
+      Map<String, dynamic> item, int originalIndex, int currentQty) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ItemCustomizationSheet(item: item, currentQty: currentQty),
+    );
+    if (result != null && mounted) {
+      AppHaptics.light();
+      final qty = result['quantity'] as int? ?? 1;
+      setState(() => _cart[originalIndex] = (_cart[originalIndex] ?? 0) + qty);
+    }
+  }
+
   Widget _buildPill(String label, bool selected, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -242,7 +261,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   }
 
   Future<void> _showCartSummarySheet(List<dynamic> items, double subtotal) async {
-    final confirmed = await showModalBottomSheet<bool>(
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -254,12 +273,22 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         subtotal: subtotal,
       ),
     );
-    if (confirmed == true && mounted) {
-      _checkout(items, subtotal);
+    if (result != null && result['confirmed'] == true && mounted) {
+      _checkout(
+        items,
+        subtotal,
+        paymentMethod: result['paymentMethod'] as int? ?? 0,
+        deliveryAddress: result['deliveryAddress'] as String?,
+      );
     }
   }
 
-  Future<void> _checkout(List<dynamic> items, double subtotal) async {
+  Future<void> _checkout(
+    List<dynamic> items,
+    double subtotal, {
+    int paymentMethod = 0,
+    String? deliveryAddress,
+  }) async {
     // Check auth — if not signed in, show QuickAuthSheet before proceeding
     final isAuthed = ref.read(authTokenProvider)?.isNotEmpty ?? false;
     if (!isAuthed) {
@@ -287,7 +316,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       // Use the device's current location as the delivery address
       double deliveryLat = 11.9416; // Default: White Town, Pondicherry
       double deliveryLng = 79.8083;
-      String deliveryAddress = 'Current Location, Pondicherry';
+      String address = deliveryAddress ?? 'Current Location, Pondicherry';
 
       try {
         final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -305,12 +334,15 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         // Fall back to default Pondicherry coordinates
       }
 
+      // paymentMethod: 0 = Razorpay (online, maps to 1), 1 = Cash on Delivery (maps to 2)
+      final apiPaymentMethod = paymentMethod == 1 ? 2 : 1;
+
       final result = await api.checkout({
         'vendorId': widget.vendorId,
-        'deliveryAddress': deliveryAddress,
+        'deliveryAddress': address,
         'deliveryLatitude': deliveryLat,
         'deliveryLongitude': deliveryLng,
-        'paymentMethod': 1,
+        'paymentMethod': apiPaymentMethod,
         'items': cartItems,
       });
 
@@ -319,11 +351,22 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
 
       if (mounted) {
         setState(() => _cart.clear());
-        await _initiateRazorpayPayment(
-          foodOrderId: foodOrderId,
-          amount: totalAmount,
-          orderResult: result,
-        );
+        if (paymentMethod == 1) {
+          // Cash on Delivery — skip Razorpay, show success directly
+          if (mounted) {
+            showModalBottomSheet(
+              context: context,
+              isDismissible: false,
+              builder: (_) => _CheckoutResultSheet(result: result),
+            );
+          }
+        } else {
+          await _initiateRazorpayPayment(
+            foodOrderId: foodOrderId,
+            amount: totalAmount,
+            orderResult: result,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -459,6 +502,7 @@ class _MenuItemTile extends StatelessWidget {
     required this.quantity,
     required this.onAdd,
     required this.onRemove,
+    required this.onCardTap,
     this.imageUrl,
   });
 
@@ -470,11 +514,14 @@ class _MenuItemTile extends StatelessWidget {
   final int quantity;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
+  final VoidCallback onCardTap;
   final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onCardTap,
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -582,6 +629,7 @@ class _MenuItemTile extends StatelessWidget {
                 ),
         ],
       ),
+    ),
     );
   }
 }
@@ -703,8 +751,9 @@ class _CheckoutResultSheet extends StatelessWidget {
 }
 
 /// Swiggy-style cart summary bottom sheet with rounded top border.
-/// Shows itemized cart contents and total before confirming order.
-class _CartSummarySheet extends StatelessWidget {
+/// Shows itemized cart contents, delivery address selector, payment method,
+/// and bill details (including taxes) before confirming order.
+class _CartSummarySheet extends StatefulWidget {
   const _CartSummarySheet({
     required this.items,
     required this.cart,
@@ -716,10 +765,58 @@ class _CartSummarySheet extends StatelessWidget {
   final double subtotal;
 
   @override
+  State<_CartSummarySheet> createState() => _CartSummarySheetState();
+}
+
+class _CartSummarySheetState extends State<_CartSummarySheet> {
+  String _deliveryAddress = 'Current Location, Pondicherry';
+  int _paymentMethod = 0; // 0 = Razorpay, 1 = Cash on Delivery
+
+  static const _deliveryFee = 20.0;
+  static const _platformFee = 5.0;
+
+  double get _taxes => widget.subtotal * 0.05;
+  double get _total => widget.subtotal + _deliveryFee + _platformFee + _taxes;
+
+  Future<void> _changeAddress() async {
+    final controller = TextEditingController(text: _deliveryAddress);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delivery Address'),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Enter your delivery address',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isNotEmpty) Navigator.pop(ctx, text);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty) {
+      setState(() => _deliveryAddress = result);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final deliveryFee = 20.0;
-    final platformFee = 5.0;
-    final total = subtotal + deliveryFee + platformFee;
+    final cart = widget.cart;
+    final subtotal = widget.subtotal;
 
     return Container(
       decoration: BoxDecoration(
@@ -731,7 +828,7 @@ class _CartSummarySheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -758,6 +855,41 @@ class _CartSummarySheet extends StatelessWidget {
                   ],
                 ),
                 const Divider(height: 24),
+                // Delivery Address selector
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on, size: 20, color: AppTheme.emerald),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Delivery Address',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                            Text(_deliveryAddress,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _changeAddress,
+                        child: const Text('Change'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 // Itemized list
                 Flexible(
                   child: ListView.builder(
@@ -765,7 +897,7 @@ class _CartSummarySheet extends StatelessWidget {
                     itemCount: cart.length,
                     itemBuilder: (_, i) {
                       final entry = cart.entries.elementAt(i);
-                      final item = items[entry.key] as Map<String, dynamic>;
+                      final item = widget.items[entry.key] as Map<String, dynamic>;
                       final name = item['name'] as String? ?? '';
                       final price = (item['price'] as num).toDouble();
                       final qty = entry.value;
@@ -806,16 +938,45 @@ class _CartSummarySheet extends StatelessWidget {
                   ),
                 ),
                 const Divider(height: 24),
+                // Payment method
+                Text('Payment Method',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface)),
+                const SizedBox(height: 4),
+                RadioListTile<int>(
+                  value: 0,
+                  groupValue: _paymentMethod,
+                  activeColor: AppTheme.emerald,
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Razorpay (Online)'),
+                  subtitle: const Text('UPI, Card, Net Banking'),
+                  onChanged: (v) => setState(() => _paymentMethod = v ?? 0),
+                ),
+                RadioListTile<int>(
+                  value: 1,
+                  groupValue: _paymentMethod,
+                  activeColor: AppTheme.emerald,
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Cash on Delivery'),
+                  subtitle: const Text('Pay with cash on arrival'),
+                  onChanged: (v) => setState(() => _paymentMethod = v ?? 1),
+                ),
+                const Divider(height: 24),
                 // Bill details
                 _BillRow(label: 'Subtotal', value: '\u20B9${subtotal.toStringAsFixed(0)}'),
-                _BillRow(label: 'Delivery Fee', value: '\u20B9${deliveryFee.toStringAsFixed(0)}'),
-                _BillRow(label: 'Platform Fee', value: '\u20B9${platformFee.toStringAsFixed(0)}'),
+                _BillRow(label: 'Delivery Fee', value: '\u20B9${_deliveryFee.toStringAsFixed(0)}'),
+                _BillRow(label: 'Platform Fee', value: '\u20B9${_platformFee.toStringAsFixed(0)}'),
+                _BillRow(label: 'Taxes & Charges (5%)', value: '\u20B9${_taxes.toStringAsFixed(0)}'),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text('\u20B9${total.toStringAsFixed(0)}',
+                    Text('\u20B9${_total.toStringAsFixed(0)}',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.emerald)),
                   ],
                 ),
@@ -828,7 +989,11 @@ class _CartSummarySheet extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: AppTheme.emerald,
                     ),
-                    onPressed: () => Navigator.pop(context, true),
+                    onPressed: () => Navigator.pop(context, {
+                      'confirmed': true,
+                      'paymentMethod': _paymentMethod,
+                      'deliveryAddress': _deliveryAddress,
+                    }),
                     child: const Text('Confirm Order', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                   ),
                 ),
@@ -856,6 +1021,280 @@ class _BillRow extends StatelessWidget {
           Text(label, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant)),
           Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
         ],
+      ),
+    );
+  }
+}
+
+/// Item customization bottom sheet showing variants (radio), add-ons
+/// (checkboxes), a quantity stepper, and an Add to Cart button.
+class _ItemCustomizationSheet extends StatefulWidget {
+  const _ItemCustomizationSheet({required this.item, required this.currentQty});
+
+  final Map<String, dynamic> item;
+  final int currentQty;
+
+  @override
+  State<_ItemCustomizationSheet> createState() => _ItemCustomizationSheetState();
+}
+
+class _ItemCustomizationSheetState extends State<_ItemCustomizationSheet> {
+  late int _quantity;
+  int? _selectedVariantIndex;
+  final Set<int> _selectedAddOns = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _quantity = 1;
+  }
+
+  List<Map<String, dynamic>> get _variants {
+    final raw = widget.item['variants'];
+    if (raw is List) {
+      return raw.whereType<Map<String, dynamic>>().toList();
+    }
+    return [];
+  }
+
+  List<Map<String, dynamic>> get _addOns {
+    final raw = widget.item['addOns'];
+    if (raw is List) {
+      return raw.whereType<Map<String, dynamic>>().toList();
+    }
+    return [];
+  }
+
+  double get _basePrice => (widget.item['price'] as num).toDouble();
+
+  double get _variantPrice {
+    if (_selectedVariantIndex == null) return 0;
+    final variants = _variants;
+    if (_selectedVariantIndex! >= variants.length) return 0;
+    return (variants[_selectedVariantIndex!]['price'] as num?)?.toDouble() ?? 0;
+  }
+
+  double get _addOnsPrice {
+    double total = 0;
+    for (final idx in _selectedAddOns) {
+      total += (_addOns[idx]['price'] as num?)?.toDouble() ?? 0;
+    }
+    return total;
+  }
+
+  double get _unitPrice => _basePrice + _variantPrice + _addOnsPrice;
+  double get _totalPrice => _unitPrice * _quantity;
+
+  @override
+  Widget build(BuildContext context) {
+    final variants = _variants;
+    final addOns = _addOns;
+    final name = widget.item['name'] as String? ?? '';
+    final description = widget.item['description'] as String?;
+    final imageUrl = widget.item['imageUrl'] as String?;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20, 12, 20,
+            20 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                // Item header
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (imageUrl != null && imageUrl.isNotEmpty) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 64,
+                          height: 64,
+                          child: AppNetworkImage(
+                            imageUrl: imageUrl,
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                            fallbackIcon: Icons.restaurant_outlined,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name,
+                              style: const TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold)),
+                          if (description != null) ...[
+                            const SizedBox(height: 4),
+                            Text(description,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant)),
+                          ],
+                          const SizedBox(height: 6),
+                          Text('\u20B9${_basePrice.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.emerald)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 28),
+                // Variants (radio buttons)
+                if (variants.isNotEmpty) ...[
+                  Text('Choose Size',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface)),
+                  const SizedBox(height: 4),
+                  for (int i = 0; i < variants.length; i++)
+                    RadioListTile<int>(
+                      value: i,
+                      groupValue: _selectedVariantIndex,
+                      activeColor: AppTheme.emerald,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(variants[i]['name'] as String? ?? 'Option ${i + 1}'),
+                      subtitle: (variants[i]['price'] as num?)?.toDouble() != null &&
+                              (variants[i]['price'] as num).toDouble() > 0
+                          ? Text(
+                              '+\u20B9${(variants[i]['price'] as num).toDouble().toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  fontSize: 13, color: AppTheme.emerald))
+                          : null,
+                      onChanged: (v) => setState(() => _selectedVariantIndex = v),
+                    ),
+                  const SizedBox(height: 8),
+                ],
+                // Add-ons (checkboxes)
+                if (addOns.isNotEmpty) ...[
+                  Text('Add-ons',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface)),
+                  const SizedBox(height: 4),
+                  for (int i = 0; i < addOns.length; i++)
+                    CheckboxListTile(
+                      value: _selectedAddOns.contains(i),
+                      activeColor: AppTheme.emerald,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(addOns[i]['name'] as String? ?? 'Add-on ${i + 1}'),
+                      subtitle: (addOns[i]['price'] as num?)?.toDouble() != null &&
+                              (addOns[i]['price'] as num).toDouble() > 0
+                          ? Text(
+                              '+\u20B9${(addOns[i]['price'] as num).toDouble().toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  fontSize: 13, color: AppTheme.emerald))
+                          : null,
+                      onChanged: (checked) {
+                        setState(() {
+                          if (checked == true) {
+                            _selectedAddOns.add(i);
+                          } else {
+                            _selectedAddOns.remove(i);
+                          }
+                        });
+                      },
+                    ),
+                  const SizedBox(height: 8),
+                ],
+                const Divider(height: 24),
+                // Quantity stepper + Add to Cart
+                Row(
+                  children: [
+                    // Quantity stepper
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.emerald.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove, size: 20),
+                            color: AppTheme.emerald,
+                            onPressed: _quantity > 1
+                                ? () => setState(() => _quantity--)
+                                : null,
+                          ),
+                          Text('$_quantity',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 18)),
+                          IconButton(
+                            icon: const Icon(Icons.add, size: 20),
+                            color: AppTheme.emerald,
+                            onPressed: () => setState(() => _quantity++),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    // Add to Cart button
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.emerald,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context, {
+                          'quantity': _quantity,
+                          'variantIndex': _selectedVariantIndex,
+                          'addOnIndices': _selectedAddOns.toList(),
+                          'unitPrice': _unitPrice,
+                        });
+                      },
+                      child: Text(
+                        'Add to Cart \u00B7 \u20B9${_totalPrice.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

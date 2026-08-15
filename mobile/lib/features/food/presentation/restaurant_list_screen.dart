@@ -9,9 +9,10 @@ import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import 'widgets/restaurant_card.dart';
 
-final restaurantListProvider = FutureProvider<List<dynamic>>((ref) async {
+final restaurantListProvider =
+    FutureProvider.family<List<dynamic>, bool>((ref, foodVendorsOnly) async {
   final api = ref.watch(foodApiProvider);
-  return await api.listVendors(foodVendorsOnly: true);
+  return await api.listVendors(foodVendorsOnly: foodVendorsOnly);
 });
 
 class RestaurantListScreen extends ConsumerStatefulWidget {
@@ -24,6 +25,7 @@ class RestaurantListScreen extends ConsumerStatefulWidget {
 class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
   String _searchQuery = '';
   String? _cuisineFilter;
+  bool _foodVendorsOnly = true; // true = Food Delivery, false = Quick Essentials
 
   static const _cuisines = [
     'Italian', 'Indian', 'Chinese', 'French', 'Cafe',
@@ -44,7 +46,7 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final restaurantsAsync = ref.watch(restaurantListProvider);
+    final restaurantsAsync = ref.watch(restaurantListProvider(_foodVendorsOnly));
 
     return Scaffold(
       appBar: AppBar(
@@ -62,6 +64,48 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
       ),
       body: Column(
         children: [
+          // Food Delivery / Quick Essentials segmented toggle
+          FadeSlideIn(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: true,
+                    icon: Icon(Icons.restaurant_outlined, size: 18),
+                    label: Text('Food Delivery'),
+                  ),
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.shopping_bag_outlined, size: 18),
+                    label: Text('Quick Essentials'),
+                  ),
+                ],
+                selected: {_foodVendorsOnly},
+                onSelectionChanged: (selection) {
+                  AppHaptics.selection();
+                  setState(() => _foodVendorsOnly = selection.first);
+                },
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return AppTheme.emerald;
+                    }
+                    return Theme.of(context).colorScheme.surfaceContainerHighest;
+                  }),
+                  foregroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return Colors.white;
+                    }
+                    return Theme.of(context).colorScheme.onSurfaceVariant;
+                  }),
+                  side: WidgetStateProperty.all(
+                    BorderSide(color: Theme.of(context).dividerColor),
+                  ),
+                ),
+              ),
+            ),
+          ),
           FadeSlideIn(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -116,7 +160,7 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
               loading: () => const ShimmerList(withImage: false, count: 6),
               error: (e, _) => ErrorState(
                 message: e.toString(),
-                onRetry: () => ref.invalidate(restaurantListProvider),
+                onRetry: () => ref.invalidate(restaurantListProvider(_foodVendorsOnly)),
               ),
               data: (vendors) {
                 final filtered = _filterRestaurants(vendors);
@@ -130,7 +174,7 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
                 return RefreshIndicator(
                   onRefresh: () {
                     AppHaptics.light();
-                    return ref.refresh(restaurantListProvider.future);
+                    return ref.refresh(restaurantListProvider(_foodVendorsOnly).future);
                   },
                   child: ListView.builder(
                     padding: const EdgeInsets.only(bottom: 16),

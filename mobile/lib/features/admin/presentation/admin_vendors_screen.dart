@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/app_network_image.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/admin_providers.dart';
@@ -309,6 +310,11 @@ class _VendorCard extends ConsumerWidget {
                 ),
               ],
             ),
+            // KYC document preview (side-by-side thumbnails) for pending vendors
+            if (!vendor.isApproved && vendor.isActive) ...[
+              const SizedBox(height: 8),
+              _VendorKycDocumentSection(vendor: vendor),
+            ],
             // Approval action buttons for pending vendors
             if (!vendor.isApproved && vendor.isActive) ...[
               const SizedBox(height: 8),
@@ -634,5 +640,173 @@ class _OnboardVendorDialogState extends ConsumerState<_OnboardVendorDialog> {
     _deliveryFeeController.clear();
     _prepTimeController.clear();
     setState(() => _category = _categories.first);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Vendor KYC document preview (side-by-side thumbnails)
+// ---------------------------------------------------------------------------
+
+/// Displays the vendor's uploaded compliance documents (FSSAI, GST, PAN) as
+/// side-by-side thumbnails in a horizontal scroll. Each thumbnail is labelled
+/// and tappable to open a full-screen image viewer.
+///
+/// The current [AdminVendor] data model does not expose document URLs, so
+/// placeholder cards are shown with a TODO to wire real URLs when the
+/// backend exposes them.
+class _VendorKycDocumentSection extends StatelessWidget {
+  const _VendorKycDocumentSection({required this.vendor});
+  final AdminVendor vendor;
+
+  // TODO: Replace with real document URLs once the backend exposes them on
+  // the vendor DTO (e.g. vendor.documents / vendor.documentUrls).
+  static const _vendorDocTypes = ['FSSAI', 'GST', 'PAN'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.document_scanner_rounded, size: 15, color: AdminColors.textMuted),
+            SizedBox(width: 6),
+            Text(
+              'Compliance Documents',
+              style: TextStyle(fontSize: 12, color: AdminColors.textMuted, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _vendorDocTypes.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final label = _vendorDocTypes[i];
+              // TODO: Resolve real URL per document type from vendor data.
+              const url = null;
+              return _VendorDocumentThumbnail(label: label, imageUrl: url);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A single vendor document thumbnail card. Shows the image when [imageUrl]
+/// is available, otherwise a placeholder with the document label. Tapping
+/// opens a full-screen viewer (only when a URL is present).
+class _VendorDocumentThumbnail extends StatelessWidget {
+  const _VendorDocumentThumbnail({required this.label, this.imageUrl});
+  final String label;
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: imageUrl == null
+          ? null
+          : () => _openVendorFullScreen(context, imageUrl!),
+      child: Container(
+        width: 140,
+        decoration: BoxDecoration(
+          color: AdminColors.surfaceHover,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AdminColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                child: imageUrl == null
+                    ? _VendorPlaceholder()
+                    : AppNetworkImage(
+                        imageUrl: imageUrl!,
+                        fit: BoxFit.cover,
+                        height: double.infinity,
+                        width: double.infinity,
+                        fallbackIcon: Icons.description_outlined,
+                      ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AdminColors.border)),
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: AdminColors.textPrimary, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VendorPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AdminColors.surfaceHover,
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.image_outlined, size: 28, color: AdminColors.textMuted),
+            SizedBox(height: 4),
+            Text('No preview', style: TextStyle(fontSize: 10, color: AdminColors.textMuted)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-screen image viewer for inspecting a vendor compliance document.
+void _openVendorFullScreen(BuildContext context, String imageUrl) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => _VendorFullScreenImageViewer(imageUrl: imageUrl),
+      fullscreenDialog: true,
+    ),
+  );
+}
+
+class _VendorFullScreenImageViewer extends StatelessWidget {
+  const _VendorFullScreenImageViewer({required this.imageUrl});
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Document'),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: AppNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.contain,
+            fallbackIcon: Icons.broken_image_outlined,
+            fallbackColor: Colors.black,
+          ),
+        ),
+      ),
+    );
   }
 }

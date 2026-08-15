@@ -6,13 +6,57 @@ import '../../../core/theme/app_theme.dart';
 import '../application/vendor_providers.dart';
 import '../data/vendor_dashboard_api.dart';
 
+/// In-memory guestlist entry for pub/club partners.
+/// TODO: persist guestlist to backend once endpoint is available.
+class GuestlistEntry {
+  GuestlistEntry({
+    required this.name,
+    required this.partySize,
+    this.checkedIn = false,
+  });
+
+  String name;
+  int partySize;
+  bool checkedIn;
+}
+
 /// Drinks menu management for Pub/Club vendors.
 /// Reuses the existing menu API but displays with beverage-themed UI.
-class DrinksMenuScreen extends ConsumerWidget {
+/// Also hosts the Live Crowd slider and Guestlist management for nightlife.
+class DrinksMenuScreen extends ConsumerStatefulWidget {
   const DrinksMenuScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DrinksMenuScreen> createState() => _DrinksMenuScreenState();
+}
+
+class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
+  int _crowdPercent = 25;
+  final List<GuestlistEntry> _guestlist = [];
+
+  String _vibeLabel(int pct) {
+    if (pct <= 30) return 'Chill';
+    if (pct <= 70) return 'Lively';
+    return 'Packed';
+  }
+
+  Color _vibeColor(int pct) {
+    if (pct <= 30) return AppTheme.emerald;
+    if (pct <= 70) return AppTheme.warning;
+    return AppTheme.danger;
+  }
+
+  /// Updates the venue's live occupancy percentage.
+  /// TODO: Replace stub with real venue API call once
+  /// `PUT /api/vendor/venues/{id}/occupancy` endpoint is implemented.
+  Future<void> _updateOccupancy(int pct) async {
+    // Stub: no live endpoint yet. Persisted only in local state.
+    // When endpoint exists, call:
+    //   await ref.read(vendorDashboardApiProvider).updateOccupancy(venueId, pct);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final menuAsync = ref.watch(vendorMenuProvider);
 
     return Scaffold(
@@ -42,33 +86,367 @@ class DrinksMenuScreen extends ConsumerWidget {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: menuAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.emerald),
+        loading: () => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildCrowdSection(),
+            const SizedBox(height: 16),
+            _buildGuestlistSection(),
+            const SizedBox(height: 32),
+            const Center(child: CircularProgressIndicator(color: AppTheme.emerald)),
+          ],
         ),
-        error: (e, _) => _buildError(context, ref, e.toString()),
+        error: (e, _) => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildCrowdSection(),
+            const SizedBox(height: 16),
+            _buildGuestlistSection(),
+            const SizedBox(height: 32),
+            _buildError(context, ref, e.toString()),
+          ],
+        ),
         data: (items) {
-          if (items.isEmpty) {
-            return _buildEmpty();
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            itemBuilder: (context, i) => _DrinkCard(
-              name: items[i].name,
-              category: items[i].category,
-              price: items[i].price,
-              isAvailable: items[i].isAvailable,
-              description: items[i].description,
-              onToggle: () {
-                AppHaptics.light();
-                ref.read(vendorMenuProvider.notifier).toggleItem(items[i].id);
-              },
-            ),
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            children: [
+              _buildCrowdSection(),
+              const SizedBox(height: 16),
+              _buildGuestlistSection(),
+              const SizedBox(height: 24),
+              const Row(
+                children: [
+                  Icon(Icons.local_bar, color: AppTheme.emerald, size: 20),
+                  SizedBox(width: 8),
+                  Text('Drinks Menu',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (items.isEmpty)
+                _buildEmpty()
+              else
+                ...items.map((item) => _DrinkCard(
+                      name: item.name,
+                      category: item.category,
+                      price: item.price,
+                      isAvailable: item.isAvailable,
+                      description: item.description,
+                      onToggle: () {
+                        AppHaptics.light();
+                        ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
+                      },
+                    )),
+            ],
           );
         },
       ),
     );
   }
+
+  // ── Live Crowd Section ──
+
+  Widget _buildCrowdSection() {
+    final vibe = _vibeLabel(_crowdPercent);
+    final color = _vibeColor(_crowdPercent);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.groups, color: AppTheme.emerald, size: 22),
+              const SizedBox(width: 8),
+              const Text('Live Crowd',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  vibe,
+                  style: TextStyle(
+                      color: color, fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Prominent percentage indicator
+          Center(
+            child: Text(
+              '$_crowdPercent%',
+              style: TextStyle(
+                color: color,
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+                height: 1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Visual occupancy bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: _crowdPercent / 100,
+              minHeight: 8,
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Slider(
+            value: _crowdPercent.toDouble(),
+            min: 0,
+            max: 100,
+            divisions: 100,
+            activeColor: AppTheme.emerald,
+            inactiveColor: AppTheme.emerald.withValues(alpha: 0.15),
+            label: '$_crowdPercent% - $vibe',
+            onChanged: (v) {
+              AppHaptics.selection();
+              setState(() => _crowdPercent = v.round());
+            },
+            onChangeEnd: (v) {
+              _updateOccupancy(v.round());
+            },
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Empty', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
+              Text('Full', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Guestlist Section ──
+
+  Widget _buildGuestlistSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.list_alt, color: AppTheme.emerald, size: 22),
+              const SizedBox(width: 8),
+              const Text('Guestlist',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              const Spacer(),
+              if (_guestlist.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emerald.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_guestlist.where((g) => g.checkedIn).length}/${_guestlist.length}',
+                    style: const TextStyle(
+                        color: AppTheme.emerald,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_guestlist.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: Text(
+                  'No guests on the list yet',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+                ),
+              ),
+            )
+          else
+            ..._guestlist.asMap().entries.map((e) => _buildGuestlistTile(e.key, e.value)),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.emerald,
+                side: const BorderSide(color: AppTheme.emerald, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                AppHaptics.light();
+                _showAddGuestDialog(context);
+              },
+              icon: const Icon(Icons.person_add, size: 18),
+              label: const Text('Add to Guestlist'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuestlistTile(int index, GuestlistEntry entry) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: entry.checkedIn
+              ? AppTheme.emerald.withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            entry.checkedIn ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: entry.checkedIn ? AppTheme.emerald : Colors.white.withValues(alpha: 0.4),
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.name,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    decoration: entry.checkedIn ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                Text(
+                  'Party of ${entry.partySize}',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            entry.checkedIn ? 'Checked In' : 'Pending',
+            style: TextStyle(
+              color: entry.checkedIn ? AppTheme.emerald : AppTheme.gold,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              backgroundColor: entry.checkedIn
+                  ? AppTheme.danger.withValues(alpha: 0.15)
+                  : AppTheme.emerald.withValues(alpha: 0.15),
+              foregroundColor: entry.checkedIn ? AppTheme.danger : AppTheme.emerald,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+            ),
+            onPressed: () {
+              AppHaptics.light();
+              setState(() => entry.checkedIn = !entry.checkedIn);
+              // TODO: sync check-in status to backend once endpoint exists.
+            },
+            child: Text(entry.checkedIn ? 'Undo' : 'Check In'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddGuestDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final sizeController = TextEditingController(text: '1');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Text('Add to Guestlist', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Guest name',
+                labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                prefixIcon: Icon(Icons.person, color: Colors.white.withValues(alpha: 0.4)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: sizeController,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Party size',
+                labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                prefixIcon: Icon(Icons.groups, color: Colors.white.withValues(alpha: 0.4)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+            onPressed: () {
+              final name = nameController.text.trim();
+              final size = int.tryParse(sizeController.text.trim()) ?? 1;
+              if (name.isEmpty) return;
+              AppHaptics.light();
+              setState(() {
+                _guestlist.add(GuestlistEntry(name: name, partySize: size < 1 ? 1 : size));
+              });
+              // TODO: persist new guestlist entry to backend once endpoint exists.
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Menu helpers ──
 
   Widget _buildError(BuildContext context, WidgetRef ref, String error) {
     return Center(
@@ -95,18 +473,20 @@ class DrinksMenuScreen extends ConsumerWidget {
   }
 
   Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.local_bar, size: 64, color: Colors.white.withValues(alpha: 0.2)),
-          const SizedBox(height: 16),
-          Text('No drinks on the menu yet',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 18)),
-          const SizedBox(height: 8),
-          Text('Tap + to add your first drink',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
-        ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.local_bar, size: 64, color: Colors.white.withValues(alpha: 0.2)),
+            const SizedBox(height: 16),
+            Text('No drinks on the menu yet',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 18)),
+            const SizedBox(height: 8),
+            Text('Tap + to add your first drink',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
+          ],
+        ),
       ),
     );
   }

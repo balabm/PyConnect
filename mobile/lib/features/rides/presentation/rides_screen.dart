@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/osm_geocoding_service.dart';
 import '../../../core/network/osrm_routing_service.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -13,6 +16,7 @@ import '../../auth/presentation/waiver_sheet.dart';
 import 'widgets/map_selection_mode_indicator.dart';
 import 'widgets/nearby_drivers_section.dart';
 import 'widgets/payment_method_selector.dart';
+import 'saved_locations_screen.dart';
 import 'widgets/ride_map.dart';
 import 'widgets/ride_result_card.dart';
 import 'widgets/route_info_bar.dart';
@@ -525,6 +529,22 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
     );
   }
 
+  Future<void> _openDropoffSearchOverlay() async {
+    AppHaptics.light();
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => const _DropoffSearchOverlay(),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _dropoffLocation = result['location'] as LatLng;
+        _dropoffAddress = result['address'] as String;
+        _selectingPickup = false;
+      });
+    }
+  }
+
   Widget _buildAddressCard() {
     return Container(
       decoration: BoxDecoration(
@@ -569,6 +589,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
               _dropoffLocation = location;
               _dropoffAddress = address;
             }),
+            onSearchTap: () => _openDropoffSearchOverlay(),
           ),
         ],
       ),
@@ -838,6 +859,7 @@ class _AddressRow extends ConsumerStatefulWidget {
     required this.onSelected,
     this.initialText,
     this.initialLocation,
+    this.onSearchTap,
   });
 
   final IconData icon;
@@ -846,6 +868,7 @@ class _AddressRow extends ConsumerStatefulWidget {
   final void Function(String address, LatLng location) onSelected;
   final String? initialText;
   final LatLng? initialLocation;
+  final VoidCallback? onSearchTap;
 
   @override
   ConsumerState<_AddressRow> createState() => _AddressRowState();
@@ -1090,6 +1113,199 @@ class _MapActionButtonIcon extends StatelessWidget {
         icon,
         size: 22,
         color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
+      ),
+    );
+  }
+}
+
+/// Full-screen search overlay for selecting a dropoff location.
+/// Shows autocomplete search results, saved places, and recent locations.
+class _DropoffSearchOverlay extends ConsumerStatefulWidget {
+  const _DropoffSearchOverlay();
+
+  @override
+  ConsumerState<_DropoffSearchOverlay> createState() => _DropoffSearchOverlayState();
+}
+
+class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
+  final _searchController = TextEditingController();
+  List<GeocodingResult> _results = [];
+  bool _isSearching = false;
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    if (query.trim().length < 3) {
+      setState(() {
+        _results = [];
+        _isSearching = false;
+      });
+      return;
+    }
+    setState(() => _isSearching = true);
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final geocoding = ref.read(geocodingProvider);
+        final results = await geocoding.search(
+          query,
+          countryCodes: const ['in'],
+          limit: 8,
+        );
+        if (mounted) {
+          setState(() {
+            _results = results;
+            _isSearching = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isSearching = false);
+      }
+    });
+  }
+
+  void _selectResult(GeocodingResult result) {
+    AppHaptics.light();
+    Navigator.of(context).pop({
+      'location': result.location,
+      'address': result.displayName,
+    });
+  }
+
+  void _selectSavedLocation(dynamic loc) {
+    AppHaptics.light();
+    final lat = (loc['latitude'] as num?)?.toDouble() ?? 11.9356;
+    final lng = (loc['longitude'] as num?)?.toDouble() ?? 79.8301;
+    final address = loc['address'] as String? ?? loc['label'] as String? ?? 'Saved location';
+    Navigator.of(context).pop({
+      'location': LatLng(lat, lng),
+      'address': address,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final savedLocationsAsync = ref.watch(savedLocationsProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: TextField(
+          controller: _searchController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Where to?',
+            border: InputBorder.none,
+            prefixIcon: const Icon(Icons.search, size: 22),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 20),
+                    onPressed: () {
+                      _searchController.clear();
+                      _onSearchChanged('');
+                    },
+                  )
+                : null,
+          ),
+          onChanged: _onSearchChanged,
+        ),
+      ),
+      body: Column(
+        children: [
+          // Search results
+          if (_isSearching)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_results.isNotEmpty)
+            Expanded(
+              child: ListView.builder(
+                itemCount: _results.length,
+                itemBuilder: (context, index) {
+                  final r = _results[index];
+                  return ListTile(
+                    leading: Icon(Icons.location_on, color: AppTheme.emerald, size: 22),
+                    title: Text(r.displayName, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    onTap: () => _selectResult(r),
+                  );
+                },
+              ),
+            )
+          else ...[
+            // Saved places section
+            savedLocationsAsync.when(
+              data: (locations) {
+                if (locations.isEmpty) return const SizedBox.shrink();
+                return Expanded(
+                  child: ListView(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Text(
+                          'SAVED PLACES',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.slate,
+                          ),
+                        ),
+                      ),
+                      ...locations.map((loc) => ListTile(
+                            leading: Icon(Icons.bookmark, color: AppTheme.emerald, size: 22),
+                            title: Text(loc['label'] as String? ?? 'Saved place'),
+                            subtitle: Text(
+                              loc['address'] as String? ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onTap: () => _selectSavedLocation(loc),
+                          )),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+            // Recent locations placeholder
+            if (_results.isEmpty &&
+                savedLocationsAsync.maybeWhen(data: (l) => l.isEmpty, orElse: () => false))
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search, size: 48, color: AppTheme.slate.withValues(alpha: 0.5)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Search for a destination',
+                        style: TextStyle(color: AppTheme.slate),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Try "Rock Beach", "Auroville", or "White Town"',
+                        style: TextStyle(fontSize: 12, color: AppTheme.slate.withValues(alpha: 0.7)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }

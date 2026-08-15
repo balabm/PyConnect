@@ -589,27 +589,113 @@ public sealed class VendorController : ControllerBase
         }
     }
 
-    [HttpPost("luggage/{id:guid}/collect")]
-    [ProducesResponseType(typeof(LuggageDropOffResponse), StatusCodes.Status200OK)]
+    // ── Live occupancy reporting (vendor-facing) ──
+
+    /// <summary>
+    /// Updates the live occupancy percentage for a venue owned by the
+    /// authenticated vendor. The percentage is translated to a current
+    /// capacity count against the venue's max capacity.
+    /// </summary>
+    [HttpPost("occupancy")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<LuggageDropOffResponse>> MarkLuggageCollected(
-        Guid id,
+    public async Task<IActionResult> UpdateOccupancy(
+        [FromBody] UpdateOccupancyRequest request,
         CancellationToken cancellationToken = default)
     {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Authenticated phone not found." });
+
+        var vendorId = await _context.Vendors.AsNoTracking()
+            .Where(v => v.ContactPhone == phone)
+            .Select(v => v.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (vendorId == Guid.Empty)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        var venue = await _context.Venues
+            .FirstOrDefaultAsync(v => v.Id == request.VenueId, cancellationToken);
+
+        if (venue is null)
+            return NotFound(new { Message = "Venue not found." });
+
+        // Validate ownership — only the venue's vendor can update occupancy.
+        if (venue.VendorId != vendorId)
+            return Forbid();
+
         try
         {
-            var result = await _mediator.Send(new MarkLuggageCollectedCommand(id), cancellationToken);
-            return Ok(result);
+            venue.SetOccupancyPercentage(request.OccupancyPercentage);
         }
-        catch (UnauthorizedAccessException)
+        catch (ArgumentOutOfRangeException ex)
         {
-            return Unauthorized(new { Message = "Vendor profile not found." });
+            return BadRequest(new { Message = ex.Message });
         }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return Ok(new { Message = "Occupancy updated.", venue.Id, OccupancyPercentage = request.OccupancyPercentage });
+    }
+
+    // ── Claim check generation (luggage cloak vendors) ──
+
+    /// <summary>
+    /// Generates a claim check for a walk-in luggage drop-off. Creates a
+    /// LuggageDropOff record with a unique claim check ID and returns a QR
+    /// payload encoding that ID for the customer to scan at pickup.
+    /// </summary>
+    [HttpPost("claim-check")]
+    [ProducesResponseType(typeof(ClaimCheckResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ClaimCheckResponse>> CreateClaimCheck(
+        [FromBody] CreateClaimCheckRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Authenticated phone not found." });
+
+        var vendor = await _context.Vendors
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        if (string.IsNullOrWhiteSpace(request.CustomerName))
+            return BadRequest(new { Message = "Customer name is required." });
+        if (request.BagCount <= 0)
+            return BadRequest(new { Message = "Bag count must be at least 1." });
+
+        var userId = _currentUser.UserId
+            ?? throw new UnauthorizedAccessException("User not authenticated.");
+
+        var now = DateTimeOffset.UtcNow;
+        var dropOff = LuggageDropOff.Create(
+            userId,
+            vendor.Id,
+            scheduledFor: now,
+            droppedAt: now,
+            bagCount: request.BagCount,
+            ratePerHour: 0m,
+            notes: request.CustomerName);
+
+        // Immediately mark as dropped — the luggage is handed over now.
+        dropOff.MarkDropped();
+
+        _context.LuggageDropOffs.Add(dropOff);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var qrPayload = $"pyconnect:claim-check:{dropOff.Id}";
+
+        return Ok(new ClaimCheckResponse(
+            dropOff.Id,
+            request.CustomerName,
+            request.BagCount,
+            qrPayload));
     }
 
 }
@@ -623,6 +709,14 @@ public sealed record VendorWalletResponse(decimal Balance, decimal TotalEarned, 
 public sealed record VendorWalletTransactionResponse(string Id, string Type, decimal Amount, string Description, string Timestamp);
 public sealed record UpdateVendorBookingStatusRequest(string ServiceType, string NewStatus);
 public sealed record UpdateVendorDeviceTokenRequest(string Token);
+
+// --- Occupancy & claim check request/response records ---
+
+public sealed record UpdateOccupancyRequest(Guid VenueId, int OccupancyPercentage);
+
+public sealed record CreateClaimCheckRequest(string CustomerName, int BagCount);
+
+public sealed record ClaimCheckResponse(Guid ClaimCheckId, string CustomerName, int BagCount, string QrPayload);
 
 // --- Self-onboarding request/response records ---
 

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/animations/haptic.dart';
 import '../../core/animations/staggered_animations.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/theme_controller.dart';
 
 /// A clean Apple-style grouped list of secondary services accessible from the
 /// "More" tab. Replaces the old multi-colored Windows 8-style grid.
-class ServicesHubScreen extends StatelessWidget {
+class ServicesHubScreen extends ConsumerWidget {
   const ServicesHubScreen({super.key});
 
   static const _services = [
@@ -22,6 +25,18 @@ class ServicesHubScreen extends StatelessWidget {
       title: 'Saved Places & Addresses',
       subtitle: 'Your go-to locations',
       route: '/rides/saved-locations',
+    ),
+    _HubService(
+      icon: Icons.restaurant_outlined,
+      title: 'Dietary Preferences',
+      subtitle: 'No Preference, Veg, Non-Veg, Vegan',
+      route: '__dietary__',
+    ),
+    _HubService(
+      icon: Icons.palette_outlined,
+      title: 'App Theme',
+      subtitle: 'System, Light, Dark',
+      route: '__theme__',
     ),
     _HubService(
       icon: Icons.emergency_outlined,
@@ -61,8 +76,115 @@ class ServicesHubScreen extends StatelessWidget {
     ),
   ];
 
+  Future<void> _showDietaryDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = prefs.getString('dietary_preference') ?? 'No Preference';
+    final options = ['No Preference', 'Vegetarian', 'Non-Veg', 'Vegan'];
+
+    if (!context.mounted) return;
+
+    String? selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        String tempSelection = current;
+        return StatefulBuilder(
+          builder: (ctx, setState) => AlertDialog(
+            title: const Text('Dietary Preferences'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: options.map((opt) {
+                return RadioListTile<String>(
+                  value: opt,
+                  groupValue: tempSelection,
+                  title: Text(opt),
+                  activeColor: AppTheme.emerald,
+                  onChanged: (v) => setState(() => tempSelection = v ?? current),
+                );
+              }).toList(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, tempSelection),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selected != null && selected != current) {
+      await prefs.setString('dietary_preference', selected);
+      if (context.mounted) {
+        AppHaptics.light();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Dietary preference set to $selected')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showThemeDialog(BuildContext context, WidgetRef ref) async {
+    final currentMode = ref.read(themeControllerProvider);
+    final options = {
+      ThemeModePreference.system: 'System',
+      ThemeModePreference.light: 'Light',
+      ThemeModePreference.dark: 'Dark',
+    };
+
+    if (!context.mounted) return;
+
+    ThemeModePreference? selected = await showDialog<ThemeModePreference>(
+      context: context,
+      builder: (ctx) {
+        ThemeModePreference tempSelection = currentMode;
+        return StatefulBuilder(
+          builder: (ctx, setState) => AlertDialog(
+            title: const Text('App Theme'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: options.entries.map((e) {
+                return RadioListTile<ThemeModePreference>(
+                  value: e.key,
+                  groupValue: tempSelection,
+                  title: Text(e.value),
+                  activeColor: AppTheme.emerald,
+                  onChanged: (v) => setState(() => tempSelection = v ?? currentMode),
+                );
+              }).toList(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, tempSelection),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selected != null && selected != currentMode) {
+      await ref.read(themeControllerProvider.notifier).setMode(selected);
+      if (context.mounted) {
+        AppHaptics.light();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Theme set to ${options[selected]}')),
+        );
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -81,6 +203,20 @@ class ServicesHubScreen extends StatelessWidget {
               isFirst: index == 0,
               isLast: index == _services.length - 1,
               isDark: isDark,
+              onTap: () {
+                AppHaptics.light();
+                if (service.route == '__dietary__') {
+                  _showDietaryDialog(context);
+                } else if (service.route == '__theme__') {
+                  _showThemeDialog(context, ref);
+                } else if (service.route.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Support chat is coming soon.')),
+                  );
+                } else {
+                  context.go(service.route);
+                }
+              },
             ),
           );
         },
@@ -109,27 +245,20 @@ class _HubRow extends StatelessWidget {
     required this.isFirst,
     required this.isLast,
     required this.isDark,
+    required this.onTap,
   });
 
   final _HubService service;
   final bool isFirst;
   final bool isLast;
   final bool isDark;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () {
-        AppHaptics.light();
-        if (service.route.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Support chat is coming soon.')),
-          );
-          return;
-        }
-        context.go(service.route);
-      },
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
         decoration: BoxDecoration(

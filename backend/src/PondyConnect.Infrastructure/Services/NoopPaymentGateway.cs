@@ -35,6 +35,16 @@ public sealed class NoopPaymentGateway : IPaymentGateway
             Status: PaymentStatus.Captured));
     }
 
+    public Task<bool> VerifyPaymentSignatureAsync(
+        string razorpayOrderId,
+        string razorpayPaymentId,
+        string signature,
+        CancellationToken cancellationToken = default)
+    {
+        // In dev mode, always treat as valid
+        return Task.FromResult(true);
+    }
+
     public Task<RefundResult> RefundAsync(
         string providerPaymentId,
         decimal amount,

@@ -174,6 +174,8 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           id: (booking['id'] as String?) ?? '',
           isActive: isActive,
           onTap: () => context.push('/stays'),
+          ctaLabel: 'View Stay Pass',
+          ctaAction: () => context.push('/stays'),
         ));
       }
     }
@@ -204,6 +206,8 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           id: (map['id'] as String?) ?? '',
           isActive: isActive,
           onTap: () => context.push('/food/orders/${map['id']}'),
+          ctaLabel: isActive ? 'Track Order' : 'Reorder',
+          ctaAction: () => context.push('/food/orders/${map['id']}'),
         ));
       }
     }
@@ -232,6 +236,8 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           id: (map['id'] as String?) ?? '',
           isActive: isActive,
           onTap: () => context.push('/rides/${map['id']}'),
+          ctaLabel: isActive ? 'Track Ride' : 'View Receipt',
+          ctaAction: () => context.push('/rides/${map['id']}/receipt'),
         ));
       }
     }
@@ -268,6 +274,8 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           id: (map['id'] as String?) ?? '',
           isActive: isActive,
           onTap: () => context.push('/transit'),
+          ctaLabel: 'View Rental QR',
+          ctaAction: () => context.push('/transit'),
         ));
       }
     }
@@ -321,6 +329,8 @@ class _ActivityItem {
     required this.isActive,
     required this.onTap,
     this.amount,
+    this.ctaLabel,
+    this.ctaAction,
   });
 
   final _ActivityType type;
@@ -331,6 +341,8 @@ class _ActivityItem {
   final bool isActive;
   final VoidCallback onTap;
   final double? amount;
+  final String? ctaLabel;
+  final VoidCallback? ctaAction;
 }
 
 class _ActivityCard extends StatelessWidget {
@@ -389,62 +401,88 @@ class _ActivityCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Service icon
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-            const SizedBox(width: 12),
-            // Text content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Status + amount
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Row(
               children: [
-                StatusBadge(label: statusLabel, variant: statusVariant),
-                if (item.amount != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '\u20B9${item.amount!.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                // Service icon
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                  child: Icon(icon, color: iconColor, size: 22),
+                ),
+                const SizedBox(width: 12),
+                // Text content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Status + amount
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    StatusBadge(label: statusLabel, variant: statusVariant),
+                    if (item.amount != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '\u20B9${item.amount!.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
+            // CTA button
+            if (item.ctaLabel != null && item.ctaAction != null) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: item.ctaAction,
+                  icon: Icon(
+                    item.isActive ? Icons.track_changes : Icons.receipt_long,
+                    size: 16,
+                  ),
+                  label: Text(item.ctaLabel!),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.emerald,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    minimumSize: const Size(0, 32),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

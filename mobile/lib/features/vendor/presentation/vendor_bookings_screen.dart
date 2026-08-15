@@ -6,11 +6,31 @@ import '../../../core/theme/app_theme.dart';
 import '../application/vendor_providers.dart';
 import '../data/vendor_dashboard_api.dart';
 
-class VendorBookingsScreen extends ConsumerWidget {
+class VendorBookingsScreen extends ConsumerStatefulWidget {
   const VendorBookingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VendorBookingsScreen> createState() => _VendorBookingsScreenState();
+}
+
+class _VendorBookingsScreenState extends ConsumerState<VendorBookingsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(vendorBookingsProvider);
 
     return Scaffold(
@@ -28,6 +48,16 @@ class VendorBookingsScreen extends ConsumerWidget {
             icon: const Icon(Icons.refresh),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: AppTheme.emerald,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+          indicatorColor: AppTheme.emerald,
+          tabs: const [
+            Tab(text: 'All Bookings'),
+            Tab(text: 'Cover Charges'),
+          ],
+        ),
       ),
       body: bookingsAsync.when(
         loading: () => const Center(
@@ -35,29 +65,81 @@ class VendorBookingsScreen extends ConsumerWidget {
         ),
         error: (e, _) => _buildError(context, ref, e.toString()),
         data: (bookings) {
-          if (bookings.isEmpty) {
-            return _buildEmpty(context);
-          }
-          return RefreshIndicator(
-            color: AppTheme.emerald,
-            onRefresh: () => ref.read(vendorBookingsProvider.notifier).load(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: bookings.length,
-              itemBuilder: (_, i) => _BookingCard(
-                booking: bookings[i],
-                onAdvance: (newStatus) {
-                  AppHaptics.medium();
-                  ref.read(vendorBookingsProvider.notifier).updateStatus(
-                        bookings[i].bookingId,
-                        bookings[i].serviceType,
-                        newStatus,
-                      );
-                },
-              ),
-            ),
+          final coverCharges = bookings
+              .where((b) => b.serviceType.toLowerCase() == 'nightlife' ||
+                  b.serviceType.toLowerCase() == 'cover charge' ||
+                  b.serviceType.toLowerCase() == 'covercharge')
+              .toList();
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildBookingsList(context, ref, bookings, isCoverChargeView: false),
+              _buildCoverChargesList(context, ref, coverCharges),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildBookingsList(BuildContext context, WidgetRef ref,
+      List<BookingSummary> bookings, {required bool isCoverChargeView}) {
+    if (bookings.isEmpty) {
+      return _buildEmpty(context, 'No bookings today',
+          'Bookings will appear here as customers reserve');
+    }
+    return RefreshIndicator(
+      color: AppTheme.emerald,
+      onRefresh: () => ref.read(vendorBookingsProvider.notifier).load(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: bookings.length,
+        itemBuilder: (_, i) => _BookingCard(
+          booking: bookings[i],
+          onAdvance: (newStatus) {
+            AppHaptics.medium();
+            ref.read(vendorBookingsProvider.notifier).updateStatus(
+                  bookings[i].bookingId,
+                  bookings[i].serviceType,
+                  newStatus,
+                );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoverChargesList(
+      BuildContext context, WidgetRef ref, List<BookingSummary> coverCharges) {
+    if (coverCharges.isEmpty) {
+      return _buildEmpty(context, 'No cover charge bookings',
+          'Pub/club cover charge reservations will appear here');
+    }
+    return RefreshIndicator(
+      color: AppTheme.emerald,
+      onRefresh: () => ref.read(vendorBookingsProvider.notifier).load(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: coverCharges.length,
+        itemBuilder: (_, i) => _CoverChargeCard(
+          booking: coverCharges[i],
+          onAccept: () {
+            AppHaptics.success();
+            ref.read(vendorBookingsProvider.notifier).updateStatus(
+                  coverCharges[i].bookingId,
+                  coverCharges[i].serviceType,
+                  'Confirmed',
+                );
+          },
+          onReject: () {
+            AppHaptics.heavy();
+            ref.read(vendorBookingsProvider.notifier).updateStatus(
+                  coverCharges[i].bookingId,
+                  coverCharges[i].serviceType,
+                  'Cancelled',
+                );
+          },
+        ),
       ),
     );
   }
@@ -92,7 +174,7 @@ class VendorBookingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmpty(BuildContext context) {
+  Widget _buildEmpty(BuildContext context, String title, String subtitle) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -100,17 +182,184 @@ class VendorBookingsScreen extends ConsumerWidget {
           Icon(Icons.event_busy, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 12),
           Text(
-            'No bookings today',
+            title,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
           ),
           const SizedBox(height: 4),
           Text(
-            'Bookings will appear here as customers reserve',
+            subtitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
+  }
+}
+
+/// Cover charge booking card with explicit Accept / Reject actions for
+/// pending bookings. Shows customer name, guest count, date/time, status,
+/// and total amount.
+class _CoverChargeCard extends StatelessWidget {
+  const _CoverChargeCard({
+    required this.booking,
+    required this.onAccept,
+    required this.onReject,
+  });
+
+  final BookingSummary booking;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+
+  bool get _isPending =>
+      booking.status.toLowerCase() == 'pending' ||
+      booking.status.toLowerCase() == 'requested';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _statusColor(booking.status).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.emerald.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.nightlife, color: AppTheme.emerald, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      booking.customerName,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.group, size: 13,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${booking.guestCount ?? 1} guest${(booking.guestCount ?? 1) == 1 ? '' : 's'}',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              _StatusChip(booking.status),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.schedule, size: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Text(
+                _formatTime(booking.scheduledFor),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+              ),
+              const Spacer(),
+              Text(
+                '\u20B9${booking.amount.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: AppTheme.gold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          if (_isPending) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onAccept,
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Accept'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.emerald,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onReject,
+                    icon: const Icon(Icons.close, size: 16),
+                    label: const Text('Reject'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.danger,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'Pending':
+      case 'Requested':
+        return AppTheme.gold;
+      case 'Confirmed':
+        return AppTheme.sky;
+      case 'CheckedIn':
+        return AppTheme.emerald;
+      case 'Completed':
+        return AppTheme.success;
+      case 'Cancelled':
+        return AppTheme.danger;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatTime(String iso) {
+    if (iso.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(iso);
+      return '${dt.day}/${dt.month} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso;
+    }
   }
 }
 
