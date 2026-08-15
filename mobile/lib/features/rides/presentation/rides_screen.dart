@@ -135,47 +135,66 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Ride'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Center(
+            child: _MapActionButton(
+              icon: Icons.arrow_back,
+              onPressed: () => context.pop(),
+            ),
+          ),
+        ),
         actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) => context.push(value),
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                  value: '/rides/history',
-                  child: Row(children: [
-                    Icon(Icons.history),
-                    SizedBox(width: 8),
-                    Text('Ride History')
-                  ])),
-              const PopupMenuItem(
-                  value: '/rides/scheduled',
-                  child: Row(children: [
-                    Icon(Icons.schedule),
-                    SizedBox(width: 8),
-                    Text('Scheduled Rides')
-                  ])),
-              const PopupMenuItem(
-                  value: '/rides/saved-locations',
-                  child: Row(children: [
-                    Icon(Icons.bookmark),
-                    SizedBox(width: 8),
-                    Text('Saved Places')
-                  ])),
-              const PopupMenuItem(
-                  value: '/rides/emergency-contacts',
-                  child: Row(children: [
-                    Icon(Icons.contact_phone),
-                    SizedBox(width: 8),
-                    Text('Emergency Contacts')
-                  ])),
-              const PopupMenuItem(
-                  value: '/rides/driver/earnings',
-                  child: Row(children: [
-                    Icon(Icons.payments),
-                    SizedBox(width: 8),
-                    Text('Driver Earnings')
-                  ])),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: PopupMenuButton<String>(
+                offset: const Offset(0, 40),
+                icon: const _MapActionButtonIcon(Icons.more_vert),
+                onSelected: (value) => context.push(value),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                      value: '/rides/history',
+                      child: Row(children: [
+                        Icon(Icons.history),
+                        SizedBox(width: 8),
+                        Text('Ride History')
+                      ])),
+                  const PopupMenuItem(
+                      value: '/rides/scheduled',
+                      child: Row(children: [
+                        Icon(Icons.schedule),
+                        SizedBox(width: 8),
+                        Text('Scheduled Rides')
+                      ])),
+                  const PopupMenuItem(
+                      value: '/rides/saved-locations',
+                      child: Row(children: [
+                        Icon(Icons.bookmark),
+                        SizedBox(width: 8),
+                        Text('Saved Places')
+                      ])),
+                  const PopupMenuItem(
+                      value: '/rides/emergency-contacts',
+                      child: Row(children: [
+                        Icon(Icons.contact_phone),
+                        SizedBox(width: 8),
+                        Text('Emergency Contacts')
+                      ])),
+                  const PopupMenuItem(
+                      value: '/rides/driver/earnings',
+                      child: Row(children: [
+                        Icon(Icons.payments),
+                        SizedBox(width: 8),
+                        Text('Driver Earnings')
+                      ])),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -253,16 +272,18 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
             builder: (context, scrollController) {
               return Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.96),
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(AppRadius.xl),
                     topRight: Radius.circular(AppRadius.xl),
                   ),
                   boxShadow: [
-                    const BoxShadow(
-                      color: Color(0x1A000000),
+                    BoxShadow(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.black.withValues(alpha: 0.4)
+                          : const Color(0x1A000000),
                       blurRadius: 12,
-                      offset: Offset(0, -2),
+                      offset: const Offset(0, -2),
                     ),
                   ],
                 ),
@@ -509,7 +530,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
           // Pickup
           _AddressRow(
             icon: Icons.radio_button_checked,
-            iconColor: AppTheme.lagoon,
+            iconColor: AppTheme.emerald,
             label: 'Pickup',
             initialText: _pickupAddress,
             initialLocation: _pickupLocation,
@@ -529,7 +550,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
           // Dropoff
           _AddressRow(
             icon: Icons.location_on,
-            iconColor: AppTheme.coral,
+            iconColor: AppTheme.danger,
             label: 'Dropoff',
             onSelected: (address, location) => setState(() {
               _dropoffLocation = location;
@@ -682,17 +703,17 @@ class _RideConfirmSheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.lagoon.withValues(alpha: 0.1),
+                      color: AppTheme.emerald.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(vehicleName,
-                        style: const TextStyle(color: AppTheme.lagoon, fontWeight: FontWeight.w600, fontSize: 13)),
+                        style: const TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.w600, fontSize: 13)),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               // Route summary
-              _RouteRow(icon: Icons.radio_button_checked, color: AppTheme.lagoon, label: 'Pickup', address: pickupAddress),
+              _RouteRow(icon: Icons.radio_button_checked, color: AppTheme.emerald, label: 'Pickup', address: pickupAddress),
               Padding(
                 padding: const EdgeInsets.only(left: 11),
                 child: Container(
@@ -701,7 +722,7 @@ class _RideConfirmSheet extends StatelessWidget {
                   color: Theme.of(context).dividerColor,
                 ),
               ),
-              _RouteRow(icon: Icons.location_on, color: AppTheme.coral, label: 'Dropoff', address: dropoffAddress),
+              _RouteRow(icon: Icons.location_on, color: AppTheme.danger, label: 'Dropoff', address: dropoffAddress),
               const SizedBox(height: 16),
               // Trip stats
               Row(
@@ -720,7 +741,7 @@ class _RideConfirmSheet extends StatelessWidget {
                 children: [
                   const Text('Total Fare', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   Text('\u20B9${fare.toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.lagoon)),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.charcoal)),
                 ],
               ),
               const SizedBox(height: 20),
@@ -730,7 +751,6 @@ class _RideConfirmSheet extends StatelessWidget {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: AppTheme.lagoon,
                   ),
                   onPressed: () => Navigator.pop(context, true),
                   child: const Text('Confirm Ride', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
@@ -983,6 +1003,80 @@ class _AddressRowState extends ConsumerState<_AddressRow> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Floating circular map action button with a frosted glass or solid surface look.
+class _MapActionButton extends StatelessWidget {
+  const _MapActionButton({required this.icon, this.onPressed});
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: isDark ? AppTheme.darkCard : AppTheme.white,
+      borderRadius: BorderRadius.circular(22),
+      elevation: 0,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkCard : AppTheme.white,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            size: 22,
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Icon-only variant used as the `icon` of a [PopupMenuButton].
+class _MapActionButtonIcon extends StatelessWidget {
+  const _MapActionButtonIcon(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : AppTheme.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        size: 22,
+        color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
       ),
     );
   }

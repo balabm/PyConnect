@@ -1,8 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
-
 /// A reusable network image widget with shimmer placeholder, error fallback,
 /// and theme-aware colors. Replaces raw `Image.network` throughout the app.
 ///

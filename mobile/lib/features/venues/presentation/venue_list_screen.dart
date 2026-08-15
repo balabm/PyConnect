@@ -160,13 +160,13 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: selected ? AppTheme.lagoon : Theme.of(context).colorScheme.surface,
+                            color: selected ? AppTheme.emerald : Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(AppRadius.pill),
                             border: Border.all(
-                              color: selected ? AppTheme.lagoon : Theme.of(context).dividerColor,
+                              color: selected ? AppTheme.emerald : const Color(0xFFE5E7EB),
                             ),
                             boxShadow: selected
-                                ? [BoxShadow(color: AppTheme.lagoon.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                                ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
                                 : [],
                           ),
                           child: Text(
@@ -174,7 +174,7 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: selected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: selected ? Colors.white : AppTheme.slate,
                             ),
                           ),
                         ),
@@ -251,6 +251,9 @@ class _VenueCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Theme.of(context).brightness == Brightness.dark
+              ? Border.all(color: AppTheme.darkBorder)
+              : null,
           boxShadow: [
             BoxShadow(
               color: Theme.of(context).brightness == Brightness.dark
@@ -270,7 +273,7 @@ class _VenueCard extends StatelessWidget {
               children: [
                 AppNetworkImage(
                   imageUrl: imageUrl,
-                  height: 160,
+                  height: 180,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   fallbackIcon: Icons.local_bar_outlined,
@@ -299,8 +302,8 @@ class _VenueCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: venue.isOpen
-                          ? AppTheme.success.withValues(alpha: 0.9)
-                          : AppTheme.danger.withValues(alpha: 0.9),
+                          ? AppTheme.emerald
+                          : AppTheme.danger,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
@@ -332,14 +335,14 @@ class _VenueCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: AppTheme.lagoon.withValues(alpha: 0.95),
+                        color: AppTheme.emerald,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.star, size: 12, color: Colors.white),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Text(
                             'Priority',
                             style: TextStyle(

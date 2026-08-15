@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
-import '../../../core/animations/modern_animations.dart';
 import '../../../core/animations/staggered_animations.dart';
+import '../../../core/design/app_network_image.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/time_context_controller.dart';
 
-/// Context-aware home that changes its greeting, suggestions, and color
-/// palette based on the time of day. Uses spring-based animations instead
-/// of native animations for test compatibility.
+/// Context-aware home that displays a clean greeting and curated
+/// photography-driven collections based on the time of day.
+/// No solid-color blocks — the UI stays invisible so imagery stands out.
 class ContextualHome extends ConsumerWidget {
   const ContextualHome({super.key});
 
@@ -48,28 +48,64 @@ class ContextualHome extends ConsumerWidget {
   }
 }
 
-/// A premium contextual card with gradient background, icon, and tap animation.
-class _ContextualCard extends StatefulWidget {
-  const _ContextualCard({
-    super.key,
-    required this.icon,
-    required this.title,
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({
+    required this.greeting,
     required this.subtitle,
-    required this.gradient,
-    required this.route,
   });
 
-  final IconData icon;
-  final String title;
+  final String greeting;
   final String subtitle;
-  final LinearGradient gradient;
-  final String route;
 
   @override
-  State<_ContextualCard> createState() => _ContextualCardState();
+  Widget build(BuildContext context) {
+    return FadeSlideIn(
+      duration: const Duration(milliseconds: 600),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              greeting,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoal,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.slate,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _ContextualCardState extends State<_ContextualCard>
+/// A curated, 16:9 image card with a bottom scrim for legible text.
+class _CuratedCard extends StatefulWidget {
+  const _CuratedCard({
+    required this.imageUrl,
+    required this.title,
+    this.subtitle,
+    this.route,
+  });
+
+  final String imageUrl;
+  final String title;
+  final String? subtitle;
+  final String? route;
+
+  @override
+  State<_CuratedCard> createState() => _CuratedCardState();
+}
+
+class _CuratedCardState extends State<_CuratedCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
@@ -81,7 +117,7 @@ class _ContextualCardState extends State<_ContextualCard>
       vsync: this,
       duration: const Duration(milliseconds: 120),
     );
-    _scale = Tween<double>(begin: 1.0, end: 0.93).animate(
+    _scale = Tween<double>(begin: 1.0, end: 0.97).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -100,7 +136,7 @@ class _ContextualCardState extends State<_ContextualCard>
       onTapCancel: () => _controller.reverse(),
       onTap: () {
         AppHaptics.light();
-        context.go(widget.route);
+        if (widget.route != null) context.go(widget.route!);
       },
       child: AnimatedBuilder(
         animation: _scale,
@@ -109,65 +145,70 @@ class _ContextualCardState extends State<_ContextualCard>
           child: child,
         ),
         child: Container(
+          width: 220,
+          margin: const EdgeInsets.only(right: 12),
           decoration: BoxDecoration(
-            gradient: widget.gradient,
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             boxShadow: [
               BoxShadow(
-                color: widget.gradient.colors.first.withValues(alpha: 0.35),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.4)
+                    : AppTheme.cardShadow,
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(widget.icon, color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(height: 6),
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          widget.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Flexible(
-                      child: Text(
-                        widget.subtitle,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 11,
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AppNetworkImage(
+                imageUrl: widget.imageUrl,
+                height: double.infinity,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                fallbackIcon: Icons.image_outlined,
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    gradient: AppTheme.bottomImageScrim,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                           height: 1.2,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                      if (widget.subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.subtitle!,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 12,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -175,69 +216,49 @@ class _ContextualCardState extends State<_ContextualCard>
   }
 }
 
-/// Animated hero header with gradient background and greeting.
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({
-    required this.greeting,
-    required this.subtitle,
-    required this.gradient,
-    required this.icon,
+/// A horizontal section containing a title and a scrollable row of curated image cards.
+class _CuratedCollectionsSection extends StatelessWidget {
+  const _CuratedCollectionsSection({
+    required this.title,
+    required this.cards,
   });
 
-  final String greeting;
-  final String subtitle;
-  final List<Color> gradient;
-  final IconData icon;
+  final String title;
+  final List<_CuratedCard> cards;
 
   @override
   Widget build(BuildContext context) {
-    return BounceIn(
-      duration: const Duration(milliseconds: 600),
-      child: AnimatedGradientHeader(
-        colors: gradient,
-        borderRadius: AppRadius.xl,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      greeting,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, color: Colors.white, size: 28),
-              ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FadeSlideIn(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.charcoal,
+                  ),
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 140,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: cards,
+          ),
+        ),
+      ],
     );
   }
 }
+
+// --- Time-of-day home variants ---
 
 class _MorningArrival extends StatelessWidget {
   const _MorningArrival({super.key});
@@ -246,56 +267,35 @@ class _MorningArrival extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       key: const ValueKey('morning'),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
           const _HeroHeader(
             greeting: 'Good morning!',
             subtitle: 'Arriving in Pondy? Let\'s get you sorted.',
-            gradient: [AppTheme.lagoon, AppTheme.lagoonDark],
-            icon: Icons.wb_sunny,
           ),
           const SizedBox(height: 20),
-          FadeSlideIn(
-            child: Text(
-              'Quick Start',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.3,
-            children: [
-              FadeSlideIn(
-                delay: const Duration(milliseconds: 100),
-                child: const _ContextualCard(
-                  key: ValueKey('luggage'),
-                  icon: Icons.luggage,
-                  title: 'Drop Luggage',
-                  subtitle: 'Cloak your bags near the bus stand',
-                  gradient: AppTheme.lagoonGradient,
-                  route: '/transit',
-                ),
+          _CuratedCollectionsSection(
+            title: 'Start the Day',
+            cards: [
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
+                title: 'Artisanal Breakfast',
+                subtitle: 'Bakeries & cafés',
+                route: '/food',
               ),
-              FadeSlideIn(
-                delay: const Duration(milliseconds: 200),
-                child: const _ContextualCard(
-                  key: ValueKey('scooter'),
-                  icon: Icons.two_wheeler,
-                  title: 'Rent Scooter',
-                  subtitle: 'Explore White Town on two wheels',
-                  gradient: AppTheme.oceanGradient,
-                  route: '/transit',
-                ),
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+                title: 'Beach Vibes',
+                subtitle: 'Promenade walks',
+                route: '/venues',
+              ),
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800',
+                title: 'Coastal Coffee',
+                subtitle: 'Cool cafés nearby',
+                route: '/venues?category=Cafe',
               ),
             ],
           ),
@@ -312,60 +312,35 @@ class _AfternoonHeat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       key: const ValueKey('afternoon'),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
           const _HeroHeader(
-            greeting: 'Beat the heat!',
-            subtitle: 'AC cafes, chilled drinks & cool spots',
-            gradient: [AppTheme.lagoon, AppTheme.lagoonDark],
-            icon: Icons.icecream,
+            greeting: 'Beat the heat',
+            subtitle: 'AC cafés, chilled drinks & cool spots',
           ),
           const SizedBox(height: 20),
-          FadeSlideIn(
-            child: Text(
-              'Cool Down',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.3,
-            children: [
-              FadeSlideIn(
-                delay: const Duration(milliseconds: 100),
-                child: const _ContextualCard(
-                  key: ValueKey('cafe'),
-                  icon: Icons.local_cafe,
-                  title: 'AC Cafes',
-                  subtitle: 'Cool down with iced coffee & bites',
-                  gradient: LinearGradient(
-                    colors: [AppTheme.lagoon, AppTheme.lagoonDark],
-                  ),
-                  route: '/venues?category=Cafe',
-                ),
+          _CuratedCollectionsSection(
+            title: 'Cool Down',
+            cards: [
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800',
+                title: 'AC Cafes',
+                subtitle: 'Iced coffee & bites',
+                route: '/venues?category=Cafe',
               ),
-              FadeSlideIn(
-                delay: const Duration(milliseconds: 200),
-                child: const _ContextualCard(
-                  key: ValueKey('lunch'),
-                  icon: Icons.restaurant,
-                  title: 'Lunch',
-                  subtitle: 'Wood-fired pizza & local cuisine',
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.lagoonDark, AppTheme.night],
-                  ),
-                  route: '/food',
-                ),
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1563729784474-d877f61cd093?w=800',
+                title: 'Gelato & Chill',
+                subtitle: 'Desserts to cool off',
+                route: '/food',
+              ),
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
+                title: 'Beachside Rentals',
+                subtitle: 'Scooters & luggage drop',
+                route: '/transit',
               ),
             ],
           ),
@@ -382,58 +357,35 @@ class _EveningNightlife extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       key: const ValueKey('evening'),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-          _HeroHeader(
-            greeting: 'Nightlife tonight!',
+          const _HeroHeader(
+            greeting: 'Nightlife tonight',
             subtitle: 'Pubs, clubs & live crowd in Pondy',
-            gradient: [Theme.of(context).colorScheme.onSurface, Color(0xFF6A11CB)],
-            icon: Icons.nightlife,
           ),
           const SizedBox(height: 20),
-          FadeSlideIn(
-            child: Text(
-              'Tonight',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.3,
-            children: [
-              FadeSlideIn(
-                delay: const Duration(milliseconds: 100),
-                child: const _ContextualCard(
-                  key: ValueKey('pub'),
-                  icon: Icons.local_bar,
-                  title: 'Pub Entry',
-                  subtitle: 'Skip the line with cover charge pass',
-                  gradient: AppTheme.nightGradient,
-                  route: '/venues?filter=nightlife',
-                ),
+          _CuratedCollectionsSection(
+            title: 'Tonight',
+            cards: [
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1572116469696-31def3a40c2c?w=800',
+                title: 'Pub Entry',
+                subtitle: 'Skip the line',
+                route: '/venues?filter=nightlife',
               ),
-              FadeSlideIn(
-                delay: const Duration(milliseconds: 200),
-                child: const _ContextualCard(
-                  key: ValueKey('vibe'),
-                  icon: Icons.people,
-                  title: 'Live Crowd Density',
-                  subtitle: 'Check real-time venue capacity',
-                  gradient: LinearGradient(
-                    colors: [AppTheme.lagoonDark, AppTheme.lagoon],
-                  ),
-                  route: '/venues',
-                ),
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800',
+                title: 'Clubs & DJs',
+                subtitle: 'Dance floors nearby',
+                route: '/venues?filter=nightlife',
+              ),
+              _CuratedCard(
+                imageUrl: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800',
+                title: 'Dinner First',
+                subtitle: 'Restaurants open now',
+                route: '/food',
               ),
             ],
           ),

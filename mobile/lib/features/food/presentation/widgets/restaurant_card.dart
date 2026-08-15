@@ -46,10 +46,10 @@ class RestaurantCard extends StatelessWidget {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        gradient: AppTheme.lagoonGradient,
+                        color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(Icons.restaurant, size: 32, color: Colors.white),
+                      child: const Icon(Icons.restaurant, size: 32, color: Color(0xFF6B7280)),
                     ),
             ),
           ),
@@ -61,7 +61,7 @@ class RestaurantCard extends StatelessWidget {
                 Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                 if (cuisine != null) ...[
                   const SizedBox(height: 2),
-                  Text(cuisine, style: TextStyle(fontSize: 12, color: AppTheme.lagoon, fontWeight: FontWeight.w600)),
+                  Text(cuisine, style: TextStyle(fontSize: 12, color: AppTheme.emerald, fontWeight: FontWeight.w600)),
                 ],
                 if (description != null) ...[
                   const SizedBox(height: 4),

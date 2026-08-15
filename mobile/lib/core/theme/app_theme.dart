@@ -3,17 +3,27 @@ import 'package:flutter/material.dart';
 /// Modern coastal palette inspired by Pondicherry's coastline.
 /// Lagoon Teal + Terracotta Coral on a crisp off-white canvas.
 abstract final class AppTheme {
-  // --- Brand colors ---
-  static const lagoon = Color(0xFF0D9488);   // Lagoon Teal — primary
+  // --- Brand colors (Premium Swiggy/Uber Standard) ---
+  static const emerald = Color(0xFF00D290);  // Pondy Emerald — primary CTA
+  static const emeraldLight = Color(0xFF10E3A0);
+  static const emeraldDark = Color(0xFF00B07D);
+  // Legacy brand aliases for compatibility during migration
+  static const lagoon = Color(0xFF0D9488);
   static const lagoonLight = Color(0xFF14B8A6);
   static const lagoonDark = Color(0xFF0F766E);
-  static const coral = Color(0xFFF97316);    // Terracotta Coral — accent
+  static const coral = Color(0xFFF97316);
   static const coralLight = Color(0xFFFB923C);
+
+  // --- Neutral text & surfaces ---
+  static const white = Color(0xFFFFFFFF);
+  static const offWhite = Color(0xFFF8F9FA);
+  static const pureBlack = Color(0xFF000000);
   static const night = Color(0xFF1E293B);    // Deep slate for text
-  static const sand = Color(0xFFF8FAFC);     // Crisp off-white background
+  static const charcoal = Color(0xFF111827); // Uber/Swiggy primary text
+  static const slate = Color(0xFF6B7280);    // Muted secondary text
   static const gold = Color(0xFFE9C46A);
   static const sky = Color(0xFF4895EF);
-  static const seed = lagoon;                // Keep seed aliased for compat
+  static const seed = emerald;
 
   // --- Semantic colors ---
   static const success = Color(0xFF22C55E);
@@ -23,16 +33,23 @@ abstract final class AppTheme {
 
   // --- Surface colors ---
   static const cardBackground = Color(0xFFFFFFFF);
-  static const cardShadow = Color(0x0D000000); // black.withOpacity(0.05)
+  static const cardShadow = Color(0x0A000000); // black.withOpacity(0.04)
+  static const searchFill = Color(0xFFF3F4F6); // soft grey for input fills
 
-  // --- Dark mode colors ---
-  static const darkBackground = Color(0xFF0F172A);   // Slate 900
-  static const darkSurface = Color(0xFF1E293B);     // Slate 800
-  static const darkCard = Color(0xFF334155);        // Slate 700
-  static const darkTextPrimary = Color(0xFFF1F5F9); // Slate 100
-  static const darkTextSecondary = Color(0xFF94A3B8); // Slate 400
+  // --- Dark mode colors (OLED Premium) ---
+  static const darkBackground = Color(0xFF000000);    // Pure OLED Black
+  static const darkSurface = Color(0xFF121212);       // Dark Slate Surface
+  static const darkCard = Color(0xFF1E1E1E);          // Elevated card surface
+  static const darkBorder = Color(0x14FFFFFF);        // rgba(255,255,255,0.08)
+  static const darkTextPrimary = Color(0xFFFFFFFF);   // Pure White
+  static const darkTextSecondary = Color(0xFF9CA3AF); // Light Slate
 
-  // --- Gradient presets for contextual cards ---
+  // --- Gradient presets (subtle, used sparingly) ---
+  static const emeraldGradient = LinearGradient(
+    colors: [Color(0xFF00D290), Color(0xFF00B07D)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
   static const sunsetGradient = LinearGradient(
     colors: [Color(0xFFF97316), Color(0xFFFB923C)],
     begin: Alignment.topLeft,
@@ -54,33 +71,53 @@ abstract final class AppTheme {
     end: Alignment.bottomRight,
   );
 
+  /// Bottom image scrim for text legibility without solid-color blocks.
+  static const bottomImageScrim = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0x00000000), Color(0xCC000000)],
+  );
+
   static ThemeData get light {
     final scheme = ColorScheme.fromSeed(
-      seedColor: lagoon,
-      primary: lagoon,
-      secondary: coral,
+      seedColor: emerald,
+      primary: emerald,
+      secondary: emeraldLight,
       surface: cardBackground,
+      surfaceContainerHighest: searchFill,
+      onSurface: charcoal,
+      onSurfaceVariant: slate,
       error: Color(0xFFEF4444),
     );
     return ThemeData(
       colorScheme: scheme,
-      scaffoldBackgroundColor: sand,
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: white,
       appBarTheme: const AppBarTheme(
-        backgroundColor: cardBackground,
-        foregroundColor: night,
+        backgroundColor: white,
+        foregroundColor: charcoal,
         elevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: cardBackground,
         elevation: 0,
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: cardBackground,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: lagoon,
+          backgroundColor: emerald,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -91,8 +128,8 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: lagoon,
-          side: const BorderSide(color: lagoon, width: 1.5),
+          foregroundColor: emerald,
+          side: const BorderSide(color: emerald, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
@@ -101,18 +138,18 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: searchFill,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: lagoon, width: 2),
+          borderSide: const BorderSide(color: emerald, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -121,36 +158,50 @@ abstract final class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: Colors.white,
-        selectedColor: lagoon.withValues(alpha: 0.1),
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-        side: BorderSide(color: Colors.grey.shade300),
+        backgroundColor: white,
+        selectedColor: emerald.withValues(alpha: 0.1),
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: charcoal),
+        side: const BorderSide(color: Color(0xFFE5E7EB)),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: cardBackground,
-        indicatorColor: lagoon.withValues(alpha: 0.12),
+        indicatorColor: emerald.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ),
-      dividerTheme: DividerThemeData(
-        color: Colors.grey.shade200,
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFE5E7EB),
         thickness: 1,
         space: 1,
       ),
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(color: charcoal),
+        bodyMedium: TextStyle(color: charcoal),
+        bodySmall: TextStyle(color: slate, fontSize: 12),
+        titleLarge: TextStyle(color: charcoal, fontWeight: FontWeight.bold),
+        titleMedium: TextStyle(color: charcoal, fontWeight: FontWeight.w600),
+        titleSmall: TextStyle(color: charcoal, fontWeight: FontWeight.w500),
+        labelLarge: TextStyle(color: charcoal),
+        labelMedium: TextStyle(color: slate),
+      ),
+      iconTheme: const IconThemeData(color: slate),
     );
   }
-  /// Dark theme — coastal palette on a deep slate canvas.
+  /// Dark theme — pure OLED black with premium dark slate surfaces.
   static ThemeData get dark {
     final scheme = ColorScheme.fromSeed(
-      seedColor: lagoon,
-      primary: lagoonLight,
-      secondary: coral,
+      seedColor: emerald,
+      primary: emerald,
+      secondary: emeraldLight,
       brightness: Brightness.dark,
       surface: darkSurface,
+      surfaceContainerHighest: darkCard,
+      onSurface: darkTextPrimary,
+      onSurfaceVariant: darkTextSecondary,
       error: const Color(0xFFEF4444),
     );
     return ThemeData(
@@ -158,21 +209,31 @@ abstract final class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: darkBackground,
       appBarTheme: const AppBarTheme(
-        backgroundColor: darkSurface,
+        backgroundColor: darkBackground,
         foregroundColor: darkTextPrimary,
         elevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
       ),
-      cardTheme: const CardThemeData(
-        color: darkCard,
+      cardTheme: CardThemeData(
+        color: darkSurface,
         elevation: 0,
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: const BorderSide(color: darkBorder),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: darkSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: lagoon,
+          backgroundColor: emerald,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -183,8 +244,8 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: lagoonLight,
-          side: const BorderSide(color: lagoonLight, width: 1.5),
+          foregroundColor: emerald,
+          side: const BorderSide(color: emerald, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
@@ -196,77 +257,91 @@ abstract final class AppTheme {
         fillColor: darkCard,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: Colors.grey.shade700, width: 1),
+          borderSide: const BorderSide(color: darkBorder, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: Colors.grey.shade700, width: 1),
+          borderSide: const BorderSide(color: darkBorder, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: lagoonLight, width: 2),
+          borderSide: const BorderSide(color: emerald, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1),
         ),
+        hintStyle: const TextStyle(color: darkTextSecondary),
+        labelStyle: const TextStyle(color: darkTextSecondary),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: darkCard,
-        selectedColor: lagoon.withValues(alpha: 0.2),
+        selectedColor: emerald.withValues(alpha: 0.2),
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: darkTextPrimary),
-        side: BorderSide(color: Colors.grey.shade700),
+        side: const BorderSide(color: darkBorder),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: darkSurface,
-        indicatorColor: lagoon.withValues(alpha: 0.15),
+        indicatorColor: emerald.withValues(alpha: 0.15),
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ),
-      dividerTheme: DividerThemeData(
-        color: Colors.grey.shade800,
+      dividerTheme: const DividerThemeData(
+        color: darkBorder,
         thickness: 1,
         space: 1,
       ),
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(color: darkTextPrimary),
+        bodyMedium: TextStyle(color: darkTextPrimary),
+        bodySmall: TextStyle(color: darkTextSecondary, fontSize: 12),
+        titleLarge: TextStyle(color: darkTextPrimary, fontWeight: FontWeight.bold),
+        titleMedium: TextStyle(color: darkTextPrimary, fontWeight: FontWeight.w600),
+        titleSmall: TextStyle(color: darkTextPrimary, fontWeight: FontWeight.w500),
+        labelLarge: TextStyle(color: darkTextPrimary),
+        labelMedium: TextStyle(color: darkTextSecondary),
+      ),
+      iconTheme: const IconThemeData(color: darkTextSecondary),
     );
   }
 
-  /// Driver app theme — darker teal accent for a focused operational UI.
+  /// Driver app theme — high-contrast operational UI.
   static ThemeData get driverTheme {
     final scheme = ColorScheme.fromSeed(
-      seedColor: lagoonDark,
-      primary: lagoonDark,
-      secondary: coral,
+      seedColor: emerald,
+      primary: emerald,
+      secondary: emeraldLight,
       surface: cardBackground,
-      error: Color(0xFFEF4444),
+      onSurface: charcoal,
+      error: const Color(0xFFEF4444),
     );
     return light.copyWith(
       colorScheme: scheme,
       appBarTheme: const AppBarTheme(
-        backgroundColor: lagoonDark,
-        foregroundColor: Colors.white,
+        backgroundColor: pureBlack,
+        foregroundColor: white,
         elevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: cardBackground,
-        indicatorColor: lagoonDark.withValues(alpha: 0.12),
+        indicatorColor: emerald.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: lagoonDark,
+          backgroundColor: emerald,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
@@ -275,62 +350,64 @@ abstract final class AppTheme {
     );
   }
 
-  /// Partner app theme — coral accent for a warm vendor POS interface.
+  /// Partner app theme — high-contrast POS interface with dark slate header.
   static ThemeData get partnerTheme {
-    const slate900 = Color(0xFF0F172A);
-    const slate800 = Color(0xFF1E293B);
-    const slate700 = Color(0xFF334155);
+    const header = Color(0xFF0B0F19);
+    const surface = Color(0xFF121212);
+    const card = Color(0xFF1E1E1E);
     final scheme = ColorScheme.fromSeed(
-      seedColor: coral,
-      primary: coral,
-      secondary: lagoon,
-      surface: slate800,
-      onSurface: Colors.white,
+      seedColor: emerald,
+      primary: emerald,
+      secondary: emeraldLight,
+      surface: surface,
+      onSurface: white,
       error: const Color(0xFFEF4444),
       brightness: Brightness.dark,
     );
     return light.copyWith(
       colorScheme: scheme,
-      scaffoldBackgroundColor: slate900,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: header,
       appBarTheme: const AppBarTheme(
-        backgroundColor: slate800,
-        foregroundColor: Colors.white,
+        backgroundColor: header,
+        foregroundColor: white,
         elevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
-        color: slate800,
+        color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: const BorderSide(color: darkBorder),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: slate800,
-        indicatorColor: coral.withValues(alpha: 0.15),
+        backgroundColor: surface,
+        indicatorColor: emerald.withValues(alpha: 0.15),
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ),
-      textTheme: light.textTheme.copyWith(
-        bodyLarge: const TextStyle(color: Colors.white),
-        bodyMedium: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-        bodySmall: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-        titleLarge: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        titleMedium: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        titleSmall: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-        labelLarge: const TextStyle(color: Colors.white),
-        labelMedium: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-        labelSmall: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(color: white),
+        bodyMedium: TextStyle(color: white),
+        bodySmall: TextStyle(color: darkTextSecondary, fontSize: 12),
+        titleLarge: TextStyle(color: white, fontWeight: FontWeight.bold),
+        titleMedium: TextStyle(color: white, fontWeight: FontWeight.w600),
+        titleSmall: TextStyle(color: white, fontWeight: FontWeight.w500),
+        labelLarge: TextStyle(color: white),
+        labelMedium: TextStyle(color: darkTextSecondary),
+        labelSmall: TextStyle(color: darkTextSecondary),
       ),
-      dividerTheme: DividerThemeData(
-        color: Colors.white.withValues(alpha: 0.1),
+      dividerTheme: const DividerThemeData(
+        color: darkBorder,
         thickness: 1,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: coral,
+          backgroundColor: emerald,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -339,7 +416,7 @@ abstract final class AppTheme {
           ),
         ),
       ),
-      iconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: const IconThemeData(color: darkTextSecondary),
     );
   }
 
@@ -431,7 +508,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: accent.withValues(alpha: 0.6), width: 1.5),
+          borderSide: const BorderSide(color: accent, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -549,8 +626,8 @@ abstract final class AdminColors {
   static const border = Color(0x14FFFFFF);
   static const textPrimary = Color(0xFFF9FAFB);
   static const textMuted = Color(0xFF9CA3AF);
-  static const accent = Color(0xFF0D9488);
-  static const accentLight = Color(0xFF14B8A6);
+  static const accent = Color(0xFF00D290);
+  static const accentLight = Color(0xFF10E3A0);
   static const danger = Color(0xFFEF4444);
   static const success = Color(0xFF22C55E);
   static const warning = Color(0xFFF59E0B);

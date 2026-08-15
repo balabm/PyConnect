@@ -124,7 +124,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: AppTheme.lagoon.withValues(alpha: 0.95),
+                            color: AppTheme.emerald,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: const Row(
@@ -362,7 +362,7 @@ class _InfoTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppTheme.lagoon),
+          Icon(icon, size: 20, color: AppTheme.emerald),
           const SizedBox(width: 12),
           Expanded(child: Text(text)),
         ],

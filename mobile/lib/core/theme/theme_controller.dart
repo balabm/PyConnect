@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum ThemeModePreference { system, light, dark }
 
 class ThemeController extends StateNotifier<ThemeModePreference> {
-  ThemeController(this._storage) : super(ThemeModePreference.system) {
+  ThemeController(this._storage) : super(ThemeModePreference.light) {
     _load();
   }
 
@@ -26,7 +26,7 @@ class ThemeController extends StateNotifier<ThemeModePreference> {
         state = switch (saved) {
           'light' => ThemeModePreference.light,
           'dark' => ThemeModePreference.dark,
-          _ => ThemeModePreference.system,
+          _ => ThemeModePreference.light,
         };
       } catch (_) {}
       return;
@@ -37,7 +37,7 @@ class ThemeController extends StateNotifier<ThemeModePreference> {
       state = switch (saved) {
         'light' => ThemeModePreference.light,
         'dark' => ThemeModePreference.dark,
-        _ => ThemeModePreference.system,
+        _ => ThemeModePreference.light,
       };
     } catch (_) {}
   }

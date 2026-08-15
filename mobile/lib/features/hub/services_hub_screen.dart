@@ -5,8 +5,8 @@ import '../../core/animations/haptic.dart';
 import '../../core/animations/staggered_animations.dart';
 import '../../core/theme/app_theme.dart';
 
-/// A grid of secondary services that were moved out of the bottom navigation.
-/// Accessible from the "More" tab.
+/// A clean Apple-style grouped list of secondary services accessible from the
+/// "More" tab. Replaces the old multi-colored Windows 8-style grid.
 class ServicesHubScreen extends StatelessWidget {
   const ServicesHubScreen({super.key});
 
@@ -15,51 +15,51 @@ class ServicesHubScreen extends StatelessWidget {
       icon: Icons.directions_bus_outlined,
       title: 'Transit',
       subtitle: 'Bus, ferry & luggage cloak',
-      gradient: AppTheme.oceanGradient,
       route: '/transit',
     ),
     _HubService(
       icon: Icons.shopping_bag_outlined,
       title: 'Shop',
       subtitle: 'Essentials & daily needs',
-      gradient: AppTheme.lagoonGradient,
       route: '/essentials',
     ),
     _HubService(
       icon: Icons.museum_outlined,
       title: 'Explore',
       subtitle: 'Experiences & safety tips',
-      gradient: AppTheme.sunsetGradient,
       route: '/experiences',
     ),
     _HubService(
       icon: Icons.person_outline,
       title: 'Profile',
       subtitle: 'Account, themes & settings',
-      gradient: const LinearGradient(
-        colors: [AppTheme.night, AppTheme.lagoonDark],
-      ),
       route: '/profile',
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('More Services')),
-      body: GridView.count(
-        padding: const EdgeInsets.all(16),
-        crossAxisCount: 2,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
-        childAspectRatio: 1.1,
-        children: _services.map((s) {
-          final index = _services.indexOf(s);
+      appBar: AppBar(
+        title: const Text('More Services'),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        itemCount: _services.length,
+        itemBuilder: (context, index) {
+          final service = _services[index];
           return FadeSlideIn(
-            delay: Duration(milliseconds: index * 80),
-            child: _HubCard(service: s),
+            delay: Duration(milliseconds: index * 60),
+            child: _HubRow(
+              service: service,
+              isFirst: index == 0,
+              isLast: index == _services.length - 1,
+              isDark: isDark,
+            ),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -70,108 +70,110 @@ class _HubService {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.gradient,
     required this.route,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final LinearGradient gradient;
   final String route;
 }
 
-class _HubCard extends StatefulWidget {
-  const _HubCard({required this.service});
+class _HubRow extends StatelessWidget {
+  const _HubRow({
+    required this.service,
+    required this.isFirst,
+    required this.isLast,
+    required this.isDark,
+  });
+
   final _HubService service;
-
-  @override
-  State<_HubCard> createState() => _HubCardState();
-}
-
-class _HubCardState extends State<_HubCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 120),
-    );
-    _scale = Tween<double>(begin: 1.0, end: 0.94).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final bool isFirst;
+  final bool isLast;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) => _controller.reverse(),
-      onTapCancel: () => _controller.reverse(),
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         AppHaptics.light();
-        context.go(widget.service.route);
+        context.go(service.route);
       },
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: widget.service.gradient,
-            borderRadius: BorderRadius.circular(AppRadius.xl),
-            boxShadow: [
-              BoxShadow(
-                color: widget.service.gradient.colors.first.withValues(alpha: 0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkSurface : AppTheme.white,
+          borderRadius: BorderRadius.only(
+            topLeft: isFirst ? const Radius.circular(AppRadius.lg) : Radius.zero,
+            topRight: isFirst ? const Radius.circular(AppRadius.lg) : Radius.zero,
+            bottomLeft: isLast ? const Radius.circular(AppRadius.lg) : Radius.zero,
+            bottomRight: isLast ? const Radius.circular(AppRadius.lg) : Radius.zero,
+          ),
+          border: Border.all(
+            color: isDark ? AppTheme.darkBorder : const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
               ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkCard : const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Icon(
+                      service.icon,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.slate,
+                      size: 22,
+                    ),
                   ),
-                  child: Icon(widget.service.icon, color: Colors.white, size: 26),
-                ),
-                const Spacer(),
-                Text(
-                  widget.service.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          service.title,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          service.subtitle,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.slate,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.service.subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 12,
+                  Icon(
+                    Icons.chevron_right,
+                    color: isDark ? AppTheme.darkTextSecondary : const Color(0xFF9CA3AF),
+                    size: 22,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+            if (!isLast)
+              Divider(
+                height: 1,
+                indent: 68,
+                endIndent: 16,
+                color: isDark ? AppTheme.darkBorder : const Color(0xFFE5E7EB),
+              ),
+          ],
         ),
       ),
     );

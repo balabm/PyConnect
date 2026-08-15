@@ -17,7 +17,7 @@ class MapSelectionModeIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = isSelectingPickup ? AppTheme.lagoon : AppTheme.coral;
+    final activeColor = isSelectingPickup ? AppTheme.emerald : AppTheme.danger;
     return Material(
       elevation: 0,
       child: Container(

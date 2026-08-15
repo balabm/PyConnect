@@ -71,7 +71,7 @@ class _PondyConnectAppState extends ConsumerState<PondyConnectApp> {
     final themeMode = ref.watch(themeControllerProvider.notifier).toMaterialMode();
 
     // Driver and partner apps use their own branded themes (no dark mode toggle).
-    // Consumer app supports full light/dark/system mode switching.
+    // Consumer app supports full light/dark mode switching, but Light Mode is default.
     // Admin app uses a unified enterprise dark SaaS theme.
     final ThemeData lightTheme;
     final ThemeData? darkTheme;
