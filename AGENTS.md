@@ -130,79 +130,88 @@ Require `Backend CI` + `Mobile CI` status checks before merging PRs to `main`.
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| Web Admin | ✅ Deployed & Verified | https://pyconnect.run.place/ (200 OK, 2026-08-15) |
-| Web Partner | ✅ Deployed & Verified | https://pyconnect.run.place/partner/ (200 OK, 2026-08-15) |
-| Backend | ⏳ Pending Deployment | 90+ local fixes not yet deployed to EC2 |
-| Mobile APKs | ✅ Built Locally | 76.4 MB each (debug-signed, not yet on Play Store) |
+| Web Admin | ✅ Deployed & Verified | https://pyconnect.run.place/ (Admin app at root) |
+| Web Partner | ✅ Deployed & Verified | https://pyconnect.run.place/partner/ |
+| Backend | ✅ Deployed & Healthy | Docker container on EC2, PostgreSQL on RDS |
+| Mobile APKs | ✅ Built Locally | 76.5 MB each (Consumer, Driver, Partner) |
 | Git Repo | ✅ Pushed | https://github.com/balabm/PyConnect.git |
 | GitHub Secrets | ✅ 12/12 Configured | All deployment secrets set |
 
-### Backend — Pending Deployment
-The deployed backend at `https://pyconnect.run.place` does NOT have the local fixes. All 90+ fixes are committed locally and need deployment via `deploy-backend.yml` workflow. Key issues that will be resolved by deployment:
-- Menu delete returns 405
-- OTP not enforced on ride start
-- Driver state stuck after ride completion
-- Ride events not persisted
-- Admin can change own role / deactivate self
-- No one-active-ride-per-consumer constraint
-- Vendor self-registration doesn't create User account
-- IDOR vulnerabilities in support tickets, ride details, KYC access
-- No ownership checks on ride lifecycle (start/complete/cancel)
-- ReassignRide accessible to any authenticated user
-- Priority ping credit double-spend race condition
-- Client-provided userId accepted in luggage/rental/trip listings
-- Admin SOS events returns mock data instead of real alerts
-- Surge state lost on app restart
-- No security event logging for auth/SOS/payments
-- Missing input validation on nearby-drivers coordinates
-- Missing Guid.Empty validation on domain entities
+## EC2 Instance Configuration
+
+### Host
+- **IP**: `16.16.120.192`
+- **SSH user**: `ubuntu`
+- **SSH key**: `s1bucket.pem` (stored locally, not in repo)
+- **OS**: Ubuntu 24.04 (AWS t-series EC2)
+- **Domain**: `pyconnect.run.place` (Let's Encrypt TLS via Certbot)
+
+### Nginx (reverse proxy + static serving)
+- **Config**: `/etc/nginx/sites-enabled/pondyconnect` (symlinked from sites-available)
+- **WebSocket map**: `/etc/nginx/conf.d/websocket.conf` (defines `$connection_upgrade`)
+- **TLS**: Certbot-managed (`/etc/letsencrypt/live/pyconnect.run.place/`)
+- **HTTP→HTTPS**: Automatic 301 redirect on port 80
+
+### Route mapping
+| Path | Serves |
+|------|--------|
+| `/` | Admin Flutter web app (`/var/www/admin/`) |
+| `/partner/` | Partner Flutter web app (`/var/www/partner/`) |
+| `/api/` | Backend proxy → `localhost:5000` |
+| `/hubs/` | SignalR WebSocket proxy → `localhost:5000` |
+| `/health` | Backend health check |
+| `/admin` | 301 redirect → `/` |
+| `/vendor` | 301 redirect → `/partner/` |
+| `/privacy-policy` | Static HTML (`/var/www/static/privacy-policy.html`) |
+
+### Backend (Docker)
+- **Container**: `pondyconnect_api` (image: `balabm/pondyconnect-api:latest`)
+- **Port mapping**: `5000 → 8080` (host → container)
+- **Database**: PostgreSQL on AWS RDS (`pyconnect.ch2i68eyk0ii.eu-north-1.rds.amazonaws.com`)
+- **Cache**: Redis container (`pondyconnect-redis`, `redis:7-alpine`)
+- **SMS**: Console provider (mock mode)
+- **Storage**: Mock mode (no S3/real blob storage)
+- **Payments**: Razorpay test keys configured
+- **Health**: `GET /health` returns Healthy (database, signalr, redis checks)
+
+### Web app directories on EC2
+- `/var/www/admin/` — Admin Flutter web build (base href `/`)
+- `/var/www/partner/` — Partner Flutter web build (base href `/partner/`)
+- `/var/www/static/` — Static pages (privacy policy)
+
+### Deploy web apps manually
+```bash
+# Build admin locally
+cd mobile
+flutter build web --target lib/main_admin.dart --dart-define=API_BASE_URL=https://pyconnect.run.place --dart-define=APP_FLAVOR=admin --release
+
+# Deploy admin
+ssh -i s1bucket.pem ubuntu@16.16.120.192 "sudo rm -rf /var/www/admin/* && mkdir -p /tmp/admin-web"
+scp -i s1bucket.pem -r mobile/build/web/* ubuntu@16.16.120.192:/tmp/admin-web/
+ssh -i s1bucket.pem ubuntu@16.16.120.192 "sudo cp -r /tmp/admin-web/* /var/www/admin/ && sudo chown -R www-data:www-data /var/www/admin/ && sudo chmod -R a+rX /var/www/admin/ && rm -rf /tmp/admin-web"
+
+# Build partner (overwrites build/web)
+flutter build web --target lib/main_partner.dart --dart-define=API_BASE_URL=https://pyconnect.run.place --dart-define=APP_FLAVOR=partner --release --base-href /partner/
+
+# Deploy partner
+ssh -i s1bucket.pem ubuntu@16.16.120.192 "sudo rm -rf /var/www/partner/* && mkdir -p /tmp/partner-web"
+scp -i s1bucket.pem -r mobile/build/web/* ubuntu@16.16.120.192:/tmp/partner-web/
+ssh -i s1bucket.pem ubuntu@16.16.120.192 "sudo cp -r /tmp/partner-web/* /var/www/partner/ && sudo chown -R www-data:www-data /var/www/partner/ && sudo chmod -R a+rX /var/www/partner/ && rm -rf /tmp/partner-web && sudo systemctl reload nginx"
+```
+
+### Known EC2 config issues
+- **CORS origins**: Backend Docker env has `http://16.16.120.192` and `http://localhost:*` — should include `https://pyconnect.run.place` for web app auth to work correctly.
+- **JWT issuer/audience**: Set to `http://16.16.120.192` — should be `https://pyconnect.run.place` for production token validation.
+- These require recreating the Docker container with updated env vars.
 
 ## QA Status (Local)
 - **Backend build**: 0 errors, 0 warnings
 - **Architecture tests**: 288/288 pass
-- **API tests**: 84 pass, 76 fail (all due to 429 rate limiting from deployed backend)
-- **Flutter analyze**: 0 errors (30 info/warnings — pre-existing, non-blocking)
-- **Total fixes applied**: 100+ backend security + 330+ UI fixes across 4 QA rounds
-- **Release APKs**: 3 built (Consumer, Driver, Partner — 76.4 MB each)
+- **Flutter analyze**: 0 errors (28 info/warnings — pre-existing, non-blocking)
+- **Release APKs**: 3 built (Consumer, Driver, Partner — 76.5 MB each)
 - **Web apps**: Admin + Partner deployed & verified on EC2
-
-## Pre-Launch Audit Fixes (Round 4)
-- OTP peek endpoint now explicitly blocked in production via `IHostEnvironment.IsDevelopment()` check
-- HSTS enabled in production (`app.UseHsts()`)
-- Forwarded headers middleware added (`X-Forwarded-For`, `X-Forwarded-Proto`) for Nginx reverse proxy
-- CORS localhost entries removed from `docker-compose.prod.yml`
-- `AllowedHosts` restricted from `*` to `pyconnect.run.place;localhost`
-- Mobile API base URL now defaults to `https://pyconnect.run.place` in release builds
-- Mobile `usesCleartextTraffic` set to `false` (HTTPS only)
-- Mobile `.env` removed from pubspec assets (no longer bundled in APK)
-- Mobile `.gitignore` updated to exclude `.env` files
-- Nginx config added to repo at `deploy/nginx.conf` with WebSocket forwarding, security headers, and rate limiting
-
-## UI Remediation (Round 5)
-- Added semantic colors to AppTheme: `success` (#22C55E), `danger` (#EF4444), `warning` (#F59E0B), `info` (#3B82F6)
-- Added dark theme constants: `darkBackground` (#0F172A), `darkSurface` (#1E293B)
-- 330+ UI fixes across 67+ files (Consumer 28, Driver 6, Partner 18, Admin 15)
-- Eliminated all hardcoded `Colors.grey` (was 329+ instances, now 0)
-- Replaced `Colors.red/green/amber/blue` with `AppTheme.danger/success/warning/info`
-- Fixed invisible text (dark-on-dark) in admin pagination, partner menu, partner promotions
-- Fixed admin SOS phone button (was no-op, now launches `tel:` URI)
-- All SnackBars now have `backgroundColor`
-- All loading indicators now have visible theme colors
-
-## 3-App Consolidation (Round 5)
-- Removed redundant `vendor` Android flavor (was duplicate of `partner`)
-- Deleted `main_vendor.dart` (identical to `main_partner.dart`)
-- Partner app adapts to vendor category (7 categories with category-specific screens)
-- Web deployment path changed from `/var/www/vendor/` to `/var/www/partner/`
-
-## Git & CI/CD Setup (Round 5)
-- Git repository initialized, 618 files committed to https://github.com/balabm/PyConnect.git
-- Zero secrets tracked (verified: no .env, .pem, .jks, key.properties, google-services.json)
-- 5 CI/CD workflows created (ci-backend, ci-mobile, deploy-backend, deploy-web, deploy-mobile)
-- 12 GitHub secrets configured
-- Web apps deployed to EC2 via SSH/SCP, verified at https://pyconnect.run.place/
 
 ## Testing Notes
 - Integration tests (`PondyConnect.Api.Tests`) hit the deployed backend and may fail with 429 (rate limiting).
 - Architecture tests (`PondyConnect.Architecture.Tests`) are self-contained and should always pass (288 tests).
-- OTP can be peeked via `GET /api/auth/otp/peek?phone=...` (dev only).
+- OTP can be peeked via `GET /api/auth/otp/peek?phone=...` (dev only, blocked in production).

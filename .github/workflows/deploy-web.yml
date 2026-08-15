@@ -50,6 +50,14 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      # --- Admin: build, then immediately deploy before partner overwrites build/web ---
       - name: Build Admin web app
         working-directory: mobile
         run: |
@@ -59,6 +67,16 @@ jobs:
             --dart-define=APP_FLAVOR=admin \
             --release
 
+      - name: Deploy Admin web app
+        run: |
+          ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "sudo rm -rf /var/www/admin/* && mkdir -p /tmp/admin-web"
+          scp -i ~/.ssh/ec2_key -r mobile/build/web/* \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/admin-web/
+          ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "sudo cp -r /tmp/admin-web/* /var/www/admin/ && sudo chown -R www-data:www-data /var/www/admin/ && sudo chmod -R a+rX /var/www/admin/ && rm -rf /tmp/admin-web"
+
+      # --- Partner: build (overwrites build/web), then deploy ---
       - name: Build Partner web app
         working-directory: mobile
         run: |
@@ -68,22 +86,6 @@ jobs:
             --dart-define=APP_FLAVOR=partner \
             --release \
             --base-href /partner/
-
-      - name: Prepare SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
-          chmod 600 ~/.ssh/ec2_key
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy Admin web app
-        run: |
-          ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
-            "sudo rm -rf /var/www/admin/* && mkdir -p /tmp/admin-web"
-          scp -i ~/.ssh/ec2_key -r mobile/build/web/* \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/admin-web/
-          ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
-            "sudo cp -r /tmp/admin-web/* /var/www/admin/ && sudo chown -R www-data:www-data /var/www/admin/ && sudo chmod -R a+rX /var/www/admin/ && rm -rf /tmp/admin-web"
 
       - name: Deploy Partner web app
         run: |
