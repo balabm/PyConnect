@@ -336,7 +336,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       Navigator.of(context, rootNavigator: true).pop();
 
       switch (paymentResult) {
-        case PaymentSuccess():
+        case PaymentSuccess(:final paymentId, :final orderId, :final signature):
+          // Verify payment signature on backend before confirming.
+          await paymentService.verifyPayment(
+            razorpayPaymentId: paymentId,
+            razorpayOrderId: orderId,
+            razorpaySignature: signature,
+          );
           if (mounted) {
             setState(() => _bookingResult = booking);
           }

@@ -115,6 +115,28 @@ class RazorpayPaymentService {
     );
   }
 
+  /// Verifies a Razorpay payment on the backend by sending the
+  /// `razorpay_payment_id`, `razorpay_order_id`, and `razorpay_signature`
+  /// to `POST /api/payments/verify`. The backend validates the HMAC SHA256
+  /// signature before transitioning the order to `Paid`.
+  Future<bool> verifyPayment({
+    required String razorpayPaymentId,
+    required String razorpayOrderId,
+    String? razorpaySignature,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'razorpayPaymentId': razorpayPaymentId,
+        'razorpayOrderId': razorpayOrderId,
+        if (razorpaySignature != null) 'razorpaySignature': razorpaySignature,
+      };
+      await _api.post('/api/payments/verify', data: body);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Starts a payment flow for the given [orderId] and [amount].
   ///
   /// When `USE_MOCK_PAYMENTS=true`, instantly simulates a successful payment

@@ -4,7 +4,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using PondyConnect.Api.Hubs;
+using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Admin;
 using PondyConnect.Domain.Enums;
 
@@ -15,11 +17,13 @@ public sealed class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IHubContext<AdminHub> _hubContext;
+    private readonly IApplicationDbContext _dbContext;
 
-    public AdminController(IMediator mediator, IHubContext<AdminHub> hubContext)
+    public AdminController(IMediator mediator, IHubContext<AdminHub> hubContext, IApplicationDbContext dbContext)
     {
         _mediator = mediator;
         _hubContext = hubContext;
+        _dbContext = dbContext;
     }
 
     [HttpPost("venues/{venueId:guid}/force-soldout")]
@@ -311,6 +315,37 @@ public sealed class AdminController : ControllerBase
     {
         var result = await _mediator.Send(new GetActiveRidesQuery(), ct);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Returns in-flight food/essentials deliveries (Assigned or InProgress)
+    /// with the assigned driver's last known location for the admin live ops map.
+    /// </summary>
+    [HttpGet("active-deliveries")]
+    [ProducesResponseType(typeof(IReadOnlyList<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<object>>> GetActiveDeliveries(CancellationToken ct)
+    {
+        var deliveries = await (
+            from t in _dbContext.DispatchTasks.AsNoTracking()
+            where t.TaskType == DispatchTaskType.FoodDelivery
+                && (t.Status == DispatchTaskStatus.Assigned || t.Status == DispatchTaskStatus.InProgress)
+            join d in _dbContext.Drivers.AsNoTracking() on t.DriverId equals d.Id into dJoin
+            from d in dJoin.DefaultIfEmpty()
+            select new
+            {
+                t.Id,
+                TaskType = t.TaskType.ToString(),
+                Status = t.Status.ToString(),
+                t.PickupAddress,
+                t.DropoffAddress,
+                DriverName = d != null ? d.Name : null,
+                Latitude = d != null ? d.CurrentLocation.Latitude : (double?)null,
+                Longitude = d != null ? d.CurrentLocation.Longitude : (double?)null,
+            }).ToListAsync(ct);
+
+        return Ok(deliveries);
     }
 
     // === Phase 2: Support Tickets ===

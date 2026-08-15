@@ -121,6 +121,21 @@ final adminActiveRidesProvider =
   }
 });
 
+// === Active Food Deliveries (for admin live ops map) ===
+
+final adminActiveDeliveriesProvider =
+    StreamProvider<List<Map<String, dynamic>>>((ref) async* {
+  final api = ref.watch(adminApiProvider);
+  while (true) {
+    try {
+      yield await api.getActiveDeliveries();
+    } catch (_) {
+      yield <Map<String, dynamic>>[];
+    }
+    await Future.delayed(const Duration(seconds: 10));
+  }
+});
+
 // === SOS Alerts (real API, refreshed every 10s) ===
 
 final adminSosAlertsProvider =

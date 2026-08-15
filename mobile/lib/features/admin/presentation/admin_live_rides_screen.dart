@@ -56,7 +56,9 @@ class _AdminLiveRidesScreenState extends ConsumerState<AdminLiveRidesScreen> {
             );
           }
           if (_showMap) {
-            return _LiveOpsMap(rides: rides);
+            final deliveriesAsync = ref.watch(adminActiveDeliveriesProvider);
+            final deliveries = deliveriesAsync.valueOrNull ?? [];
+            return _LiveOpsMap(rides: rides, deliveries: deliveries);
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -74,9 +76,10 @@ class _AdminLiveRidesScreenState extends ConsumerState<AdminLiveRidesScreen> {
 
 /// Global map showing all active rides, online drivers, and food deliveries.
 class _LiveOpsMap extends StatelessWidget {
-  const _LiveOpsMap({required this.rides});
+  const _LiveOpsMap({required this.rides, this.deliveries = const []});
 
   final List<AdminActiveRide> rides;
+  final List<Map<String, dynamic>> deliveries;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +99,19 @@ class _LiveOpsMap extends StatelessWidget {
           width: 40,
           height: 40,
           child: const Icon(Icons.location_on, color: AdminColors.danger, size: 28),
+        ));
+      }
+    }
+    // Add food delivery markers (orange shopping bag icon at driver location).
+    for (final del in deliveries) {
+      final lat = (del['latitude'] as num?)?.toDouble();
+      final lng = (del['longitude'] as num?)?.toDouble();
+      if (lat != null && lng != null) {
+        markers.add(Marker(
+          point: LatLng(lat, lng),
+          width: 40,
+          height: 40,
+          child: const Icon(Icons.shopping_bag_rounded, color: Colors.orange, size: 28),
         ));
       }
     }

@@ -148,6 +148,13 @@ class AdminApi {
         .toList();
   }
 
+  /// Fetches in-flight food deliveries with driver location for the admin map.
+  Future<List<Map<String, dynamic>>> getActiveDeliveries() async {
+    final result = await _api.get('/api/admin/active-deliveries');
+    final list = result as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
   // === Support Tickets ===
 
   Future<AdminPagedResult<AdminSupportTicket>> getSupportTickets({

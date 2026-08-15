@@ -195,7 +195,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
             const SizedBox(width: 8),
             Expanded(child: _buildColumn('Preparing', preparing, AppTheme.emerald)),
             const SizedBox(width: 8),
-            Expanded(child: _buildColumn('Ready', ready, AppTheme.success)),
+            Expanded(child: _buildColumn('Ready / Dispatched', ready, AppTheme.success)),
           ],
         ),
       ),

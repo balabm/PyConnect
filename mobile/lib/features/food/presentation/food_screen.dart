@@ -46,7 +46,16 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     });
   }
 
-  static const _categories = ['Pizza', 'Pasta', 'Burger', 'Dessert', 'Drink'];
+  /// Extracts unique categories from the menu items dynamically.
+  List<String> _extractCategories(List<dynamic> items) {
+    final cats = <String>{};
+    for (final item in items) {
+      final map = item as Map<String, dynamic>;
+      final cat = map['category'] as String?;
+      if (cat != null && cat.isNotEmpty) cats.add(cat);
+    }
+    return cats.toList()..sort();
+  }
 
   List<dynamic> _filterItems(List<dynamic> items) {
     if (_searchQuery.isEmpty && _categoryFilter == null) return items;
@@ -109,19 +118,26 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
             delay: const Duration(milliseconds: 80),
             child: SizedBox(
               height: 42,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _buildPill('All', _categoryFilter == null, () {
-                    AppHaptics.selection();
-                    setState(() => _categoryFilter = null);
-                  }),
-                  ..._categories.map((cat) => _buildPill(cat, _categoryFilter == cat, () {
+              child: menuAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (items) {
+                  final categories = _extractCategories(items);
+                  return ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      _buildPill('All', _categoryFilter == null, () {
                         AppHaptics.selection();
-                        setState(() => _categoryFilter = cat);
-                      })),
-                ],
+                        setState(() => _categoryFilter = null);
+                      }),
+                      ...categories.map((cat) => _buildPill(cat, _categoryFilter == cat, () {
+                            AppHaptics.selection();
+                            setState(() => _categoryFilter = cat);
+                          })),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -417,7 +433,13 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       Navigator.of(context, rootNavigator: true).pop(); // dismiss overlay
 
       switch (paymentResult) {
-        case PaymentSuccess():
+        case PaymentSuccess(:final paymentId, :final orderId, :final signature):
+          // Verify payment signature on backend before confirming.
+          await paymentService.verifyPayment(
+            razorpayPaymentId: paymentId,
+            razorpayOrderId: orderId,
+            razorpaySignature: signature,
+          );
           if (mounted) {
             showModalBottomSheet(
               context: context,

@@ -169,6 +169,36 @@ class _TasksTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef widgetRef) {
+    // When offline, hide all task cards and show an offline message.
+    if (!isOnline) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.offline_bolt, size: 64, color: AppTheme.slate.withValues(alpha: 0.5)),
+              const SizedBox(height: 16),
+              Text(
+                'You are offline',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.slate,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Go online to receive ride and delivery offers',
+                style: TextStyle(color: AppTheme.slate.withValues(alpha: 0.7)),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final tasksAsync = widgetRef.watch(dispatchTaskStreamProvider);
 
     return tasksAsync.when(
