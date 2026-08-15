@@ -78,9 +78,9 @@ class _StatusTimeline extends StatelessWidget {
       return AppCard(
         child: Row(
           children: [
-            const Icon(Icons.cancel, color: AppTheme.coral),
+            const Icon(Icons.cancel, color: AppTheme.danger),
             const SizedBox(width: 12),
-            const Text('Order Cancelled', style: TextStyle(color: AppTheme.coral, fontWeight: FontWeight.bold)),
+            const Text('Order Cancelled', style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
           ],
         ),
       );

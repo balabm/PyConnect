@@ -761,7 +761,7 @@ class _LuggageBookingCard extends StatelessWidget {
                     onPressed: onCancel,
                     icon: const Icon(Icons.cancel_outlined, size: 16),
                     label: const Text('Cancel'),
-                    style: TextButton.styleFrom(foregroundColor: AppTheme.coral),
+                    style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
                   ),
               ],
             ),

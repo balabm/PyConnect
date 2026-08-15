@@ -236,7 +236,7 @@ class _ActivityCard extends StatelessWidget {
     };
 
     final iconColor = switch (item.type) {
-      _ActivityType.food => AppTheme.coral,
+      _ActivityType.food => AppTheme.emerald,
       _ActivityType.ride => AppTheme.emerald,
     };
 

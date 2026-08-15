@@ -129,14 +129,14 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade50,
+                          color: AppTheme.success.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green.shade200),
+                          border: Border.all(color: AppTheme.success.withValues(alpha: 0.2)),
                         ),
                         child: const Text(
                           '0% Booking Fee — You pay what the host charges',
                           style: TextStyle(
-                            color: Colors.green,
+                            color: AppTheme.success,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -288,10 +288,10 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: Colors.green.shade100,
+                  color: AppTheme.success.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle, size: 40, color: Colors.green),
+                child: const Icon(Icons.check_circle, size: 40, color: AppTheme.success),
               ),
             ),
             const SizedBox(height: 16),
@@ -368,12 +368,12 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                         Icon(
                           a.isFree ? Icons.card_giftcard : Icons.add_circle,
                           size: 16,
-                          color: a.isFree ? Colors.green : Colors.orange,
+                          color: a.isFree ? AppTheme.success : AppTheme.emerald,
                         ),
                         const SizedBox(width: 8),
                         Expanded(child: Text(a.name, style: const TextStyle(fontSize: 13))),
                         if (a.isFree)
-                          const Text('Free', style: TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.w600))
+                          const Text('Free', style: TextStyle(fontSize: 12, color: AppTheme.success, fontWeight: FontWeight.w600))
                         else
                           Text('\u20B9${a.price.toInt()}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                       ],
@@ -416,19 +416,19 @@ class _CompleteTripCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.orange.shade50,
-            Colors.amber.shade50,
+            AppTheme.emerald.withValues(alpha: 0.06),
+            Colors.white,
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.shade200),
+        border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.luggage, size: 24, color: Colors.orange),
+              const Icon(Icons.luggage, size: 24, color: AppTheme.emerald),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
@@ -436,14 +436,14 @@ class _CompleteTripCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.orange,
+                    color: AppTheme.emerald,
                   ),
                 ),
               ),
               Switch(
                 value: addOnEnabled,
                 onChanged: onToggle,
-                activeThumbColor: Colors.orange,
+                activeThumbColor: AppTheme.emerald,
               ),
             ],
           ),
@@ -462,7 +462,7 @@ class _CompleteTripCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               color: addOnEnabled
-                  ? Colors.green
+                  ? AppTheme.success
                   : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
