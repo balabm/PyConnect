@@ -158,6 +158,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                               price: (item['price'] as num).toDouble(),
                               category: item['category'] as String?,
                               isLateNight: item['isLateNight'] as bool? ?? false,
+                              imageUrl: item['imageUrl'] as String?,
                               quantity: qty,
                               onAdd: () {
                                 AppHaptics.light();
@@ -458,6 +459,7 @@ class _MenuItemTile extends StatelessWidget {
     required this.quantity,
     required this.onAdd,
     required this.onRemove,
+    this.imageUrl,
   });
 
   final String name;
@@ -468,6 +470,7 @@ class _MenuItemTile extends StatelessWidget {
   final int quantity;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -522,6 +525,31 @@ class _MenuItemTile extends StatelessWidget {
                   ],
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Item thumbnail (64x64, 1:1 aspect ratio)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child: imageUrl != null && imageUrl!.isNotEmpty
+                  ? AppNetworkImage(
+                      imageUrl: imageUrl!,
+                      fit: BoxFit.cover,
+                      width: 64,
+                      height: 64,
+                      fallbackIcon: Icons.restaurant_outlined,
+                    )
+                  : Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.restaurant_outlined,
+                        size: 28,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 12),

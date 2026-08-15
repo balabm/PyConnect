@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/presentation/waiver_sheet.dart';
 import '../../vendor/data/vendor_api.dart';
 import '../application/transit_controller.dart';
 import '../data/luggage_api.dart';
@@ -1244,6 +1246,13 @@ class _RentalBookingSheetState extends ConsumerState<_RentalBookingSheet> {
         ratePerHour: _rate,
       );
       if (mounted) Navigator.of(context).pop(true);
+    } on WaiverRequiredException {
+      if (mounted) {
+        final accepted = await WaiverSheet.show(context);
+        if (accepted == true && mounted) {
+          _submit(); // Retry after waiver acceptance
+        }
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {

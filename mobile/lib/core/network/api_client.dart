@@ -87,10 +87,14 @@ class ApiClient {
           }
           throw AuthRequiredException();
         }
-        // 403 — authenticated but lacking the required role.
-        // Surface a user-friendly "permission denied" message.
+        // 403 — authenticated but lacking the required role or waiver.
         if (e.response?.statusCode == 403) {
           final data = e.response?.data;
+          // Detect the liability waiver requirement from the backend's
+          // RequireWaiverAttribute filter response.
+          if (data is Map && data['error'] == 'Liability_Waiver_Required') {
+            throw WaiverRequiredException();
+          }
           String msg = 'You do not have permission to perform this action.';
           if (data is Map && data['message'] is String) {
             msg = data['message'] as String;
@@ -187,4 +191,11 @@ class ApiException implements Exception {
 class AuthRequiredException implements Exception {
   @override
   String toString() => 'Authentication required';
+}
+
+/// Thrown when the backend returns 403 with `Liability_Waiver_Required`.
+/// The UI should catch this and show the waiver acceptance sheet.
+class WaiverRequiredException implements Exception {
+  @override
+  String toString() => 'Liability waiver required';
 }

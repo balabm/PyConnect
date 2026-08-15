@@ -27,6 +27,11 @@ class AuthApi {
     return AuthResult.fromJson(body as Map<String, dynamic>);
   }
 
+  /// Accepts the liability waiver. Required before booking rides or rentals.
+  Future<void> acceptWaiver() async {
+    await _api.post('/api/auth/waiver/accept');
+  }
+
   /// Sends a Google idToken to the backend and returns a PY Connect JWT.
   /// [phone] is optional; the backend will ask for it if this is a new account.
   Future<SocialAuthResult> signInWithGoogle(

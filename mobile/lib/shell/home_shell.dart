@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/activity/presentation/activity_hub_screen.dart';
 import '../features/food/presentation/restaurant_list_screen.dart';
 import '../features/hub/services_hub_screen.dart';
 import '../features/rides/presentation/rides_screen.dart';
@@ -39,6 +40,8 @@ class _Hub extends ConsumerWidget {
               context.go('/rides');
             case 3:
               context.go('/stays');
+            case 4:
+              context.go('/activity');
             default:
               context.go('/hub');
           }
@@ -65,6 +68,11 @@ class _Hub extends ConsumerWidget {
             label: 'Stays',
           ),
           NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'Activity',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.grid_view_outlined),
             selectedIcon: Icon(Icons.grid_view),
             label: 'More',
@@ -78,7 +86,8 @@ class _Hub extends ConsumerWidget {
     if (path.startsWith('/food')) return 1;
     if (path.startsWith('/rides')) return 2;
     if (path.startsWith('/stays')) return 3;
-    if (path.startsWith('/hub')) return 4;
+    if (path.startsWith('/activity')) return 4;
+    if (path.startsWith('/hub')) return 5;
     return 0;
   }
 
@@ -90,6 +99,7 @@ class _Hub extends ConsumerWidget {
         RestaurantListScreen(),
         RideHailingScreen(),
         StaysScreen(),
+        ActivityHubScreen(),
         ServicesHubScreen(),
       ],
     );

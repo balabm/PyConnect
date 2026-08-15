@@ -69,73 +69,90 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     final vibe = Vibe.fromOccupancy(venue.occupancy);
     final occupancyPct = venue.occupancy.clamp(0, 100).toInt();
 
+    // Use curated fallback image when no venue image is available.
+    final heroImageUrl = (venue.imageUrl != null && venue.imageUrl!.isNotEmpty)
+        ? venue.imageUrl!
+        : _fallbackImageFor(venue.category);
+
     return Scaffold(
-      appBar: AppBar(title: Text(venue.name)),
       body: RefreshIndicator(
         onRefresh: _refreshVenue,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // Hero image
-            if (venue.imageUrl != null)
-              SizedBox(
-                height: 200,
-                width: double.infinity,
-                child: Stack(
+        child: CustomScrollView(
+          slivers: [
+            // Hero image in SliverAppBar — shrinks on scroll
+            SliverAppBar(
+              expandedHeight: 220,
+              pinned: true,
+              flexibleSpace: FlexibleSpaceBar(
+                title: Text(
+                  venue.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                  ),
+                ),
+                background: Stack(
                   fit: StackFit.expand,
                   children: [
                     AppNetworkImage(
-                      imageUrl: venue.imageUrl!,
+                      imageUrl: heroImageUrl,
                       fit: BoxFit.cover,
-                      fallbackIcon: Icons.image_not_supported,
-                      fallbackColor: AppTheme.lagoon.withValues(alpha: 0.2),
+                      fallbackIcon: Icons.local_bar_outlined,
                     ),
+                    // Gradient overlay for title readability
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
+                            Colors.black.withValues(alpha: 0.3),
                             Colors.transparent,
                             Colors.black.withValues(alpha: 0.5),
                           ],
+                          stops: const [0, 0.5, 1],
                         ),
                       ),
                     ),
-                    Positioned(
-                      bottom: 12,
-                      left: 16,
-                      right: 16,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              venue.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
-                              ),
-                            ),
+                    // Priority Ping badge
+                    if (venue.isPriorityPingActive)
+                      Positioned(
+                        top: MediaQuery.of(context).padding.top + 8,
+                        right: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppTheme.lagoon.withValues(alpha: 0.95),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          if (venue.isPriorityPingActive)
-                            const StatusBadge(
-                              label: 'Priority Ping',
-                              variant: BadgeVariant.warning,
-                              icon: Icons.bolt,
-                            ),
-                        ],
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.star, size: 12, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                'Priority',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
-            Padding(
+            ),
+            // Detail content
+            SliverPadding(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
                   // Rating + vibe row
                   FadeSlideIn(
                     delay: const Duration(milliseconds: 100),
@@ -263,13 +280,31 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                       ),
                     ),
                   ),
-                ],
+                  const SizedBox(height: 20),
+                ]),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Curated Pondicherry fallback images by category.
+  static const _fallbackImages = {
+    'nightlife': 'https://images.unsplash.com/photo-1572116469696-31def3a40c2c?w=800',
+    'bar': 'https://images.unsplash.com/photo-1572116469696-31def3a40c2c?w=800',
+    'pub': 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800',
+    'club': 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800',
+    'cafe': 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800',
+    'restaurant': 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
+    'lounge': 'https://images.unsplash.com/photo-1580587774553-5e7e8a4f5d1c?w=800',
+  };
+
+  String _fallbackImageFor(String category) {
+    final catLower = category.toLowerCase();
+    return _fallbackImages[catLower] ??
+        'https://images.unsplash.com/photo-1600598546430-3a1e4a9e2c8e?w=800';
   }
 
   Future<void> _fetchVenueFromApi() async {

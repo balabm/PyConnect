@@ -17,6 +17,7 @@ import '../features/food/presentation/food_order_history_screen.dart';
 import '../features/food/presentation/food_screen.dart';
 import '../features/food/presentation/restaurant_list_screen.dart';
 import '../features/hub/services_hub_screen.dart';
+import '../features/activity/presentation/activity_hub_screen.dart';
 import '../features/notifications/application/notification_providers.dart';
 import '../features/rides/presentation/ride_history_screen.dart';
 import '../features/rides/presentation/ride_rating_screen.dart';
@@ -233,6 +234,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'hub',
             builder: (_, _) => const ServicesHubScreen(),
+          ),
+          GoRoute(
+            path: 'activity',
+            builder: (_, _) => const ActivityHubScreen(),
           ),
         ],
       ),

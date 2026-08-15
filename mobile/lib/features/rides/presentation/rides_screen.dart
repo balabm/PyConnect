@@ -9,6 +9,7 @@ import '../../../core/network/osrm_routing_service.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
+import '../../auth/presentation/waiver_sheet.dart';
 import 'widgets/map_selection_mode_indicator.dart';
 import 'widgets/nearby_drivers_section.dart';
 import 'widgets/payment_method_selector.dart';
@@ -199,11 +200,11 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
             ),
           ),
 
-          // Floating selection mode indicator
+          // Floating selection mode indicator — positioned below AppBar
           Positioned(
-            top: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
-            left: 12,
-            right: 12,
+            top: MediaQuery.of(context).padding.top + kToolbarHeight + 16,
+            left: 16,
+            right: 16,
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.0, end: 1.0),
               duration: const Duration(milliseconds: 300),
@@ -252,7 +253,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
             builder: (context, scrollController) {
               return Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                  color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.96),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(AppRadius.xl),
                     topRight: Radius.circular(AppRadius.xl),
@@ -609,6 +610,13 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
     } on AuthRequiredException {
       if (mounted) {
         setState(() => _inlineError = 'Please sign in to book a ride.');
+      }
+    } on WaiverRequiredException {
+      if (mounted) {
+        final accepted = await WaiverSheet.show(context);
+        if (accepted == true && mounted) {
+          _requestRide(); // Retry after waiver acceptance
+        }
       }
     } catch (e) {
       if (mounted) {
