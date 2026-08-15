@@ -18,6 +18,16 @@ final _rideHistoryProvider = FutureProvider.autoDispose<List<dynamic>>((ref) asy
   return await api.listRides();
 });
 
+/// Stub: my-stays bookings endpoint is not yet available.
+final _staysBookingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  return [];
+});
+
+/// Stub: my-rentals endpoint is not yet available.
+final _rentalsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  return [];
+});
+
 /// A unified activity feed aggregating food orders, ride history, and
 /// venue bookings into a single chronological list.
 class ActivityHubScreen extends ConsumerStatefulWidget {
@@ -28,28 +38,37 @@ class ActivityHubScreen extends ConsumerStatefulWidget {
 }
 
 class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
-  String _filter = 'All'; // All, Active, Completed
+  String _filter = 'All'; // All, Stays, Food, Rides, Rentals
 
   @override
   Widget build(BuildContext context) {
     final foodAsync = ref.watch(_foodOrdersProvider);
     final rideAsync = ref.watch(_rideHistoryProvider);
+    final staysAsync = ref.watch(_staysBookingsProvider);
+    final rentalsAsync = ref.watch(_rentalsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Your Activity')),
       body: Column(
         children: [
-          // Filter chips
+          // Category filter chips
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Row(
-              children: [
-                _buildFilterChip('All'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Active'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Completed'),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('All'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Stays'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Food'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Rides'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Rentals'),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -59,8 +78,10 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
               onRefresh: () async {
                 ref.invalidate(_foodOrdersProvider);
                 ref.invalidate(_rideHistoryProvider);
+                ref.invalidate(_staysBookingsProvider);
+                ref.invalidate(_rentalsProvider);
               },
-              child: _buildBody(context, foodAsync, rideAsync),
+              child: _buildBody(context, foodAsync, rideAsync, staysAsync, rentalsAsync),
             ),
           ),
         ],
@@ -98,22 +119,34 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
     BuildContext context,
     AsyncValue<List<dynamic>> foodAsync,
     AsyncValue<List<dynamic>> rideAsync,
+    AsyncValue<List<dynamic>> staysAsync,
+    AsyncValue<List<dynamic>> rentalsAsync,
   ) {
     // Loading state
-    if (foodAsync.isLoading || rideAsync.isLoading) {
+    if (foodAsync.isLoading || rideAsync.isLoading || staysAsync.isLoading || rentalsAsync.isLoading) {
       return const ShimmerList(count: 6, withImage: false);
     }
 
     // Error state
-    final foodError = foodAsync.hasError;
-    final rideError = rideAsync.hasError;
-    if (foodError && rideError) {
+    final allError = foodAsync.hasError && rideAsync.hasError && staysAsync.hasError && rentalsAsync.hasError;
+    if (allError) {
       return ErrorState(
         message: 'Could not load activity. Please try again.',
         onRetry: () {
           ref.invalidate(_foodOrdersProvider);
           ref.invalidate(_rideHistoryProvider);
+          ref.invalidate(_staysBookingsProvider);
+          ref.invalidate(_rentalsProvider);
         },
+      );
+    }
+
+    // Stays and rentals tabs are stubs pending backend booking endpoints.
+    if (_filter == 'Stays' || _filter == 'Rentals') {
+      return EmptyState(
+        icon: _filter == 'Stays' ? Icons.bed_outlined : Icons.key_outlined,
+        title: 'No ${_filter.toLowerCase()} yet',
+        subtitle: '$_filter booking history will appear here once the backend endpoint is wired.',
       );
     }
 
@@ -121,56 +154,54 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
     final items = <_ActivityItem>[];
 
     final foodOrders = foodAsync.valueOrNull ?? [];
-    for (final order in foodOrders) {
-      final map = order as Map<String, dynamic>;
-      final status = (map['status'] as String?) ?? '';
-      final statusLower = status.toLowerCase();
-      final isActive = statusLower == 'pending' ||
-          statusLower == 'confirmed' ||
-          statusLower == 'preparing' ||
-          statusLower == 'ready' ||
-          statusLower == 'outfordelivery' ||
-          statusLower == 'out_for_delivery';
-      final isCompleted = statusLower == 'delivered' || statusLower == 'completed';
-      if (_filter == 'Active' && !isActive) continue;
-      if (_filter == 'Completed' && !isCompleted) continue;
+    if (_filter == 'All' || _filter == 'Food') {
+      for (final order in foodOrders) {
+        final map = order as Map<String, dynamic>;
+        final status = (map['status'] as String?) ?? '';
+        final statusLower = status.toLowerCase();
+        final isActive = statusLower == 'pending' ||
+            statusLower == 'confirmed' ||
+            statusLower == 'preparing' ||
+            statusLower == 'ready' ||
+            statusLower == 'outfordelivery' ||
+            statusLower == 'out_for_delivery';
 
-      items.add(_ActivityItem(
-        type: _ActivityType.food,
-        title: (map['vendorName'] as String?) ?? 'Food Order',
-        subtitle: ((map['items'] as List?)?.length ?? 0).toString(),
-        status: status,
-        amount: (map['totalAmount'] as num?)?.toDouble(),
-        id: (map['id'] as String?) ?? '',
-        isActive: isActive,
-        onTap: () => context.push('/food/orders/${map['id']}'),
-      ));
+        items.add(_ActivityItem(
+          type: _ActivityType.food,
+          title: (map['vendorName'] as String?) ?? 'Food Order',
+          subtitle: '${(map['items'] as List?)?.length ?? 0} items',
+          status: status,
+          amount: (map['totalAmount'] as num?)?.toDouble(),
+          id: (map['id'] as String?) ?? '',
+          isActive: isActive,
+          onTap: () => context.push('/food/orders/${map['id']}'),
+        ));
+      }
     }
 
     final rides = rideAsync.valueOrNull ?? [];
-    for (final ride in rides) {
-      final map = ride as Map<String, dynamic>;
-      final status = (map['status'] as String?) ?? '';
-      final statusLower = status.toLowerCase();
-      final isActive = statusLower == 'requested' ||
-          statusLower == 'accepted' ||
-          statusLower == 'arrivedatpickup' ||
-          statusLower == 'inprogress' ||
-          statusLower == 'in_progress';
-      final isCompleted = statusLower == 'completed';
-      if (_filter == 'Active' && !isActive) continue;
-      if (_filter == 'Completed' && !isCompleted) continue;
+    if (_filter == 'All' || _filter == 'Rides') {
+      for (final ride in rides) {
+        final map = ride as Map<String, dynamic>;
+        final status = (map['status'] as String?) ?? '';
+        final statusLower = status.toLowerCase();
+        final isActive = statusLower == 'requested' ||
+            statusLower == 'accepted' ||
+            statusLower == 'arrivedatpickup' ||
+            statusLower == 'inprogress' ||
+            statusLower == 'in_progress';
 
-      items.add(_ActivityItem(
-        type: _ActivityType.ride,
-        title: 'Ride',
-        subtitle: '${map['pickupAddress'] ?? ''} → ${map['dropoffAddress'] ?? ''}',
-        status: status,
-        amount: (map['totalAmount'] as num?)?.toDouble(),
-        id: (map['id'] as String?) ?? '',
-        isActive: isActive,
-        onTap: () => context.push('/rides/${map['id']}'),
-      ));
+        items.add(_ActivityItem(
+          type: _ActivityType.ride,
+          title: 'Ride',
+          subtitle: '${map['pickupAddress'] ?? ''} → ${map['dropoffAddress'] ?? ''}',
+          status: status,
+          amount: (map['totalAmount'] as num?)?.toDouble(),
+          id: (map['id'] as String?) ?? '',
+          isActive: isActive,
+          onTap: () => context.push('/rides/${map['id']}'),
+        ));
+      }
     }
 
     // Sort: active first, then by most recent (assuming API returns most recent first)
