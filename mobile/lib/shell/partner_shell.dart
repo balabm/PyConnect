@@ -133,8 +133,8 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           ],
         VendorCategoryType.luggageCloak => const [
             VendorDashboardScreen(),
-            CloakCapacityScreen(),
             VendorBookingsScreen(),
+            CloakCapacityScreen(),
             ScannerScreen(),
             ManageHubScreen(),
           ],

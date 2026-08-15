@@ -7,7 +7,23 @@ import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 
-/// Providers that fetch food orders, ride history, stays, and rentals in parallel.
+/// Unified activity feed provider that calls GET /api/activity/all.
+/// Falls back to separate endpoints if the unified endpoint fails.
+final _unifiedActivityProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  ref.watch(authTokenProvider);
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.get('/api/activity/all');
+    final list = response as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  } catch (_) {
+    // Fallback: return empty list, separate providers will fill in
+    return [];
+  }
+});
+
+/// Fallback providers that fetch food orders, ride history, stays, and rentals in parallel.
 final _foodOrdersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   ref.watch(authTokenProvider);
   final api = ref.watch(foodApiProvider);
@@ -45,6 +61,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final unifiedAsync = ref.watch(_unifiedActivityProvider);
     final foodAsync = ref.watch(_foodOrdersProvider);
     final rideAsync = ref.watch(_rideHistoryProvider);
     final staysAsync = ref.watch(_staysBookingsProvider);
@@ -79,12 +96,13 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
+                ref.invalidate(_unifiedActivityProvider);
                 ref.invalidate(_foodOrdersProvider);
                 ref.invalidate(_rideHistoryProvider);
                 ref.invalidate(_staysBookingsProvider);
                 ref.invalidate(_rentalsProvider);
               },
-              child: _buildBody(context, foodAsync, rideAsync, staysAsync, rentalsAsync),
+              child: _buildBody(context, unifiedAsync, foodAsync, rideAsync, staysAsync, rentalsAsync),
             ),
           ),
         ],
@@ -120,12 +138,19 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
 
   Widget _buildBody(
     BuildContext context,
+    AsyncValue<List<Map<String, dynamic>>> unifiedAsync,
     AsyncValue<List<dynamic>> foodAsync,
     AsyncValue<List<dynamic>> rideAsync,
     AsyncValue<List<Map<String, dynamic>>> staysAsync,
     AsyncValue<List<dynamic>> rentalsAsync,
   ) {
-    // Loading state
+    // If the unified endpoint returned data, use it directly.
+    final unified = unifiedAsync.valueOrNull;
+    if (unified != null && unified.isNotEmpty) {
+      return _buildUnifiedList(context, unified);
+    }
+
+    // Loading state (fallback providers)
     if (foodAsync.isLoading || rideAsync.isLoading || staysAsync.isLoading || rentalsAsync.isLoading) {
       return const ShimmerList(count: 6, withImage: false);
     }
@@ -136,6 +161,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       return ErrorState(
         message: 'Could not load activity. Please try again.',
         onRetry: () {
+          ref.invalidate(_unifiedActivityProvider);
           ref.invalidate(_foodOrdersProvider);
           ref.invalidate(_rideHistoryProvider);
           ref.invalidate(_staysBookingsProvider);
@@ -318,6 +344,93 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
         child: _ActivityCard(item: items[index]),
       ),
     );
+  }
+
+  /// Builds the activity list from the unified /api/activity/all endpoint.
+  Widget _buildUnifiedList(BuildContext context, List<Map<String, dynamic>> unified) {
+    final items = <_ActivityItem>[];
+    for (final raw in unified) {
+      final type = (raw['type'] as String?) ?? '';
+      final typeLower = type.toLowerCase();
+      _ActivityType? actType;
+      if (typeLower == 'stay') actType = _ActivityType.stay;
+      else if (typeLower == 'food') actType = _ActivityType.food;
+      else if (typeLower == 'ride') actType = _ActivityType.ride;
+      else if (typeLower == 'rental') actType = _ActivityType.rental;
+      if (actType == null) continue;
+
+      final filterName = actType == _ActivityType.stay ? 'Stays'
+          : actType == _ActivityType.food ? 'Food'
+          : actType == _ActivityType.ride ? 'Rides'
+          : 'Rentals';
+      if (_filter != 'All' && _filter != filterName) continue;
+
+      final status = (raw['status'] as String?) ?? '';
+      final statusLower = status.toLowerCase();
+      final isActive = statusLower == 'pending' ||
+          statusLower == 'confirmed' ||
+          statusLower == 'preparing' ||
+          statusLower == 'ready' ||
+          statusLower == 'outfordelivery' ||
+          statusLower == 'out_for_delivery' ||
+          statusLower == 'requested' ||
+          statusLower == 'accepted' ||
+          statusLower == 'arrivedatpickup' ||
+          statusLower == 'inprogress' ||
+          statusLower == 'in_progress' ||
+          statusLower == 'checkedin' ||
+          statusLower == 'checked_in';
+
+      items.add(_ActivityItem(
+        type: actType,
+        title: (raw['title'] as String?) ?? 'Activity',
+        subtitle: (raw['subtitle'] as String?) ?? '',
+        status: status,
+        amount: (raw['amount'] as num?)?.toDouble(),
+        id: (raw['id'] as String?) ?? '',
+        isActive: isActive,
+        createdAt: DateTime.tryParse(raw['createdAt'] as String? ?? '') ?? DateTime.now(),
+        onTap: () => _navigateToDetail(context, actType!, raw['id'] as String? ?? ''),
+        ctaLabel: isActive ? 'Track' : 'View',
+        ctaAction: () => _navigateToDetail(context, actType!, raw['id'] as String? ?? ''),
+      ));
+    }
+
+    items.sort((a, b) {
+      if (a.isActive != b.isActive) return a.isActive ? -1 : 1;
+      return b.createdAt.compareTo(a.createdAt);
+    });
+
+    if (items.isEmpty) {
+      return const EmptyState(
+        icon: Icons.history,
+        title: 'No Activity Yet',
+        subtitle: 'Your bookings, rides, and orders will appear here.',
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) => FadeSlideIn(
+        delay: Duration(milliseconds: index * 50),
+        child: _ActivityCard(item: items[index]),
+      ),
+    );
+  }
+
+  void _navigateToDetail(BuildContext context, _ActivityType type, String id) {
+    switch (type) {
+      case _ActivityType.stay:
+        context.push('/stays');
+      case _ActivityType.food:
+        context.push('/food/orders/$id');
+      case _ActivityType.ride:
+        context.push('/rides/$id');
+      case _ActivityType.rental:
+        context.push('/rentals');
+    }
   }
 }
 

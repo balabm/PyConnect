@@ -1,7 +1,9 @@
 namespace PondyConnect.Api.Controllers;
 
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PondyConnect.Application.Features.Bookings;
 using PondyConnect.Application.Features.Venues;
 using PondyConnect.Domain.Enums;
 
@@ -52,6 +54,27 @@ public sealed class VenuesController : ControllerBase
         catch (InvalidOperationException)
         {
             return NotFound(new { Message = "Venue not found or is not active." });
+        }
+    }
+
+    [HttpPost("{id:guid}/book")]
+    [Authorize]
+    [ProducesResponseType(typeof(CreateBookingResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CreateBookingResponse>> Book(
+        Guid id,
+        [FromBody] CreateBookingCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return CreatedAtAction(nameof(GetById), new { id = result.BookingId }, result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { Message = ex.Message });
         }
     }
 }

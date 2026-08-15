@@ -80,6 +80,7 @@ public sealed class AdminController : ControllerBase
     }
 
     [HttpPost("approve-driver/{driverId:guid}")]
+    [HttpPost("drivers/{driverId:guid}/approve")]
     [ProducesResponseType(typeof(ApproveDriverResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApproveDriverResponse>> ApproveDriver(Guid driverId, CancellationToken ct)

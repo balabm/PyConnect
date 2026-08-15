@@ -408,11 +408,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.black87, Colors.black54],
+            colors: [Colors.red, Colors.red.shade900],
           ),
         ),
         child: Center(
@@ -425,10 +425,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.content_copy, color: Colors.orange, size: 40),
+                  child: const Icon(Icons.content_copy, color: Colors.white, size: 40),
                 ),
                 const SizedBox(height: 24),
                 const Text(

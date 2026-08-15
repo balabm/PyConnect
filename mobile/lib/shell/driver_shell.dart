@@ -26,17 +26,54 @@ class DriverShell extends ConsumerStatefulWidget {
 class _DriverShellState extends ConsumerState<DriverShell> {
   Timer? _locationTimer;
   bool _isStartingLocation = false;
+  StreamSubscription? _rideOfferSub;
+  StreamSubscription? _foodOfferSub;
 
   @override
   void initState() {
     super.initState();
     // Initialize overlay alert service for dispatch notifications
     OverlayAlertService.instance.initialize();
+    _listenForRideOffers();
+  }
+
+  void _listenForRideOffers() {
+    final signalR = ref.read(driverSignalRProvider);
+    _rideOfferSub = signalR.rideOfferStream.listen((args) {
+      for (final arg in args) {
+        if (arg is Map<String, dynamic>) {
+          try {
+            final offer = RideOfferModel.fromJson(arg);
+            OverlayAlertService.instance.showRideOfferAlert(
+              title: offer.taskType.contains('Food') ? 'Food Delivery!' : 'New Ride Request!',
+              body: 'Pickup: ${offer.pickupAddress}\nEarnings: ₹${offer.driverEarnings.toStringAsFixed(0)} (100%)',
+              rideId: offer.rideId,
+            );
+          } catch (_) {}
+        }
+      }
+    });
+    _foodOfferSub = signalR.foodDeliveryOfferStream.listen((args) {
+      for (final arg in args) {
+        if (arg is Map<String, dynamic>) {
+          try {
+            final offer = RideOfferModel.fromJson(arg);
+            OverlayAlertService.instance.showRideOfferAlert(
+              title: 'Food Delivery Task!',
+              body: 'Pickup: ${offer.pickupAddress}\nEarnings: ₹${offer.driverEarnings.toStringAsFixed(0)} (100%)',
+              rideId: offer.rideId,
+            );
+          } catch (_) {}
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _locationTimer?.cancel();
+    _rideOfferSub?.cancel();
+    _foodOfferSub?.cancel();
     KeepAwakeService.disable();
     super.dispose();
   }

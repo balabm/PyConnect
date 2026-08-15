@@ -71,7 +71,7 @@ class BackgroundLocationService {
       service.stopSelf();
     });
 
-    timer = Timer.periodic(const Duration(seconds: 3), (t) async {
+    timer = Timer.periodic(const Duration(seconds: 5), (t) async {
       try {
         final position = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
