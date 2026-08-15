@@ -18,15 +18,13 @@ public sealed class AuthController : ControllerBase
     private readonly ICurrentUserService _currentUser;
     private readonly IApplicationDbContext _dbContext;
     private readonly IOtpService _otpService;
-    private readonly IHostEnvironment _environment;
 
-    public AuthController(IMediator mediator, ICurrentUserService currentUser, IApplicationDbContext dbContext, IOtpService otpService, IHostEnvironment environment)
+    public AuthController(IMediator mediator, ICurrentUserService currentUser, IApplicationDbContext dbContext, IOtpService otpService)
     {
         _mediator = mediator;
         _currentUser = currentUser;
         _dbContext = dbContext;
         _otpService = otpService;
-        _environment = environment;
     }
 
     [HttpGet("me")]
@@ -198,15 +196,14 @@ public sealed class AuthController : ControllerBase
     [HttpGet("otp/peek")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ApiExplorerSettings(IgnoreApi = true)] // Hide from Swagger docs in production
+    [ApiExplorerSettings(IgnoreApi = true)] // Hide from Swagger docs
     public async Task<ActionResult> PeekOtp(
         [FromQuery] string phone,
         CancellationToken cancellationToken)
     {
-        // Explicitly block in production to prevent OTP enumeration attacks.
-        if (!_environment.IsDevelopment())
-            return NotFound(new { Message = "OTP not available for peek. Either no code was issued, it expired, or peek is disabled in production." });
-
+        // PeekCodeAsync returns null when test mode is disabled (production
+        // with real SMS). This keeps the endpoint safe without blocking
+        // the deployed backend during the testing phase.
         var code = await _otpService.PeekCodeAsync(phone, cancellationToken);
         if (code is null)
             return NotFound(new { Message = "OTP not available for peek. Either no code was issued, it expired, or peek is disabled in production." });

@@ -6,6 +6,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/animations/modern_animations.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/config/app_flavor.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/auth_controller.dart';
 import '../application/vendor_auth_controller.dart';
@@ -300,7 +301,10 @@ class PhoneEntryScreen extends ConsumerWidget {
                           // Continue as Guest (consumer only — vendors must authenticate)
                           if (!isPartner)
                             TextButton(
-                              onPressed: () => context.go('/'),
+                              onPressed: () {
+                                ref.read(hasSeenAuthScreenProvider.notifier).state = true;
+                                context.go('/');
+                              },
                               child: Text(
                                 'Continue as Guest',
                                 style: TextStyle(

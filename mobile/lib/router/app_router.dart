@@ -42,6 +42,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: _AuthRefreshListenable(ref),
     redirect: (context, state) {
       final authenticated = ref.read(authControllerProvider).valueOrNull?.isAuthenticated ?? false;
+      final hasSeenAuth = ref.read(hasSeenAuthScreenProvider);
       final path = state.matchedLocation;
 
       // Handle FCM deep link: if a pending deep link exists and the user is
@@ -50,6 +51,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (pendingDeepLink != null && authenticated && path == '/') {
         ref.read(pendingDeepLinkProvider.notifier).state = null;
         return pendingDeepLink;
+      }
+
+      // First launch: redirect unauthenticated users to the login screen.
+      // They can "Continue as Guest" to skip into the app.
+      if (!authenticated && !hasSeenAuth && path == '/') {
+        return '/auth';
       }
 
       // Booking an experience requires identity.

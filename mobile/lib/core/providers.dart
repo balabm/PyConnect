@@ -49,6 +49,12 @@ final authTokenProvider = StateProvider<String?>((ref) => null);
 /// the auth flow. Cleared once the user authenticates and is returned.
 final pendingAuthRedirectProvider = StateProvider<String?>((ref) => null);
 
+/// Tracks whether the user has seen the auth/login screen on this launch.
+/// The app redirects to /auth on first launch. Once the user logs in or
+/// taps "Continue as Guest", this is set to true and they won't be
+/// redirected again during the session.
+final hasSeenAuthScreenProvider = StateProvider<bool>((ref) => false);
+
 final authApiProvider = Provider<AuthApi>((ref) => AuthApi(ref.watch(apiClientProvider)));
 final venueApiProvider = Provider<VenueApi>((ref) => VenueApi(ref.watch(apiClientProvider)));
 final transitApiProvider = Provider<TransitApi>((ref) => TransitApi(ref.watch(apiClientProvider)));

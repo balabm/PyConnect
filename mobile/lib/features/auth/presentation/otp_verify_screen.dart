@@ -118,12 +118,14 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
       await ref.read(vendorAuthControllerProvider.notifier).verifyOtp(phone, _otp);
       if (!mounted) return;
       if (!ref.read(vendorAuthControllerProvider).hasError) {
+        ref.read(hasSeenAuthScreenProvider.notifier).state = true;
         context.go('/');
       }
     } else {
       await ref.read(authControllerProvider.notifier).verifyOtp(phone, _otp);
       if (!mounted) return;
       if (!ref.read(authControllerProvider).hasError) {
+        ref.read(hasSeenAuthScreenProvider.notifier).state = true;
         final pending = ref.read(pendingAuthRedirectProvider);
         ref.read(pendingAuthRedirectProvider.notifier).state = null;
         context.go(pending ?? '/');

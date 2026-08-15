@@ -103,21 +103,29 @@ class _QuickAuthSheetState extends ConsumerState<QuickAuthSheet> {
   }
 
   Future<void> _autofillOtp() async {
-    try {
-      final code = await ref.read(authApiProvider).peekOtp(_phone);
-      if (code != null && code.length == 6 && mounted) {
-        for (var i = 0; i < 6; i++) {
-          _otpControllers[i].text = code[i];
+    // Retry peek a few times with a short delay — the OTP may not be
+    // cached yet immediately after the request returns.
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (!mounted || _hasSubmitted) return;
+      try {
+        final code = await ref.read(authApiProvider).peekOtp(_phone);
+        if (code != null && code.length == 6 && mounted) {
+          for (var i = 0; i < 6; i++) {
+            _otpControllers[i].text = code[i];
+          }
+          setState(() {});
+          if (!_hasSubmitted) {
+            _hasSubmitted = true;
+            _focusNodes[5].unfocus();
+            await _verifyOtp();
+          }
+          return;
         }
-        setState(() {});
-        if (!_hasSubmitted) {
-          _hasSubmitted = true;
-          _focusNodes[5].unfocus();
-          await _verifyOtp();
-        }
+      } catch (_) {
+        // Silent — autofill is a testing convenience
       }
-    } catch (_) {
-      // Silent — autofill is a testing convenience
+      // Wait before retrying
+      await Future.delayed(const Duration(milliseconds: 500));
     }
   }
 
