@@ -432,9 +432,24 @@ class _OrderSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (showChecklist) ...[
-            _ChecklistItem(label: '1x Order items verified'),
-            _ChecklistItem(label: '1x Payment confirmation checked'),
-            _ChecklistItem(label: '1x Packaging intact'),
+            if (task.orderItems != null && task.orderItems!.isNotEmpty) ...[
+              // Real itemized checklist from backend order data
+              if (task.orderId != null)
+                _DetailRow(label: 'Order ID', value: task.orderId!),
+              const SizedBox(height: 8),
+              ...task.orderItems!.map((item) => _ChecklistItem(
+                    label: '${item.quantity}x ${item.name}',
+                    note: item.specialInstructions,
+                  )),
+              const SizedBox(height: 8),
+              _ChecklistItem(label: 'Payment confirmation checked'),
+              _ChecklistItem(label: 'Packaging intact'),
+            ] else ...[
+              // Generic checklist fallback
+              _ChecklistItem(label: '1x Order items verified'),
+              _ChecklistItem(label: '1x Payment confirmation checked'),
+              _ChecklistItem(label: '1x Packaging intact'),
+            ],
           ] else ...[
             _DetailRow(label: 'Task type', value: task.taskType),
             _DetailRow(label: 'Pickup', value: task.pickupAddress),
@@ -468,19 +483,40 @@ class _OrderSummaryCard extends StatelessWidget {
 }
 
 class _ChecklistItem extends StatelessWidget {
-  const _ChecklistItem({required this.label});
+  const _ChecklistItem({required this.label, this.note});
 
   final String label;
+  final String? note;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.check_box_outline_blank, size: 20, color: AppTheme.emerald),
           const SizedBox(width: 10),
-          Text(label, style: const TextStyle(fontSize: 14)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 14)),
+                if (note != null && note!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      'Note: $note',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );

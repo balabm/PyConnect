@@ -15,6 +15,7 @@ import '../features/vendor/presentation/vendor_bookings_screen.dart';
 import '../features/vendor/presentation/kitchen_display_screen.dart';
 import '../features/vendor/presentation/manage_hub_screen.dart';
 import '../features/vendor/presentation/drinks_menu_screen.dart';
+import '../features/vendor/presentation/table_crowd_manager_screen.dart';
 import '../features/vendor/presentation/fleet_management_screen.dart';
 import '../features/vendor/presentation/active_rentals_screen.dart';
 import '../features/vendor/presentation/taxi_fleet_screen.dart';
@@ -111,7 +112,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           ],
         VendorCategoryType.pubClub => const [
             VendorDashboardScreen(),
-            KitchenDisplayScreen(),
+            TableCrowdManagerScreen(),
             DrinksMenuScreen(),
             ScannerScreen(),
             ManageHubScreen(),
@@ -314,9 +315,11 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: SafeArea(
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: Theme.of(context).colorScheme.surface,

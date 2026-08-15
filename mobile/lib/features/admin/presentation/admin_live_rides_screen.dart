@@ -1,21 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../application/admin_providers.dart';
 import '../data/admin_api.dart';
 
-class AdminLiveRidesScreen extends ConsumerWidget {
+class AdminLiveRidesScreen extends ConsumerStatefulWidget {
   const AdminLiveRidesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminLiveRidesScreen> createState() => _AdminLiveRidesScreenState();
+}
+
+class _AdminLiveRidesScreenState extends ConsumerState<AdminLiveRidesScreen> {
+  bool _showMap = false;
+
+  @override
+  Widget build(BuildContext context) {
     final ridesAsync = ref.watch(adminActiveRidesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Live Rides'),
+        title: const Text('Live Ops'),
         actions: [
+          IconButton(
+            icon: Icon(_showMap ? Icons.list_rounded : Icons.map_outlined),
+            onPressed: () => setState(() => _showMap = !_showMap),
+            tooltip: _showMap ? 'Show list' : 'Show map',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => ref.invalidate(adminActiveRidesProvider),
@@ -41,6 +55,9 @@ class AdminLiveRidesScreen extends ConsumerWidget {
               ),
             );
           }
+          if (_showMap) {
+            return _LiveOpsMap(rides: rides);
+          }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: rides.length,
@@ -51,6 +68,50 @@ class AdminLiveRidesScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Global map showing all active rides, online drivers, and food deliveries.
+class _LiveOpsMap extends StatelessWidget {
+  const _LiveOpsMap({required this.rides});
+
+  final List<AdminActiveRide> rides;
+
+  @override
+  Widget build(BuildContext context) {
+    final markers = <Marker>[];
+    for (final ride in rides) {
+      if (ride.pickupLatitude != null && ride.pickupLongitude != null) {
+        markers.add(Marker(
+          point: LatLng(ride.pickupLatitude!, ride.pickupLongitude!),
+          width: 40,
+          height: 40,
+          child: Icon(_vehicleIcon(ride.vehicleType), color: _statusColor(ride.status), size: 28),
+        ));
+      }
+      if (ride.dropLatitude != null && ride.dropLongitude != null) {
+        markers.add(Marker(
+          point: LatLng(ride.dropLatitude!, ride.dropLongitude!),
+          width: 40,
+          height: 40,
+          child: const Icon(Icons.location_on, color: AdminColors.danger, size: 28),
+        ));
+      }
+    }
+
+    return FlutterMap(
+      options: const MapOptions(
+        initialCenter: LatLng(11.9356, 79.8301),
+        initialZoom: 13,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.pondyconnect.admin',
+        ),
+        MarkerLayer(markers: markers),
+      ],
     );
   }
 }
@@ -143,6 +204,7 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
+
 class _InfoRow extends StatelessWidget {
   const _InfoRow({required this.icon, required this.label, required this.value});
   final IconData icon;
@@ -165,6 +227,16 @@ IconData _vehicleIcon(String type) {
     case 'car': return Icons.directions_car_rounded;
     case 'auto': return Icons.local_taxi_rounded;
     default: return Icons.two_wheeler_rounded;
+  }
+}
+
+Color _statusColor(String s) {
+  switch (s.toLowerCase()) {
+    case 'searching': case 'requested': return AdminColors.warning;
+    case 'driverassigned': case 'accepted': return AdminColors.info;
+    case 'arrivedatpickup': return AppTheme.coral;
+    case 'enroute': return AdminColors.accent;
+    default: return AdminColors.textMuted;
   }
 }
 

@@ -42,10 +42,12 @@ class RazorpayPaymentService {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    _isInitialized = true;
   }
 
   final ApiClient _api;
   late final Razorpay _razorpay;
+  bool _isInitialized = false;
 
   Completer<PaymentResult>? _completer;
 
@@ -163,6 +165,13 @@ class RazorpayPaymentService {
     };
 
     try {
+      if (!_isInitialized) {
+        _razorpay = Razorpay();
+        _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleSuccess);
+        _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleError);
+        _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+        _isInitialized = true;
+      }
       _razorpay.open(options);
     } catch (e) {
       // Any SDK initialization failure (NotInitializedError, missing

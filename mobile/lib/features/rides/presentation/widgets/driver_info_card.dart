@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design/design.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/design/app_network_image.dart';
 
 /// Driver information card with avatar, name, rating, plate, and ETA.
 class DriverInfoCard extends StatelessWidget {
@@ -23,16 +24,31 @@ class DriverInfoCard extends StatelessWidget {
     final name = driverInfo?['driverName'] as String? ?? 'Driver assigned';
     final rating = (driverInfo?['rating'] as num?)?.toDouble();
     final plate = driverInfo?['vehiclePlate'] as String?;
+    final photoUrl = driverInfo?['driverPhoto'] as String? ?? driverInfo?['photoUrl'] as String?;
 
     return AppCard(
       child: Row(
         children: [
           CircleAvatar(
+            radius: 24,
             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            child: Icon(
-              _vehicleIcon(vehicleType),
-              color: Theme.of(context).colorScheme.primary,
-            ),
+            backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                ? null
+                : null,
+            child: photoUrl != null && photoUrl.isNotEmpty
+                ? ClipOval(
+                    child: AppNetworkImage(
+                      imageUrl: photoUrl,
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
+                      fallbackIcon: _vehicleIcon(vehicleType),
+                    ),
+                  )
+                : Icon(
+                    _vehicleIcon(vehicleType),
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(

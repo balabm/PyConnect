@@ -1,13 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/vendor_providers.dart';
 import '../data/vendor_dashboard_api.dart';
 
-/// In-memory guestlist entry for pub/club partners.
-/// TODO: persist guestlist to backend once endpoint is available.
+/// Guestlist entry for pub/club partners.
+/// Persisted locally via SharedPreferences until backend endpoint is available.
 class GuestlistEntry {
   GuestlistEntry({
     required this.name,
@@ -18,6 +21,18 @@ class GuestlistEntry {
   String name;
   int partySize;
   bool checkedIn;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'partySize': partySize,
+        'checkedIn': checkedIn,
+      };
+
+  factory GuestlistEntry.fromJson(Map<String, dynamic> json) => GuestlistEntry(
+        name: json['name'] as String? ?? '',
+        partySize: (json['partySize'] as num?)?.toInt() ?? 1,
+        checkedIn: json['checkedIn'] as bool? ?? false,
+      );
 }
 
 /// Drinks menu management for Pub/Club vendors.
@@ -33,6 +48,32 @@ class DrinksMenuScreen extends ConsumerStatefulWidget {
 class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
   int _crowdPercent = 25;
   final List<GuestlistEntry> _guestlist = [];
+  static const _guestlistKey = 'pub_guestlist';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGuestlist();
+  }
+
+  Future<void> _loadGuestlist() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_guestlistKey);
+    if (json != null) {
+      final list = jsonDecode(json) as List<dynamic>;
+      setState(() {
+        _guestlist.clear();
+        _guestlist.addAll(list
+            .map((e) => GuestlistEntry.fromJson(e as Map<String, dynamic>)));
+      });
+    }
+  }
+
+  Future<void> _saveGuestlist() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = jsonEncode(_guestlist.map((e) => e.toJson()).toList());
+    await prefs.setString(_guestlistKey, json);
+  }
 
   String _vibeLabel(int pct) {
     if (pct <= 30) return 'Chill';
@@ -488,7 +529,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
             onPressed: () {
               AppHaptics.light();
               setState(() => entry.checkedIn = !entry.checkedIn);
-              // TODO: sync check-in status to backend once endpoint exists.
+              _saveGuestlist();
             },
             child: Text(entry.checkedIn ? 'Undo' : 'Check In'),
           ),
@@ -546,7 +587,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               setState(() {
                 _guestlist.add(GuestlistEntry(name: name, partySize: size < 1 ? 1 : size));
               });
-              // TODO: persist new guestlist entry to backend once endpoint exists.
+              _saveGuestlist();
               Navigator.pop(dialogContext);
             },
             child: const Text('Add'),

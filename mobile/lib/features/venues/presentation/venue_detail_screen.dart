@@ -30,7 +30,8 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
   final _galleryController = PageController();
   int _galleryPage = 0;
 
-  static const _osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  static const _positronTiles = 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+  static const _darkMatterTiles = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
   @override
   void dispose() {
@@ -433,7 +434,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                               ),
                               children: [
                                 TileLayer(
-                                  urlTemplate: _osmTiles,
+                                  urlTemplate: Theme.of(context).brightness == Brightness.dark ? _darkMatterTiles : _positronTiles,
                                   userAgentPackageName: 'com.pondyconnect.app',
                                 ),
                                 MarkerLayer(

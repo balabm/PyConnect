@@ -231,14 +231,14 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           ),
         ],
       ),
-      body: IndexedStack(
+      body: SafeArea(child: IndexedStack(
         index: currentIndex,
         children: const [
           DriverHomeScreen(),
           ActiveTripScreen(),
           DriverEarningsScreen(),
         ],
-      ),
+      )),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected: (i) => ref.read(driverSelectedTabProvider.notifier).state = i,

@@ -27,7 +27,7 @@ class _Hub extends ConsumerWidget {
     final index = _indexFor(GoRouterState.of(context).uri.path);
 
     return Scaffold(
-      body: _buildStack(index),
+      body: SafeArea(child: _buildStack(index)),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) {

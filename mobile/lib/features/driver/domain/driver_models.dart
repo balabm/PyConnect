@@ -11,6 +11,8 @@ class DispatchTaskModel {
     required this.driverEarnings,
     required this.status,
     this.driverId,
+    this.orderId,
+    this.orderItems,
   });
 
   final String id;
@@ -20,8 +22,11 @@ class DispatchTaskModel {
   final double driverEarnings;
   final String status;
   final String? driverId;
+  final String? orderId;
+  final List<OrderItemModel>? orderItems;
 
   factory DispatchTaskModel.fromJson(Map<String, dynamic> json) {
+    final itemsRaw = json['orderItems'] as List<dynamic>?;
     return DispatchTaskModel(
       id: json['id'] as String,
       taskType: json['taskType'] as String,
@@ -30,6 +35,30 @@ class DispatchTaskModel {
       driverEarnings: (json['driverEarnings'] as num).toDouble(),
       status: json['status'] as String,
       driverId: json['driverId'] as String?,
+      orderId: json['orderId'] as String?,
+      orderItems: itemsRaw
+          ?.map((e) => OrderItemModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class OrderItemModel {
+  OrderItemModel({
+    required this.name,
+    required this.quantity,
+    this.specialInstructions,
+  });
+
+  final String name;
+  final int quantity;
+  final String? specialInstructions;
+
+  factory OrderItemModel.fromJson(Map<String, dynamic> json) {
+    return OrderItemModel(
+      name: json['name'] as String? ?? '',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      specialInstructions: json['specialInstructions'] as String?,
     );
   }
 }

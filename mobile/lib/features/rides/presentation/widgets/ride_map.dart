@@ -6,8 +6,10 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../core/theme/app_theme.dart';
 
-/// OpenStreetMap standard raster tiles (free, no API key).
-/// Not blocked by common ad blockers (unlike CartoDB basemaps).
+/// CartoDB Positron (light) and Dark Matter (dark) tiles per MasterPlan spec.
+/// Falls back to OSM standard tiles if CartoDB is unavailable.
+const _positronTiles = 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+const _darkMatterTiles = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 const _osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 /// Active trip polyline color — bright teal for high contrast on dark map.
@@ -178,14 +180,15 @@ class _RideMapState extends State<RideMap> {
         keepAlive: true,
       ),
       children: [
-        // Tile layer — OpenStreetMap standard raster tiles.
-        // Not blocked by ad blockers (CartoDB basemaps are).
+        // Tile layer — CartoDB Positron (light) / Dark Matter (dark) per MasterPlan.
         // Wrapped in a Builder so it rebuilds reactively on theme changes.
         Builder(
           builder: (context) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
             return TileLayer(
-              urlTemplate: _osmTiles,
+              urlTemplate: isDark ? _darkMatterTiles : _positronTiles,
               userAgentPackageName: 'com.pondyconnect.app',
+              retinaMode: true,
             );
           },
         ),
