@@ -6,7 +6,7 @@ import 'app.dart';
 import 'core/config/app_flavor.dart';
 import 'core/widgets/error_boundary.dart';
 
-/// Entry point for the PondyConnect Partner (Service Owner POS) app.
+/// Entry point for the PY Connect Partner (Service Owner POS) app.
 /// Covers all vendor categories: Restaurant, Cafe, Pizzeria, PubClub,
 /// ScooterRental, TaxiOperator, LuggageCloak.
 ///

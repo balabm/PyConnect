@@ -135,7 +135,7 @@ class RazorpayPaymentService {
       'amount': (amount * 100).round(), // paise
       'currency': 'INR',
       'order_id': orderId,
-      'name': 'PondyConnect',
+      'name': 'PY Connect',
       'description': 'Payment for your order',
       'prefill': <String, dynamic>{
         'contact': userPhone,

@@ -5,7 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../application/admin_providers.dart';
 import '../data/admin_api.dart';
 
-/// Driver management screen for the PondyConnect admin web app.
+/// Driver management screen for the PY Connect admin web app.
 /// Lists drivers with search, filters, approve / reject-KYC actions,
 /// and pagination.
 class AdminDriversScreen extends ConsumerStatefulWidget {

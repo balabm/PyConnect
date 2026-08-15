@@ -247,7 +247,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _vendorName.isEmpty ? 'PondyConnect Partner' : _vendorName,
+                    _vendorName.isEmpty ? 'PY Connect Partner' : _vendorName,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

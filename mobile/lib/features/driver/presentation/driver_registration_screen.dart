@@ -129,7 +129,7 @@ class _DriverRegistrationScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Drive with PondyConnect',
+                          'Drive with PY Connect',
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium

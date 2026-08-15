@@ -228,7 +228,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         venueId: widget.venueId,
         seats: _seats,
         scheduledFor: _scheduledFor,
-        notes: 'Vibe-check entry via PondyConnect',
+        notes: 'Vibe-check entry via PY Connect',
       );
       if (!mounted) return;
 

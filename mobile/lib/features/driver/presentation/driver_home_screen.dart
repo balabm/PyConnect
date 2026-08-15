@@ -40,7 +40,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PondyConnect Captain'),
+        title: const Text('PY Connect Captain'),
         actions: [
           IconButton(
             icon: const Icon(Icons.verified_user_outlined),

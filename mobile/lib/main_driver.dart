@@ -6,7 +6,7 @@ import 'app.dart';
 import 'core/config/app_flavor.dart';
 import 'core/widgets/error_boundary.dart';
 
-/// Entry point for the PondyConnect Captain (Driver) app.
+/// Entry point for the PY Connect Captain (Driver) app.
 ///
 /// Build with:
 ///   flutter build apk --flavor driver --target lib/main_driver.dart \

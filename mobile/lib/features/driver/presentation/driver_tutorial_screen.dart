@@ -30,9 +30,9 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
     _TutorialPage(
       icon: Icons.waving_hand_outlined,
       title: 'Welcome, Captain!',
-      subtitle: 'You\'re about to join PondyConnect',
+      subtitle: 'You\'re about to join PY Connect',
       points: [
-        'PondyConnect is Pondicherry\'s local ride-hailing platform',
+        'PY Connect is Pondicherry\'s local ride-hailing platform',
         'We connect tourists and locals with reliable drivers',
         'You set your own hours — drive whenever you want',
         'No commission deducted from your earnings',

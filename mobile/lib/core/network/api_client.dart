@@ -106,11 +106,11 @@ class ApiClient {
       return ApiException('The request timed out. Please check your connection and try again.');
     }
     if (e.type == DioExceptionType.connectionError) {
-      return ApiException('Could not reach PondyConnect. Please check your internet connection.');
+      return ApiException('Could not reach PY Connect. Please check your internet connection.');
     }
     final status = e.response?.statusCode;
     if (status != null && status >= 500) {
-      return ApiException('PondyConnect is having a moment. Please try again shortly.');
+      return ApiException('PY Connect is having a moment. Please try again shortly.');
     }
     if (status == 429) {
       return ApiException('Too many requests. Please slow down and try again.');

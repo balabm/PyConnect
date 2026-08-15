@@ -106,7 +106,7 @@ class AdminShell extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('God Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AdminColors.textPrimary)),
-                        const Text('PondyConnect', style: TextStyle(fontSize: 11, color: AdminColors.textMuted)),
+                        const Text('PY Connect', style: TextStyle(fontSize: 11, color: AdminColors.textMuted)),
                       ],
                     ),
                   ),

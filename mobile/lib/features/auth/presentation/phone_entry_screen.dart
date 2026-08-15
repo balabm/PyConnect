@@ -78,7 +78,7 @@ class PhoneEntryScreen extends ConsumerWidget {
                         duration: const Duration(milliseconds: 500),
                         offset: const Offset(0, 0.1),
                         child: const Text(
-                          'PondyConnect',
+                          'PY Connect',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,

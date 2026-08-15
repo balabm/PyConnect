@@ -30,7 +30,7 @@ class BackgroundLocationService {
         autoStart: false,
         isForegroundMode: true,
         notificationChannelId: 'driver_location_tracking',
-        initialNotificationTitle: 'PondyConnect Captain',
+        initialNotificationTitle: 'PY Connect Captain',
         initialNotificationContent: 'Location tracking is active',
         foregroundServiceNotificationId: 8888,
       ),

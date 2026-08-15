@@ -179,7 +179,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PondyConnect Captain'),
+        title: const Text('PY Connect Captain'),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),

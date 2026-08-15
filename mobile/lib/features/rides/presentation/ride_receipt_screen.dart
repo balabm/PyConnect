@@ -202,7 +202,7 @@ class _ReceiptBody extends StatelessWidget {
             ),
           const SizedBox(height: 16),
           Text(
-            'PondyConnect · 0% commission · 100% to driver',
+            'PY Connect · 0% commission · 100% to driver',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
           ),
         ],

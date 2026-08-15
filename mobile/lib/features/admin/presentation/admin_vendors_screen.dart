@@ -6,7 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../application/admin_providers.dart';
 import '../data/admin_api.dart';
 
-/// Vendor management screen for PondyConnect admin web app.
+/// Vendor management screen for PY Connect admin web app.
 /// Lists vendors, supports search/filter, and onboarding new vendors.
 class AdminVendorsScreen extends ConsumerStatefulWidget {
   const AdminVendorsScreen({super.key});

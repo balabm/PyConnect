@@ -26,9 +26,9 @@ dotnet test                     # All tests (integration tests hit deployed back
 ```powershell
 cd mobile
 flutter analyze                 # Static analysis
-flutter build apk --flavor consumer --release  # Consumer app
-flutter build apk --flavor driver --release    # Driver app
-flutter build apk --flavor partner --release   # Partner app
+flutter build apk --flavor consumer --target lib/main.dart --release
+flutter build apk --flavor driver --target lib/main_driver.dart --release
+flutter build apk --flavor partner --target lib/main_partner.dart --release
 ```
 
 ## Architecture

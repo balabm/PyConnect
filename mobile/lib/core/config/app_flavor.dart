@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Identifies which compiled app binary is running.
 ///
 /// Passed via `--dart-define=APP_FLAVOR=<name>` at build time:
-///   - `consumer` → PondyConnect (tourist app)
-///   - `driver`   → PondyConnect Captain
-///   - `partner`  → PondyConnect Partner (service owner POS — covers all vendor categories)
-///   - `admin`    → PondyConnect Admin (web only)
+///   - `consumer` → PY Connect (tourist app)
+///   - `driver`   → PY Connect Captain
+///   - `partner`  → PY Connect Partner (service owner POS — covers all vendor categories)
+///   - `admin`    → PY Connect Admin (web only)
 enum AppFlavor {
   consumer,
   driver,
@@ -18,10 +18,10 @@ enum AppFlavor {
 
   /// Human-readable app title shown in MaterialApp.
   String get title => switch (this) {
-        consumer => 'PondyConnect',
-        driver => 'PondyConnect Captain',
-        partner => 'PondyConnect Partner',
-        admin => 'PondyConnect Admin',
+        consumer => 'PY Connect',
+        driver => 'PY Connect Captain',
+        partner => 'PY Connect Partner',
+        admin => 'PY Connect Admin',
       };
 }
 

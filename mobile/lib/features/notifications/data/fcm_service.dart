@@ -99,7 +99,7 @@ void _showLocalNotificationFromPayload(RemoteMessage message) {
         : channelId == _kNewOrdersChannelId
             ? 'New Orders'
             : 'General Notifications',
-    channelDescription: 'PondyConnect push notification',
+    channelDescription: 'PY Connect push notification',
     importance: priority >= 4 ? Importance.max : Importance.defaultImportance,
     priority: priority >= 4 ? Priority.max : Priority.defaultPriority,
     playSound: true,
@@ -138,7 +138,7 @@ String _defaultTitle(String type) {
     case 'order_status':
       return 'Order Update';
     default:
-      return 'PondyConnect';
+      return 'PY Connect';
   }
 }
 

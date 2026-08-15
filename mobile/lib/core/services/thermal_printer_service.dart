@@ -114,7 +114,7 @@ class ThermalPrinterService {
     try {
       final p = _printer!;
 
-      p.text('PondyConnect',
+      p.text('PY Connect',
           styles: const PosStyles(
             align: PosAlign.center,
             bold: true,

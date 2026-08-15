@@ -53,7 +53,7 @@ class ErrorState extends StatelessWidget {
             Text(
               isAuthError
                   ? 'Authentication required. Please log in.'
-                  : 'Something went wrong while connecting to PondyConnect. Please try again.',
+                  : 'Something went wrong while connecting to PY Connect. Please try again.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -136,7 +136,7 @@ class AuthAwareErrorState extends ConsumerWidget {
             Text(
               isAuthError
                   ? 'Authentication required. Please log in.'
-                  : 'Something went wrong while connecting to PondyConnect. Please try again.',
+                  : 'Something went wrong while connecting to PY Connect. Please try again.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),
