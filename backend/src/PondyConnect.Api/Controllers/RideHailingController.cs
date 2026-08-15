@@ -52,7 +52,7 @@ public sealed class RideHailingController : ControllerBase
             request.PickupLongitude < -180 || request.PickupLongitude > 180 ||
             request.DropoffLongitude < -180 || request.DropoffLongitude > 180)
         {
-            return BadRequest(new { message = "Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180." });
+            return BadRequest(new { Message = "Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180." });
         }
 
         var cmd = new RequestRideCommand(

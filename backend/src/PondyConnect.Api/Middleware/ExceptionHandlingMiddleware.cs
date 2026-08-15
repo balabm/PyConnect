@@ -34,28 +34,28 @@ public sealed partial class ExceptionHandlingMiddleware
         {
             ValidationException validationEx => (
                 StatusCodes.Status422UnprocessableEntity,
-                (object)new { message = "Validation failed.", errors = validationEx.Errors.Select(e => new { field = e.PropertyName, error = e.ErrorMessage }) }),
+                (object)new { Message = "Validation failed.", errors = validationEx.Errors.Select(e => new { field = e.PropertyName, error = e.ErrorMessage }) }),
             ServiceAreaException serviceAreaEx => (
                 StatusCodes.Status400BadRequest,
-                (object)new { message = serviceAreaEx.Message, distanceKm = serviceAreaEx.DistanceKm, radiusKm = serviceAreaEx.RadiusKm }),
+                (object)new { Message = serviceAreaEx.Message, distanceKm = serviceAreaEx.DistanceKm, radiusKm = serviceAreaEx.RadiusKm }),
             UnauthorizedAccessException => (
                 StatusCodes.Status401Unauthorized,
-                (object)new { message = ex.Message }),
+                (object)new { Message = ex.Message }),
             InvalidOperationException => (
                 StatusCodes.Status400BadRequest,
-                (object)new { message = ex.Message }),
+                (object)new { Message = ex.Message }),
             ArgumentException => (
                 StatusCodes.Status400BadRequest,
-                (object)new { message = ex.Message }),
+                (object)new { Message = ex.Message }),
             JsonException => (
                 StatusCodes.Status400BadRequest,
-                (object)new { message = "Malformed JSON in request body." }),
+                (object)new { Message = "Malformed JSON in request body." }),
             BadHttpRequestException badHttpEx => (
                 StatusCodes.Status400BadRequest,
-                (object)new { message = "Invalid request format." }),
+                (object)new { Message = "Invalid request format." }),
             _ => (
                 StatusCodes.Status500InternalServerError,
-                (object)new { message = "An unexpected error occurred." })
+                (object)new { Message = "An unexpected error occurred." })
         };
 
         if (statusCode == StatusCodes.Status500InternalServerError)

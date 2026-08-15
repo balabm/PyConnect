@@ -66,7 +66,7 @@ public sealed class VendorController : ControllerBase
         var existing = await _context.Vendors
             .FirstOrDefaultAsync(v => v.ContactPhone == request.ContactPhone, cancellationToken);
         if (existing != null)
-            return BadRequest(new { message = "A vendor with this phone number already exists." });
+            return BadRequest(new { Message = "A vendor with this phone number already exists." });
 
         // Create or upgrade the user account to Vendor role so they can log in
         // via the vendor auth flow once approved.
@@ -753,6 +753,8 @@ public sealed class VendorController : ControllerBase
         [FromBody] AssignTransitDriverRequest request,
         CancellationToken cancellationToken = default)
     {
+        try
+        {
         var phone = _currentUser.Phone;
         if (string.IsNullOrWhiteSpace(phone))
             return Unauthorized(new { Message = "Authenticated phone not found." });
@@ -775,6 +777,11 @@ public sealed class VendorController : ControllerBase
         await _context.SaveChangesAsync(cancellationToken);
 
         return Ok(new { Message = "Driver assigned.", trip.Id, request.DriverName, request.VehiclePlate });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return BadRequest(new { Message = ex.Message });
+    }
     }
 
 }

@@ -67,6 +67,8 @@ class VendorMenuNotifier extends StateNotifier<AsyncValue<List<MenuItemModel>>> 
                 description: item.description,
                 imageUrl: item.imageUrl,
                 isLateNight: item.isLateNight,
+                isVeg: item.isVeg,
+                prepTimeMinutes: item.prepTimeMinutes,
               ) : item)
           .toList(),
     );

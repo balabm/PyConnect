@@ -69,7 +69,7 @@ public sealed class VendorAuthController : ControllerBase
         // available when the system is in test/SMS-mock mode.
         var code = await _otpService.PeekCodeAsync(phone, cancellationToken);
         if (code is null)
-            return NotFound(new { message = "OTP not available for peek." });
+            return NotFound(new { Message = "OTP not available for peek." });
 
         return Ok(new { phone, code });
     }

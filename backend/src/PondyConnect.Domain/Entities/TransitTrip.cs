@@ -136,9 +136,12 @@ public sealed class TransitTrip : BaseEntity
     /// <summary>
     /// Assigns a driver and optional vehicle plate to this trip.
     /// Called by the taxi vendor when dispatching a vehicle.
+    /// Only allowed for trips that are not yet completed or cancelled.
     /// </summary>
     public void AssignDriver(string? driverName, string? vehiclePlate = null)
     {
+        if (Status is TransitStatus.Completed or TransitStatus.Cancelled)
+            throw new InvalidOperationException("Cannot assign a driver to a completed or cancelled trip.");
         DriverName = driverName;
         VehiclePlate = vehiclePlate;
         MarkUpdated();

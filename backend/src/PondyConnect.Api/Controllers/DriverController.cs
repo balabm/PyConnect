@@ -306,9 +306,14 @@ public sealed class DriverController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> MarkArrivedAtStore(Guid taskId, CancellationToken ct)
     {
-        var task = await _dbContext.DispatchTasks.FirstOrDefaultAsync(t => t.Id == taskId, ct);
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        // Ownership check: only the driver assigned to this task can update it.
+        var task = await _dbContext.DispatchTasks.FirstOrDefaultAsync(t => t.Id == taskId && t.DriverId == driver.Id, ct);
         if (task is null)
-            return NotFound(new { Message = "Task not found." });
+            return NotFound(new { Message = "Task not found or not assigned to you." });
         try
         {
             task.MarkArrivedAtStore();
@@ -332,9 +337,14 @@ public sealed class DriverController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> MarkOutForDelivery(Guid taskId, CancellationToken ct)
     {
-        var task = await _dbContext.DispatchTasks.FirstOrDefaultAsync(t => t.Id == taskId, ct);
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        // Ownership check: only the driver assigned to this task can update it.
+        var task = await _dbContext.DispatchTasks.FirstOrDefaultAsync(t => t.Id == taskId && t.DriverId == driver.Id, ct);
         if (task is null)
-            return NotFound(new { Message = "Task not found." });
+            return NotFound(new { Message = "Task not found or not assigned to you." });
         try
         {
             task.MarkOutForDelivery();
