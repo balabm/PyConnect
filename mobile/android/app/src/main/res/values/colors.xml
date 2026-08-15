@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PY Connect</string>
+    <color name="launch_bg">#0D9488</color>
 </resources>

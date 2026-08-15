@@ -8,7 +8,11 @@ import 'core/widgets/error_boundary.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // .env is not bundled in release builds — safe to skip.
+  }
   setupAppErrorWidget();
   runApp(const ProviderScope(
     child: PondyConnectApp(flavor: AppFlavor.consumer),
