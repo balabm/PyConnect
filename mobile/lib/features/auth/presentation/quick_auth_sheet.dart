@@ -5,7 +5,6 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/auth_controller.dart';
-import '../data/auth_api.dart';
 
 /// A reusable modal bottom sheet that lets guest users authenticate via
 /// phone + OTP without leaving their current screen.

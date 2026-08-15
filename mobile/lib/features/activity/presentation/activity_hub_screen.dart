@@ -138,7 +138,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       items.add(_ActivityItem(
         type: _ActivityType.food,
         title: (map['vendorName'] as String?) ?? 'Food Order',
-        subtitle: (map['items'] as List?)?.length?.toString() ?? '0',
+        subtitle: ((map['items'] as List?)?.length ?? 0).toString(),
         status: status,
         amount: (map['totalAmount'] as num?)?.toDouble(),
         id: (map['id'] as String?) ?? '',
