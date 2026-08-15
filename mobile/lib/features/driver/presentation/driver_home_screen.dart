@@ -218,7 +218,9 @@ class _TasksTab extends ConsumerWidget {
               duration: const Duration(milliseconds: 350),
               child: DispatchTaskCard(
                 task: task,
-                onAccept: task.status == 'Available' && isOnline
+                onAccept: task.status == 'Available' &&
+                        isOnline &&
+                        ref.read(activeTaskProvider) == null
                     ? () => _acceptTask(context, task)
                     : null,
               ),
