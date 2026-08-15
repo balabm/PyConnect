@@ -13,6 +13,8 @@ import '../features/driver/presentation/active_trip_screen.dart';
 import '../core/services/keep_awake_service.dart';
 import '../core/services/background_location_service.dart';
 import '../core/services/overlay_alert_service.dart';
+import '../features/driver/data/driver_api.dart';
+import '../features/driver/presentation/ride_offer_sheet.dart';
 
 /// Root scaffold for the Driver app with bottom navigation.
 class DriverShell extends ConsumerStatefulWidget {
@@ -43,11 +45,14 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         if (arg is Map<String, dynamic>) {
           try {
             final offer = RideOfferModel.fromJson(arg);
+            // Show high-priority notification (works in background).
             OverlayAlertService.instance.showRideOfferAlert(
               title: offer.taskType.contains('Food') ? 'Food Delivery!' : 'New Ride Request!',
               body: 'Pickup: ${offer.pickupAddress}\nEarnings: ₹${offer.driverEarnings.toStringAsFixed(0)} (100%)',
               rideId: offer.rideId,
             );
+            // Also show the full-screen modal offer sheet when app is foregrounded.
+            _showOfferSheet(offer);
           } catch (_) {}
         }
       }
@@ -62,10 +67,51 @@ class _DriverShellState extends ConsumerState<DriverShell> {
               body: 'Pickup: ${offer.pickupAddress}\nEarnings: ₹${offer.driverEarnings.toStringAsFixed(0)} (100%)',
               rideId: offer.rideId,
             );
+            _showOfferSheet(offer);
           } catch (_) {}
         }
       }
     });
+  }
+
+  /// Shows the [RideOfferSheet] as a non-dismissible bottom sheet so the
+  /// driver can review the offer and accept/decline with a 30-second
+  /// countdown. Prevents duplicate sheets if one is already open.
+  bool _offerSheetOpen = false;
+  void _showOfferSheet(RideOfferModel offer) {
+    if (!mounted || _offerSheetOpen) return;
+    _offerSheetOpen = true;
+    final context = this.context;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => RideOfferSheet(
+        offer: offer,
+        onAccept: () async {
+          Navigator.pop(sheetContext);
+          _offerSheetOpen = false;
+          try {
+            final api = ref.read(driverApiProvider);
+            final accepted = await api.acceptTask(offer.rideId);
+            ref.read(activeTaskProvider.notifier).state = accepted;
+            ref.read(driverSelectedTabProvider.notifier).state = 1;
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to accept: $e')),
+              );
+            }
+          }
+        },
+        onDecline: () {
+          Navigator.pop(sheetContext);
+          _offerSheetOpen = false;
+        },
+      ),
+    ).whenComplete(() => _offerSheetOpen = false);
   }
 
   @override

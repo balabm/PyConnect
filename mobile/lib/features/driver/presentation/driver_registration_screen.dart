@@ -43,6 +43,7 @@ class _DriverRegistrationScreenState
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty &&
       _phoneController.text.trim().length >= 10 &&
+      _plateController.text.trim().isNotEmpty &&
       _licenseController.text.trim().isNotEmpty;
 
   Future<void> _submit() async {
@@ -61,12 +62,8 @@ class _DriverRegistrationScreenState
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
         vehicleType: _vehicleType,
-        vehiclePlate: _plateController.text.trim().isEmpty
-            ? null
-            : _plateController.text.trim(),
-        licenseNumber: _licenseController.text.trim().isEmpty
-            ? null
-            : _licenseController.text.trim(),
+        vehiclePlate: _plateController.text.trim(),
+        licenseNumber: _licenseController.text.trim(),
       );
 
       if (mounted) {
@@ -197,7 +194,7 @@ class _DriverRegistrationScreenState
             TextField(
               controller: _plateController,
               decoration: const InputDecoration(
-                labelText: 'Vehicle Plate (optional)',
+                labelText: 'Vehicle Plate Number',
                 hintText: 'e.g. PY01AB1234',
                 prefixIcon: Icon(Icons.numbers),
                 border: OutlineInputBorder(),

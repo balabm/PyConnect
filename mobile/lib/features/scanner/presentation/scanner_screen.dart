@@ -482,7 +482,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppTheme.emerald, AppTheme.emeraldLight],
+            colors: [AppTheme.warning, Color(0xFFFBBF24)],
           ),
         ),
         child: Center(
