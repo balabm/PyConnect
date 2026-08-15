@@ -650,20 +650,17 @@ class _OnboardVendorDialogState extends ConsumerState<_OnboardVendorDialog> {
 /// Displays the vendor's uploaded compliance documents (FSSAI, GST, PAN) as
 /// side-by-side thumbnails in a horizontal scroll. Each thumbnail is labelled
 /// and tappable to open a full-screen image viewer.
-///
-/// The current [AdminVendor] data model does not expose document URLs, so
-/// placeholder cards are shown with a TODO to wire real URLs when the
-/// backend exposes them.
 class _VendorKycDocumentSection extends StatelessWidget {
   const _VendorKycDocumentSection({required this.vendor});
   final AdminVendor vendor;
 
-  // TODO: Replace with real document URLs once the backend exposes them on
-  // the vendor DTO (e.g. vendor.documents / vendor.documentUrls).
-  static const _vendorDocTypes = ['FSSAI', 'GST', 'PAN'];
-
   @override
   Widget build(BuildContext context) {
+    final docs = <(String, String?)>[
+      ('FSSAI', vendor.fssaiDocUrl),
+      ('GST', vendor.gstDocUrl),
+      ('PAN', vendor.panDocUrl),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -682,12 +679,10 @@ class _VendorKycDocumentSection extends StatelessWidget {
           height: 110,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: _vendorDocTypes.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemCount: docs.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, i) {
-              final label = _vendorDocTypes[i];
-              // TODO: Resolve real URL per document type from vendor data.
-              const url = null;
+              final (label, url) = docs[i];
               return _VendorDocumentThumbnail(label: label, imageUrl: url);
             },
           ),

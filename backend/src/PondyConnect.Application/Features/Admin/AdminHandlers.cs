@@ -261,7 +261,13 @@ public sealed record VendorSummaryResponse(
     bool IsApproved,
     bool IsActive,
     string? CuisineType,
-    double? Rating);
+    double? Rating,
+    string? FssaiNumber,
+    string? GstNumber,
+    string? PanNumber,
+    string? FssaiDocUrl,
+    string? GstDocUrl,
+    string? PanDocUrl);
 
 public sealed class ListAllVendorsHandler : IRequestHandler<ListAllVendorsQuery, IReadOnlyList<VendorSummaryResponse>>
 {
@@ -291,7 +297,13 @@ public sealed class ListAllVendorsHandler : IRequestHandler<ListAllVendorsQuery,
                 v.IsApproved,
                 v.IsActive,
                 v.CuisineType,
-                v.Rating))
+                v.Rating,
+                v.FssaiNumber,
+                v.GstNumber,
+                v.PanNumber,
+                v.FssaiDocUrl,
+                v.GstDocUrl,
+                v.PanDocUrl))
             .ToListAsync(cancellationToken);
     }
 }

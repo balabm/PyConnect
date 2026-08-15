@@ -60,7 +60,7 @@ class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final progress = _secondsLeft / (widget.offer.expiresIn > 0 ? widget.offer.expiresIn : 15);
+    final progress = _secondsLeft / (widget.offer.expiresIn > 0 ? widget.offer.expiresIn : 30);
 
     return Container(
       decoration: BoxDecoration(

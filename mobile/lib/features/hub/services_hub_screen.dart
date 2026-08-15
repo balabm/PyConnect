@@ -7,6 +7,7 @@ import '../../core/animations/haptic.dart';
 import '../../core/animations/staggered_animations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_controller.dart';
+import '../auth/application/auth_controller.dart';
 
 /// A clean Apple-style grouped list of secondary services accessible from the
 /// "More" tab. Replaces the old multi-colored Windows 8-style grid.
@@ -73,6 +74,12 @@ class ServicesHubScreen extends ConsumerWidget {
       title: 'Profile',
       subtitle: 'Account, themes & settings',
       route: '/profile',
+    ),
+    _HubService(
+      icon: Icons.logout,
+      title: 'Sign Out',
+      subtitle: 'Log out of your account',
+      route: '__signout__',
     ),
   ];
 
@@ -183,6 +190,34 @@ class ServicesHubScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      AppHaptics.light();
+      await ref.read(authControllerProvider.notifier).signOut();
+      if (context.mounted) {
+        context.go('/auth');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -209,6 +244,8 @@ class ServicesHubScreen extends ConsumerWidget {
                   _showDietaryDialog(context);
                 } else if (service.route == '__theme__') {
                   _showThemeDialog(context, ref);
+                } else if (service.route == '__signout__') {
+                  _confirmSignOut(context, ref);
                 } else if (service.route.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Support chat is coming soon.')),

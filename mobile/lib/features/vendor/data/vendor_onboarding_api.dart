@@ -23,12 +23,14 @@ class VendorOnboardingApi {
     required String category,
     required String contactPhone,
     String? description,
+    String? address,
   }) async {
     final data = await _api.post('/api/vendor/register', data: {
       'businessName': businessName,
       'category': category,
       'contactPhone': contactPhone,
       if (description != null) 'description': description,
+      if (address != null) 'address': address,
     });
     return VendorRegistrationResult.fromJson(data as Map<String, dynamic>);
   }

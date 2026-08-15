@@ -34,6 +34,7 @@ class _VendorRegistrationScreenState
   // Step 1: Business details
   final _businessNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
   final _descriptionController = TextEditingController();
   String? _selectedCategory;
 
@@ -67,6 +68,7 @@ class _VendorRegistrationScreenState
   void dispose() {
     _businessNameController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
     _descriptionController.dispose();
     _fssaiController.dispose();
     _gstController.dispose();
@@ -155,6 +157,9 @@ class _VendorRegistrationScreenState
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
       );
 
       _registeredVendorId = result.vendorId;
@@ -348,6 +353,17 @@ class _VendorRegistrationScreenState
             labelText: 'Contact Phone',
             hintText: '10-digit mobile number',
             prefixIcon: Icon(Icons.phone_outlined),
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextField(
+          controller: _addressController,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            labelText: 'Business Address',
+            hintText: 'Street, area, city',
+            prefixIcon: Icon(Icons.location_on_outlined),
             border: OutlineInputBorder(),
           ),
         ),

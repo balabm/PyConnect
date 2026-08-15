@@ -87,6 +87,21 @@ class _HeroHeader extends StatelessWidget {
                               color: AppTheme.slate,
                             ),
                       ),
+                      const SizedBox(height: 6),
+                      // Location chip
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, size: 14, color: AppTheme.emerald),
+                          const SizedBox(width: 4),
+                          Text(
+                            'White Town, Pondicherry',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.emerald,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

@@ -277,6 +277,12 @@ class AdminVendor {
     required this.isActive,
     this.cuisineType,
     this.rating,
+    this.fssaiNumber,
+    this.gstNumber,
+    this.panNumber,
+    this.fssaiDocUrl,
+    this.gstDocUrl,
+    this.panDocUrl,
   });
 
   factory AdminVendor.fromJson(Map<String, dynamic> json) => AdminVendor(
@@ -288,6 +294,12 @@ class AdminVendor {
         isActive: json['isActive'] as bool? ?? true,
         cuisineType: json['cuisineType'] as String?,
         rating: (json['rating'] as num?)?.toDouble(),
+        fssaiNumber: json['fssaiNumber'] as String?,
+        gstNumber: json['gstNumber'] as String?,
+        panNumber: json['panNumber'] as String?,
+        fssaiDocUrl: json['fssaiDocUrl'] as String?,
+        gstDocUrl: json['gstDocUrl'] as String?,
+        panDocUrl: json['panDocUrl'] as String?,
       );
 
   final String id;
@@ -298,6 +310,12 @@ class AdminVendor {
   final bool isActive;
   final String? cuisineType;
   final double? rating;
+  final String? fssaiNumber;
+  final String? gstNumber;
+  final String? panNumber;
+  final String? fssaiDocUrl;
+  final String? gstDocUrl;
+  final String? panDocUrl;
 }
 
 class OnboardVendorRequest {

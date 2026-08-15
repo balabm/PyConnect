@@ -170,6 +170,26 @@ class _HomestayCardState extends State<HomestayCard> {
                       ),
                     ),
                   ),
+                // Heritage Villa tag
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.villa, size: 12, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text('Heritage Villa', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
             Padding(
