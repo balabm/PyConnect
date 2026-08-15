@@ -364,7 +364,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppTheme.coral, AppTheme.coralLight],
+            colors: [AppTheme.emerald, AppTheme.emeraldLight],
           ),
         ),
         child: Center(
@@ -404,7 +404,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
   Widget _buildNetworkErrorOverlay() {
     return Container(
-      color: Colors.amber.shade700,
+      color: AppTheme.warning,
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

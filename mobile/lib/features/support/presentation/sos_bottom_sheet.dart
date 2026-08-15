@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/support_api.dart';
 
 class SosBottomSheet extends ConsumerStatefulWidget {
@@ -18,10 +19,10 @@ class _SosBottomSheetState extends ConsumerState<SosBottomSheet> {
   double? _longitude;
   String? _gpsStatus;
 
-  static const _issues = [
-    ('Scooter Breakdown', Icons.two_wheeler, Colors.orange),
-    ('Payment Issue', Icons.payment, Colors.blue),
-    ('Safety Concern', Icons.shield, Colors.red),
+  static final _issues = [
+    ('Scooter Breakdown', Icons.two_wheeler, AppTheme.warning),
+    ('Payment Issue', Icons.payment, AppTheme.info),
+    ('Safety Concern', Icons.shield, AppTheme.danger),
   ];
 
   Future<void> _captureGps() async {

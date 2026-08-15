@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
+import '../../../core/theme/app_theme.dart';
 
 final lateNightProductsProvider = FutureProvider<List<dynamic>>((ref) async {
   final api = ref.watch(essentialsApiProvider);
@@ -254,12 +255,12 @@ class _LateNightCarousel extends StatelessWidget {
             child: Row(
               children: [
                 Icon(Icons.nightlight_round,
-                    color: Colors.amber.shade300, size: 20),
+                    color: AppTheme.gold, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Late Night Needs',
                   style: TextStyle(
-                    color: Colors.amber.shade300,
+                    color: AppTheme.gold,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -322,7 +323,7 @@ class _LateNightCarousel extends StatelessWidget {
                             Text(
                               '\u20B9${product['price']}',
                               style: TextStyle(
-                                color: Colors.amber.shade300,
+                                color: AppTheme.gold,
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -333,7 +334,7 @@ class _LateNightCarousel extends StatelessWidget {
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
-                                    color: Colors.amber.shade300,
+                                    color: AppTheme.gold,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(Icons.add,
@@ -362,7 +363,7 @@ class _LateNightCarousel extends StatelessWidget {
                                   GestureDetector(
                                     onTap: () => onAdd(id),
                                     child: Icon(Icons.add_circle,
-                                        size: 20, color: Colors.amber.shade300),
+                                        size: 20, color: AppTheme.gold),
                                   ),
                                 ],
                               ),
@@ -445,7 +446,7 @@ class _QuickAddCard extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green),
+                        color: AppTheme.success),
                   ),
                   if (inCart == 0)
                     SizedBox(

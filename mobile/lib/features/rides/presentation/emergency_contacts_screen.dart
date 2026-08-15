@@ -48,7 +48,7 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
       appBar: AppBar(title: const Text('Emergency Contacts')),
       floatingActionButton: FloatingActionButton(
         onPressed: _addContact,
-        backgroundColor: AppTheme.coral,
+        backgroundColor: AppTheme.emerald,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
@@ -64,15 +64,15 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              color: AppTheme.coral.withValues(alpha: 0.08),
+              color: AppTheme.emerald.withValues(alpha: 0.08),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: AppTheme.coral, size: 20),
+                  Icon(Icons.info_outline, color: AppTheme.emerald, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'These contacts will be notified with your live location when you trigger SOS during a ride.',
-                      style: TextStyle(color: AppTheme.coral, fontSize: 13),
+                      style: TextStyle(color: AppTheme.emerald, fontSize: 13),
                     ),
                   ),
                 ],

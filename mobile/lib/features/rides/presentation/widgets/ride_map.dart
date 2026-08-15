@@ -131,7 +131,7 @@ class _RideMapState extends State<RideMap> {
           width: 44,
           height: 56,
           child: _PinMarker(
-            color: AppTheme.coral,
+            color: AppTheme.danger,
             icon: Icons.location_on,
             label: 'B',
           ),

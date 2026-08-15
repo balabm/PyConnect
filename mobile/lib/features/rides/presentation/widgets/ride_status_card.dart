@@ -29,12 +29,12 @@ class RideStatusCard extends StatelessWidget {
       return AppCard(
         child: Row(
           children: [
-            const Icon(Icons.cancel, color: AppTheme.coral),
+            const Icon(Icons.cancel, color: AppTheme.danger),
             const SizedBox(width: 12),
             Text(
               'Ride Cancelled',
               style: TextStyle(
-                color: AppTheme.coral,
+                color: AppTheme.danger,
                 fontWeight: FontWeight.bold,
               ),
             ),

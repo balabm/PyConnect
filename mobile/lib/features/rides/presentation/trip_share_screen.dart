@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/network/osrm_routing_service.dart';
 import '../../../core/providers.dart';
+import '../../../core/theme/app_theme.dart';
 import 'widgets/ride_map.dart';
 
 final _tripRouteProvider = FutureProvider.family<RouteResult?, ({LatLng start, LatLng end})>((ref, params) async {
@@ -142,7 +143,7 @@ class _TripBody extends ConsumerWidget {
                                   Text(vehiclePlate, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                                 if (driverRating != null)
                                   Row(children: [
-                                    const Icon(Icons.star, color: Colors.amber, size: 14),
+                                    const Icon(Icons.star, color: AppTheme.gold, size: 14),
                                     Text(' ${driverRating.toStringAsFixed(1)}', style: const TextStyle(fontSize: 12)),
                                   ]),
                               ],
@@ -196,11 +197,11 @@ class _TripBody extends ConsumerWidget {
 
   Color _statusColor(String s) {
     switch (s.toLowerCase()) {
-      case 'completed': return Colors.green;
+      case 'completed': return AppTheme.success;
       case 'cancelled':
       case 'drivercancelled': return Colors.red;
       case 'enroute': return Colors.blue;
-      default: return Colors.orange;
+      default: return AppTheme.warning;
     }
   }
 

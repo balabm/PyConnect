@@ -124,8 +124,8 @@ class _ScheduledRideCard extends StatelessWidget {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: AppTheme.coral.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                child: Text(vehicleType, style: TextStyle(color: AppTheme.coral, fontSize: 12, fontWeight: FontWeight.w600)),
+                decoration: BoxDecoration(color: AppTheme.emerald.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                child: Text(vehicleType, style: TextStyle(color: AppTheme.emerald, fontSize: 12, fontWeight: FontWeight.w600)),
               ),
             ],
           ),

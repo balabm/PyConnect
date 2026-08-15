@@ -403,7 +403,7 @@ class _FlashPromoBannerState extends State<_FlashPromoBanner> {
             width: 300,
             margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Colors.orange, Colors.deepOrange]),
+              gradient: const LinearGradient(colors: [AppTheme.warning, AppTheme.danger]),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Padding(
@@ -617,7 +617,7 @@ class _ProductDetailSheet extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               '\u20B9${product['price']}',
-              style: const TextStyle(fontSize: 20, color: Colors.green, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 20, color: AppTheme.success, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             if (product['description'] != null)
@@ -682,7 +682,7 @@ class _ProductDetailSheet extends ConsumerWidget {
                                   children: [
                                     Text(sug['name'] as String? ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                                     const Spacer(),
-                                    Text('\u20B9${sug['price']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                                    Text('\u20B9${sug['price']}', style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
