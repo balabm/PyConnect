@@ -813,6 +813,7 @@ public sealed class VendorController : ControllerBase
             return NotFound(new { Message = "Vendor profile not found." });
 
         var order = await _context.FoodOrders
+            .Include(f => f.Items)
             .FirstOrDefaultAsync(f => f.Id == orderId, cancellationToken);
         if (order is null)
             return NotFound(new { Message = "Food order not found." });

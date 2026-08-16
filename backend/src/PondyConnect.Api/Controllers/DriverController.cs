@@ -172,7 +172,9 @@ public sealed class DriverController : ControllerBase
                 return BadRequest(new { Message = error });
         }
 
-        var userId = User.FindFirst("nameid")?.Value ?? User.FindFirst("sub")?.Value;
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                     ?? User.FindFirst("nameid")?.Value
+                     ?? User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
@@ -246,7 +248,9 @@ public sealed class DriverController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<InstantPayoutResult>> RequestInstantPayout(CancellationToken ct)
     {
-        var userId = User.FindFirst("nameid")?.Value ?? User.FindFirst("sub")?.Value;
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                     ?? User.FindFirst("nameid")?.Value
+                     ?? User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
@@ -485,7 +489,9 @@ public sealed class DriverController : ControllerBase
 
     private async Task<Domain.Entities.Driver?> GetCurrentUserDriverAsync(CancellationToken ct)
     {
-        var userIdStr = User.FindFirst("nameid")?.Value ?? User.FindFirst("sub")?.Value;
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                        ?? User.FindFirst("nameid")?.Value
+                        ?? User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userIdStr))
             return null;
         var userId = Guid.Parse(userIdStr);

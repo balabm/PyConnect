@@ -41,6 +41,7 @@ builder.Services.AddScoped<ServiceAreaValidator>();
 builder.Services.AddSingleton<DriverLocationStore>();
 builder.Services.AddScoped<DispatchEngine>();
 builder.Services.AddScoped<RideDispatchService>();
+builder.Services.AddScoped<PondyConnect.Application.Features.RideHailing.DispatchTaskService>();
 builder.Services.AddScoped<FoodDeliveryDispatchService>();
 builder.Services.AddScoped<PondyConnect.Application.Common.Interfaces.IFoodDeliveryDispatchService, FoodDeliveryDispatchService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Support.ICriticalTicketBroadcaster, CriticalTicketBroadcaster>();

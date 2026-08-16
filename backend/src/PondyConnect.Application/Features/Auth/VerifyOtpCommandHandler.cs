@@ -46,6 +46,10 @@ public sealed class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, 
         const UserRole role = UserRole.Tourist;
         var user = await _userResolver.GetOrCreateAsync(request.Name ?? "PondyTripper", request.Phone, role, cancellationToken);
 
+        // Block deleted/deactivated accounts from getting new tokens.
+        if (!user.IsActive)
+            throw new UnauthorizedAccessException("This account has been deactivated.");
+
         // Waitlist conversion: if this phone number was on the pre-launch
         // waitlist, mark it converted and seed the user's wallet with promo
         // credits. Only runs on first registration (wallet doesn't exist yet).

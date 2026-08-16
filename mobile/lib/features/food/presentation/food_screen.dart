@@ -1111,7 +1111,7 @@ class _BillRow extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
                     color: AppTheme.emerald.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppRadius.xs),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
                     badge!,

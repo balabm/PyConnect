@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/network/razorpay_payment_service.dart';
+import '../../../core/providers.dart' hide staysApiProvider;
 import '../../../core/theme/app_theme.dart';
 import '../application/stays_providers.dart';
 import '../data/stays_api.dart';

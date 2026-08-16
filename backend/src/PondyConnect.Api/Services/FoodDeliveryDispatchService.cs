@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Api.Hubs;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.RideHailing;
 using PondyConnect.Domain.ValueObjects;
 
 /// <summary>
@@ -11,21 +12,29 @@ using PondyConnect.Domain.ValueObjects;
 /// SignalR (DriverHub). Called when a food order transitions to OutForDelivery.
 /// Uses the vendor's linked venue location as the pickup point, falling back
 /// to the delivery location if no venue is linked.
+///
+/// Also creates a <see cref="Domain.Entities.DispatchTask"/> so the driver
+/// can see, accept, and progress through the delivery lifecycle via the REST
+/// API (GET /api/driver/tasks, POST accept, arrived-at-store, out-for-delivery,
+/// complete).
 /// </summary>
 public sealed class FoodDeliveryDispatchService : IFoodDeliveryDispatchService
 {
     private readonly IHubContext<DriverHub> _driverHub;
     private readonly IApplicationDbContext _context;
     private readonly DriverLocationStore _locationStore;
+    private readonly DispatchTaskService _dispatchTaskService;
 
     public FoodDeliveryDispatchService(
         IHubContext<DriverHub> driverHub,
         IApplicationDbContext context,
-        DriverLocationStore locationStore)
+        DriverLocationStore locationStore,
+        DispatchTaskService dispatchTaskService)
     {
         _driverHub = driverHub;
         _context = context;
         _locationStore = locationStore;
+        _dispatchTaskService = dispatchTaskService;
     }
 
     /// <summary>
@@ -37,9 +46,21 @@ public sealed class FoodDeliveryDispatchService : IFoodDeliveryDispatchService
         CancellationToken cancellationToken = default)
     {
         var order = await _context.FoodOrders
-            .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == foodOrderId, cancellationToken);
         if (order is null) return Array.Empty<Guid>();
+
+        // Create a DispatchTask so the driver can see, accept, and progress
+        // through the delivery lifecycle via the REST API. Idempotency: only
+        // create if no task already exists for this food order.
+        var existingTask = await _context.DispatchTasks
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.SourceEntityId == order.Id && t.TaskType == Domain.Enums.DispatchTaskType.FoodDelivery, cancellationToken);
+
+        if (existingTask is null)
+        {
+            _dispatchTaskService.CreateFromFoodOrder(order);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
 
         // Resolve pickup location: vendor's linked venue, or fall back to delivery area
         GeoLocation pickupLocation;

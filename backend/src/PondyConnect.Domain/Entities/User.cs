@@ -222,7 +222,9 @@ public sealed class User : BaseEntity
     public void AnonymizeForDeletion()
     {
         Name = "Deleted User";
-        Phone = $"deleted_{Id:N}";
+        // Phone column is varchar(15) with a unique index. Use a short
+        // unique prefix + first 7 hex chars of the GUID (8 + 7 = 15).
+        Phone = $"del_{Id:N}".Substring(0, 15);
         Email = null;
         DietaryPreference = null;
         FcmDeviceToken = null;
