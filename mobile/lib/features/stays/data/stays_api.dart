@@ -13,6 +13,7 @@ class Homestay {
     required this.hasWifi,
     required this.isVerified,
     this.imageUrls,
+    this.unavailableDates = const [],
   });
 
   factory Homestay.fromJson(Map<String, dynamic> json) => Homestay(
@@ -29,6 +30,10 @@ class Homestay {
         imageUrls: (json['imageUrls'] as List<dynamic>?)
             ?.map((e) => e as String)
             .toList(),
+        unavailableDates: (json['unavailableDates'] as List<dynamic>?)
+                ?.map((e) => DateTime.parse(e as String))
+                .toList() ??
+            [],
       );
 
   final String id;
@@ -42,6 +47,7 @@ class Homestay {
   final bool hasWifi;
   final bool isVerified;
   final List<String>? imageUrls;
+  final List<DateTime> unavailableDates;
 }
 
 class AddOnSuggestion {

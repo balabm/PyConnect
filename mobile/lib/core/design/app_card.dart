@@ -30,6 +30,9 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+    final hasHeader = hasImage || gradient != null;
+
     return Container(
       margin: margin ?? const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
@@ -55,7 +58,7 @@ class AppCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (imageUrl != null || gradient != null)
+              if (hasHeader)
                 Stack(
                   children: [
                     Container(
@@ -64,14 +67,20 @@ class AppCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: gradient ?? AppTheme.sunsetGradient,
                       ),
-                      child: imageUrl != null
+                      child: hasImage
                           ? AppNetworkImage(
                               imageUrl: imageUrl!,
                               fit: BoxFit.cover,
                               height: imageHeight,
                               fallbackIcon: Icons.image_outlined,
                             )
-                          : null,
+                          : Center(
+                              child: Icon(
+                                Icons.image_outlined,
+                                size: 36,
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
                     ),
                     if (badge != null)
                       Positioned(

@@ -229,24 +229,43 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           // allow dispatch via polling. Warn the driver so they can retry.
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Could not connect to dispatch: $e. Toggle offline/online to retry.'),
-                duration: const Duration(seconds: 5),
+              const SnackBar(
+                content: Text('Could not connect to live dispatch. You may miss ride offers. Toggle offline/online to retry.'),
+                duration: Duration(seconds: 5),
               ),
             );
           }
         }
       } catch (e) {
         if (mounted) {
+          final msg = _parseGoOnlineError(e);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to go online: $e'),
+              content: Text(msg),
               backgroundColor: AppTheme.danger,
             ),
           );
         }
       }
     }
+  }
+
+  /// Parses a goOnline/SignalR exception into a user-facing message.
+  /// Detects auth-expired and network errors so the driver knows exactly
+  /// what to do instead of seeing a raw exception string.
+  String _parseGoOnlineError(Object e) {
+    final text = e.toString().toLowerCase();
+    if (text.contains('401') ||
+        text.contains('unauthorized') ||
+        text.contains('token')) {
+      return 'Authentication expired. Please log in again.';
+    }
+    if (text.contains('socketexception') ||
+        text.contains('connection') ||
+        text.contains('timeout')) {
+      return 'Network error. Check your internet connection.';
+    }
+    return 'Failed to go online: $e';
   }
 
   /// Requests foreground and background location permissions with proper flow.

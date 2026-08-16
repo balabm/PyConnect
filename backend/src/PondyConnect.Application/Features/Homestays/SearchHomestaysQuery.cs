@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Domain.Entities;
+using PondyConnect.Domain.Enums;
 
 public sealed record SearchHomestaysQuery(
     DateOnly CheckIn,
@@ -20,7 +21,8 @@ public sealed record HomestaySearchResult(
     decimal NightlyRate,
     int MaxGuests,
     bool HasWifi,
-    bool IsVerified);
+    bool IsVerified,
+    IReadOnlyList<DateOnly> UnavailableDates);
 
 public sealed class SearchHomestaysQueryHandler : IRequestHandler<SearchHomestaysQuery, IReadOnlyList<HomestaySearchResult>>
 {
@@ -63,7 +65,8 @@ public sealed class SearchHomestaysQueryHandler : IRequestHandler<SearchHomestay
                 h.NightlyRate,
                 h.MaxGuests,
                 h.HasWifi,
-                h.IsVerified))
+                h.IsVerified,
+                Array.Empty<DateOnly>()))
             .ToList();
     }
 }
@@ -89,6 +92,22 @@ public sealed class GetHomestayByIdQueryHandler : IRequestHandler<GetHomestayByI
         if (homestay is null)
             return null;
 
+        var bookings = await _context.ServiceBookings
+            .Where(b => b.HomestayId == homestay.Id && b.Status != BookingStatus.Cancelled)
+            .Where(b => b.CheckInDate.HasValue && b.CheckOutDate.HasValue)
+            .ToListAsync(cancellationToken);
+
+        var unavailableDates = new HashSet<DateOnly>();
+        foreach (var booking in bookings)
+        {
+            var start = booking.CheckInDate!.Value;
+            var end = booking.CheckOutDate!.Value;
+            for (var d = start; d < end; d = d.AddDays(1))
+            {
+                unavailableDates.Add(d);
+            }
+        }
+
         return new HomestaySearchResult(
             homestay.Id,
             homestay.Name,
@@ -99,7 +118,8 @@ public sealed class GetHomestayByIdQueryHandler : IRequestHandler<GetHomestayByI
             homestay.NightlyRate,
             homestay.MaxGuests,
             homestay.HasWifi,
-            homestay.IsVerified);
+            homestay.IsVerified,
+            unavailableDates.OrderBy(d => d).ToList());
     }
 }
 
@@ -133,7 +153,8 @@ public sealed class ListVerifiedHomestaysQueryHandler : IRequestHandler<ListVeri
                 h.NightlyRate,
                 h.MaxGuests,
                 h.HasWifi,
-                h.IsVerified))
+                h.IsVerified,
+                Array.Empty<DateOnly>()))
             .ToList();
     }
 }

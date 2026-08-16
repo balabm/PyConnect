@@ -29,7 +29,10 @@ class DriverEarningsScreen extends ConsumerWidget {
         },
         child: earningsAsync.when(
           loading: () => const ShimmerList(withImage: false, count: 5),
-          error: (e, _) => ErrorState(message: e.toString()),
+          error: (e, _) => ErrorState(
+            message: e.toString(),
+            onRetry: () => ref.invalidate(driverEarningsProvider),
+          ),
           data: (data) => _EarningsBody(data: data),
         ),
       ),

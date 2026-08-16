@@ -59,13 +59,20 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
     return _checkOutDate!.difference(_checkInDate!).inDays.clamp(1, 30);
   }
 
-  Future<void> _pickCheckIn() async {
+  Future<void> _pickCheckIn(List<DateTime> unavailableDates) async {
+    final unavailableSet = unavailableDates
+        .map((d) => DateUtils.dateOnly(d))
+        .toSet();
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
       initialDate: _checkInDate ?? now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
+      selectableDayPredicate: (DateTime day) {
+        final dateOnly = DateUtils.dateOnly(day);
+        return !unavailableSet.contains(dateOnly);
+      },
     );
     if (picked != null) {
       AppHaptics.light();
@@ -78,18 +85,25 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
     }
   }
 
-  Future<void> _pickCheckOut() async {
+  Future<void> _pickCheckOut(List<DateTime> unavailableDates) async {
     if (_checkInDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select check-in date first')),
       );
       return;
     }
+    final unavailableSet = unavailableDates
+        .map((d) => DateUtils.dateOnly(d))
+        .toSet();
     final picked = await showDatePicker(
       context: context,
       initialDate: _checkOutDate ?? _checkInDate!.add(const Duration(days: 1)),
       firstDate: _checkInDate!.add(const Duration(days: 1)),
       lastDate: _checkInDate!.add(const Duration(days: 30)),
+      selectableDayPredicate: (DateTime day) {
+        final dateOnly = DateUtils.dateOnly(day);
+        return !unavailableSet.contains(dateOnly);
+      },
     );
     if (picked != null) {
       AppHaptics.light();
@@ -274,7 +288,7 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                             child: _DateCard(
                               label: 'Check-in',
                               date: _formatDate(_checkInDate),
-                              onTap: _pickCheckIn,
+                              onTap: () => _pickCheckIn(homestay.unavailableDates),
                               icon: Icons.login,
                             ),
                           ),
@@ -283,7 +297,7 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
                             child: _DateCard(
                               label: 'Check-out',
                               date: _formatDate(_checkOutDate),
-                              onTap: _pickCheckOut,
+                              onTap: () => _pickCheckOut(homestay.unavailableDates),
                               icon: Icons.logout,
                             ),
                           ),

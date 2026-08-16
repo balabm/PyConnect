@@ -348,9 +348,9 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           id: (map['id'] as String?) ?? '',
           isActive: isActive,
           createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
-          onTap: () => context.push('/transit'),
+          onTap: () => context.push('/rentals'),
           ctaLabel: 'View Rental QR',
-          ctaAction: () => context.push('/transit'),
+          ctaAction: () => context.push('/rentals'),
         ));
       }
     }
