@@ -131,7 +131,13 @@ class ProfileScreen extends ConsumerWidget {
                         );
                         ref.read(_dietaryPreferenceProvider.notifier).state =
                             pref;
-                      } catch (_) {}
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not save preference. Please try again.')),
+                          );
+                        }
+                      }
                     },
                   ),
                   const SizedBox(height: 24),

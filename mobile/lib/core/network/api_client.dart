@@ -181,11 +181,29 @@ class ApiClient {
   /// Attempts a silent token refresh by calling POST /api/auth/refresh
   /// with the current (still-valid) token to obtain a fresh 60-minute
   /// access token. Returns `true` on success, `false` on failure.
+  ///
+  /// Tries the consumer refresh endpoint first, then falls back to the
+  /// vendor refresh endpoint so both token types are handled.
   Future<bool> _attemptTokenRefresh() async {
     if (_token == null || _token!.isEmpty) return false;
     try {
+      final newToken = await _tryRefresh('/api/auth/refresh');
+      if (newToken != null) return true;
+      // Consumer refresh failed — try the vendor refresh endpoint.
+      final vendorToken = await _tryRefresh('/api/vendor/auth/refresh');
+      if (vendorToken != null) return true;
+    } catch (_) {
+      // Refresh failed — fall through to re-auth
+    }
+    return false;
+  }
+
+  /// Calls the given refresh endpoint with the current bearer token and
+  /// returns the new access token on success, or `null` on failure.
+  Future<String?> _tryRefresh(String endpoint) async {
+    try {
       final response = await _dio.post(
-        '/api/auth/refresh',
+        endpoint,
         options: Options(headers: {'Authorization': 'Bearer $_token'}),
       );
       if (response.statusCode == 200 && response.data != null) {
@@ -197,13 +215,13 @@ class ApiClient {
           _token = newToken;
           // Persist the refreshed token so it survives app restarts.
           await onTokenRefreshed?.call(newToken);
-          return true;
+          return newToken;
         }
       }
     } catch (_) {
-      // Refresh failed — fall through to re-auth
+      // This endpoint didn't work — caller will try the next one.
     }
-    return false;
+    return null;
   }
 
   static dynamic _unwrap(Response<dynamic> response) {

@@ -31,6 +31,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
   bool _isStartingLocation = false;
   StreamSubscription? _rideOfferSub;
   StreamSubscription? _foodOfferSub;
+  int _consecutiveGpsFailures = 0;
 
   /// Queue of pending ride offers that arrived while another offer sheet
   /// was already open. When the current sheet closes, the next queued
@@ -360,8 +361,21 @@ class _DriverShellState extends ConsumerState<DriverShell> {
               position.latitude,
               position.longitude,
             );
+        // GPS succeeded — reset the failure counter.
+        _consecutiveGpsFailures = 0;
       } catch (_) {
-        // Ignore GPS errors — keep the timer alive
+        // GPS error — track consecutive failures and warn the driver
+        // after 3 in a row so they know to move to an open area.
+        _consecutiveGpsFailures++;
+        if (_consecutiveGpsFailures == 3 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('GPS signal lost. Move to an open area.'),
+              backgroundColor: AppTheme.warning,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
       }
     });
     _isStartingLocation = false;

@@ -204,7 +204,7 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
               child: ShimmerList(count: 6, withImage: true),
             ),
             error: (e, _) => SliverFillRemaining(
-              child: ErrorState(message: e.toString(), onRetry: () => ref.read(venueListProvider.notifier).refresh()),
+              child: ErrorState(message: 'Could not load venues. Please try again.', onRetry: () => ref.read(venueListProvider.notifier).refresh()),
             ),
             data: (venues) {
               final filtered = _filterVenues(venues);

@@ -346,6 +346,7 @@ public sealed class VendorController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(new GetVendorDashboardQuery(date), cancellationToken);
+        if (result is null) return NotFound(new { Message = "Dashboard not available." });
         return Ok(result);
     }
 
@@ -359,6 +360,7 @@ public sealed class VendorController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(new GetVendorBookingsQuery(date, status, page, pageSize), cancellationToken);
+        if (result is null) return NotFound(new { Message = "Bookings not available." });
         return Ok(result);
     }
 
@@ -367,6 +369,7 @@ public sealed class VendorController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<VendorVenueResponse>>> ListVenues(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new ListVendorVenuesQuery(), cancellationToken);
+        if (result is null) return Ok(Array.Empty<VendorVenueResponse>());
         return Ok(result);
     }
 

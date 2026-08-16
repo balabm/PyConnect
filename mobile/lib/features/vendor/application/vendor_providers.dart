@@ -41,20 +41,25 @@ class VendorMenuNotifier extends StateNotifier<AsyncValue<List<MenuItemModel>>> 
   }
 
   Future<void> createItem(CreateMenuItemPayload payload) async {
+    final current = state.valueOrNull ?? [];
     try {
       final api = _ref.read(vendorDashboardApiProvider);
       final item = await api.createMenuItem(payload);
-      final current = state.valueOrNull ?? [];
       state = AsyncValue.data([...current, item]);
     } catch (e, st) {
+      // Revert: ensure no stale optimistic entry remains.
+      state = AsyncValue.data(current);
       state = AsyncValue.error(e, st);
     }
   }
 
   Future<void> toggleItem(String id) async {
-    final api = _ref.read(vendorDashboardApiProvider);
-    await api.toggleMenuItem(id);
     final current = state.valueOrNull ?? [];
+    final original = current.firstWhere(
+      (i) => i.id == id,
+      orElse: () => throw StateError('Item not found'),
+    );
+    // Optimistic update
     state = AsyncValue.data(
       current
           .map((item) =>
@@ -72,6 +77,16 @@ class VendorMenuNotifier extends StateNotifier<AsyncValue<List<MenuItemModel>>> 
               ) : item)
           .toList(),
     );
+    try {
+      final api = _ref.read(vendorDashboardApiProvider);
+      await api.toggleMenuItem(id);
+    } catch (e, st) {
+      // Revert on failure
+      state = AsyncValue.data(
+        current.map((item) => item.id == id ? original : item).toList(),
+      );
+      state = AsyncValue.error(e, st);
+    }
   }
 
   Future<void> updateItem(String id, UpdateMenuItemPayload payload) async {
@@ -81,10 +96,21 @@ class VendorMenuNotifier extends StateNotifier<AsyncValue<List<MenuItemModel>>> 
   }
 
   Future<void> deleteItem(String id) async {
-    final api = _ref.read(vendorDashboardApiProvider);
-    await api.toggleMenuItem(id);
     final current = state.valueOrNull ?? [];
+    final original = current.firstWhere(
+      (i) => i.id == id,
+      orElse: () => throw StateError('Item not found'),
+    );
+    // Optimistic update
     state = AsyncValue.data(current.where((item) => item.id != id).toList());
+    try {
+      final api = _ref.read(vendorDashboardApiProvider);
+      await api.toggleMenuItem(id);
+    } catch (e, st) {
+      // Revert on failure
+      state = AsyncValue.data([...current, original]);
+      state = AsyncValue.error(e, st);
+    }
   }
 }
 
@@ -195,22 +221,31 @@ class VendorOrdersNotifier extends StateNotifier<AsyncValue<List<VendorOrderMode
   }
 
   Future<void> updateStatus(String orderId, String newStatus) async {
+    final current = state.valueOrNull ?? [];
+    final original = current.firstWhere(
+      (o) => o.id == orderId,
+      orElse: () => throw StateError('Order not found'),
+    );
+    // Optimistic update
+    state = AsyncValue.data(
+      current.map((o) => o.id == orderId
+          ? VendorOrderModel(
+              id: o.id,
+              vendorName: o.vendorName,
+              status: newStatus,
+              totalAmount: o.totalAmount,
+              placedAt: o.placedAt,
+            )
+          : o).toList(),
+    );
     try {
       final api = _ref.read(vendorDashboardApiProvider);
       await api.updateOrderStatus(orderId, newStatus);
-      final current = state.valueOrNull ?? [];
-      state = AsyncValue.data(
-        current.map((o) => o.id == orderId
-            ? VendorOrderModel(
-                id: o.id,
-                vendorName: o.vendorName,
-                status: newStatus,
-                totalAmount: o.totalAmount,
-                placedAt: o.placedAt,
-              )
-            : o).toList(),
-      );
     } catch (e, st) {
+      // Revert on failure
+      state = AsyncValue.data(
+        current.map((o) => o.id == orderId ? original : o).toList(),
+      );
       state = AsyncValue.error(e, st);
     }
   }

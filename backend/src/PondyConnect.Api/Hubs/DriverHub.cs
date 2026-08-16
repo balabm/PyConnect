@@ -5,13 +5,14 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using PondyConnect.Api.Services;
 using PondyConnect.Domain.ValueObjects;
+using System.Security.Claims;
 
 /// <summary>
 /// Driver-facing hub for ride offers and live location updates.
 /// Drivers join a per-driver group for targeted ride offers.
 /// Location updates go to the in-memory DriverLocationStore (not DB).
 /// </summary>
-[Authorize]
+[Authorize(Roles = "Driver")]
 public sealed class DriverHub : Hub
 {
     private readonly DriverLocationStore _locationStore;
@@ -76,16 +77,10 @@ public sealed class DriverHub : Hub
 
     private Guid GetDriverIdFromContext()
     {
-        // The driverId is passed as a query param when connecting, or from claims
-        var driverIdStr = Context.GetHttpContext()?.Request.Query["driverId"].ToString();
-        if (Guid.TryParse(driverIdStr, out var driverId))
+        var driverIdClaim = Context.User?.FindFirst("driverId")?.Value
+            ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(driverIdClaim, out var driverId))
             return driverId;
-
-        // Fallback: try from user claims
-        var userIdStr = Context.User?.FindFirst("nameid")?.Value ?? Context.User?.FindFirst("sub")?.Value;
-        if (Guid.TryParse(userIdStr, out var userId))
-            return userId;
-
         return Guid.Empty;
     }
 }

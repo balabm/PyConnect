@@ -77,7 +77,7 @@ public sealed class AuthController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(new { Message = "Validation failed.", Errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
     }
 
@@ -98,7 +98,7 @@ public sealed class AuthController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(new { Message = "Validation failed.", Errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
     }
 
@@ -121,7 +121,7 @@ public sealed class AuthController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(new { Message = "Validation failed.", Errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
     }
 
@@ -144,7 +144,7 @@ public sealed class AuthController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(new { Message = "Validation failed.", Errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
     }
 
@@ -173,7 +173,7 @@ public sealed class AuthController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(new { Message = "Validation failed.", Errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
     }
 

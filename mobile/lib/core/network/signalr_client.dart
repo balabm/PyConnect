@@ -16,10 +16,18 @@ class SignalRClient {
   final Map<String, List<void Function(List<Object?>?)>> _handlers = {};
   bool _isConnecting = false;
   bool _shouldReconnect = true;
+  bool _isReconnecting = false;
+
+  /// Callback invoked when the reconnection state changes. Receives `true`
+  /// when the connection is lost and a reconnect is in progress, `false`
+  /// when the connection has been restored. The driver shell can listen to
+  /// this to show/hide a "Reconnecting…" banner.
+  void Function(bool isReconnecting)? onConnectionStateChanged;
 
   final List<StreamController<List<Object?>>> _controllers = [];
 
   bool get isConnected => _connection?.state == HubConnectionState.Connected;
+  bool get isReconnecting => _isReconnecting;
 
   String get _hubUrl {
     final base = AppConfig.apiBaseUrl;
@@ -45,10 +53,14 @@ class SignalRClient {
 
       _connection!.onreconnecting(({error}) {
         // Connection lost, attempting to reconnect
+        _isReconnecting = true;
+        onConnectionStateChanged?.call(true);
       });
 
       _connection!.onreconnected(({connectionId}) {
         // Reconnected — handlers are automatically preserved
+        _isReconnecting = false;
+        onConnectionStateChanged?.call(false);
       });
 
       _connection!.onclose(({error}) {
@@ -56,6 +68,9 @@ class SignalRClient {
           Future.delayed(const Duration(seconds: 3), () {
             if (_shouldReconnect) connect();
           });
+        } else {
+          _isReconnecting = false;
+          onConnectionStateChanged?.call(false);
         }
       });
 

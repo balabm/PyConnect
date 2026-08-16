@@ -300,7 +300,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       );
     } catch (e) {
       setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = 'Booking failed. Please try again.';
       });
     } finally {
       if (mounted) setState(() => _submitting = false);

@@ -74,6 +74,7 @@ public sealed class FoodDeliveryController : ControllerBase
     public async Task<ActionResult<FoodOrderDetailResponse>> GetOrder(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetFoodOrderQuery(id), ct);
+        if (result is null) return NotFound(new { Message = "Order not found." });
         return Ok(result);
     }
 
@@ -84,6 +85,7 @@ public sealed class FoodDeliveryController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<FoodOrderSummaryResponse>>> ListOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ListUserFoodOrdersQuery(page, pageSize), ct);
+        if (result is null) return Ok(Array.Empty<FoodOrderSummaryResponse>());
         return Ok(result);
     }
 
@@ -92,6 +94,7 @@ public sealed class FoodDeliveryController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<MenuItemResponse>>> GetMenu(Guid vendorId, CancellationToken ct)
     {
         var result = await _mediator.Send(new ListMenuItemsQuery(vendorId, true), ct);
+        if (result is null) return Ok(Array.Empty<MenuItemResponse>());
         return Ok(result);
     }
 

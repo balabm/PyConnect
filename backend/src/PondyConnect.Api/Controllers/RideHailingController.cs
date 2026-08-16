@@ -143,6 +143,7 @@ public sealed class RideHailingController : ControllerBase
     public async Task<ActionResult<RideDetailResponse>> GetRide(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetRideQuery(id), ct);
+        if (result is null) return NotFound(new { Message = "Ride not found." });
         return Ok(result);
     }
 
@@ -153,6 +154,7 @@ public sealed class RideHailingController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<RideSummaryResponse>>> ListRides([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ListUserRidesQuery(page, pageSize), ct);
+        if (result is null) return Ok(Array.Empty<RideSummaryResponse>());
         return Ok(result);
     }
 

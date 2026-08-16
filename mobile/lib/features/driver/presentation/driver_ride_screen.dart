@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
+import '../../../core/network/offline_mutation_queue.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers.dart';
 import '../application/driver_providers.dart';
@@ -130,7 +131,32 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       await api.arriveAtPickup(widget.rideId);
       _loadRide();
     } catch (e) {
-      if (mounted) {
+      if (e is Exception && _isNetworkError(e)) {
+        try {
+          await ref.read(offlineMutationQueueProvider).enqueue(
+                QueuedMutation(
+                  id: '${widget.rideId}_arrive',
+                  method: 'POST',
+                  path: 'api/rides/${widget.rideId}/arrive',
+                  createdAt: DateTime.now(),
+                ),
+              );
+          if (mounted) {
+            // Optimistically update status so the UI reflects arrival.
+            setState(() => _ride?['status'] = 'ArrivedAtPickup');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Saved offline. Will sync when connection returns.'),
+                backgroundColor: AppTheme.warning,
+              ),
+            );
+          }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+          }
+        }
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
@@ -152,7 +178,33 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       await api.verifyOtpAndStart(widget.rideId, _otpController.text);
       _loadRide();
     } catch (e) {
-      if (mounted) {
+      if (e is Exception && _isNetworkError(e)) {
+        try {
+          await ref.read(offlineMutationQueueProvider).enqueue(
+                QueuedMutation(
+                  id: '${widget.rideId}_start',
+                  method: 'POST',
+                  path: 'api/rides/${widget.rideId}/verify-otp',
+                  body: {'otp': _otpController.text},
+                  createdAt: DateTime.now(),
+                ),
+              );
+          if (mounted) {
+            // Optimistically update status so the UI reflects en-route.
+            setState(() => _ride?['status'] = 'EnRoute');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Saved offline. Will sync when connection returns.'),
+                backgroundColor: AppTheme.warning,
+              ),
+            );
+          }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('OTP verification failed: $e')));
+          }
+        }
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('OTP verification failed: $e')));
       }
     } finally {
@@ -173,7 +225,44 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       // fare collection sheet.
       _loadRide();
     } catch (e) {
-      if (mounted) {
+      if (e is Exception && _isNetworkError(e)) {
+        final distance = (_ride?['distanceKm'] as num?)?.toDouble() ?? 1.0;
+        final duration = (_ride?['estimatedDurationMin'] as num?)?.toInt() ?? 10;
+        try {
+          await ref.read(offlineMutationQueueProvider).enqueue(
+                QueuedMutation(
+                  id: '${widget.rideId}_complete',
+                  method: 'POST',
+                  path: 'api/rides/${widget.rideId}/complete-with-metrics',
+                  body: {
+                    'actualDistanceKm': distance,
+                    'actualDurationMin': duration,
+                  },
+                  createdAt: DateTime.now(),
+                ),
+              );
+          if (mounted) {
+            // Optimistically mark completed and trigger fare sheet.
+            setState(() => _ride?['status'] = 'Completed');
+            if (!_fareSheetShown) {
+              _fareSheetShown = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _showFareCollectionSheet(_ride!);
+              });
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Saved offline. Will sync when connection returns.'),
+                backgroundColor: AppTheme.warning,
+              ),
+            );
+          }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+          }
+        }
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
@@ -219,7 +308,32 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       await api.cancelByDriver(widget.rideId);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) {
+      if (e is Exception && _isNetworkError(e)) {
+        try {
+          await ref.read(offlineMutationQueueProvider).enqueue(
+                QueuedMutation(
+                  id: '${widget.rideId}_cancel',
+                  method: 'POST',
+                  path: 'api/rides/${widget.rideId}/cancel-by-driver',
+                  createdAt: DateTime.now(),
+                ),
+              );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Saved offline. Will sync when connection returns.'),
+                backgroundColor: AppTheme.warning,
+              ),
+            );
+            // Optimistically navigate back — the cancellation will sync later.
+            Navigator.pop(context);
+          }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cancel failed: $e')));
+          }
+        }
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cancel failed: $e')));
       }
     } finally {
@@ -232,6 +346,16 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     }
+  }
+
+  /// Checks if an exception is a network error (vs a server error).
+  /// Network errors are queued for retry; server errors are surfaced.
+  bool _isNetworkError(Exception e) {
+    final text = e.toString().toLowerCase();
+    return text.contains('connection') ||
+        text.contains('timeout') ||
+        text.contains('network') ||
+        text.contains('socket');
   }
 
   @override

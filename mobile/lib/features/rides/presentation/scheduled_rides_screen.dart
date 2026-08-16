@@ -30,7 +30,7 @@ class _ScheduledRidesScreenState extends ConsumerState<ScheduledRidesScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           AppHaptics.light();
-          context.push('/rides/schedule');
+          context.push('/rides/scheduled');
         },
         backgroundColor: AppTheme.emerald,
         foregroundColor: Colors.white,
@@ -50,7 +50,7 @@ class _ScheduledRidesScreenState extends ConsumerState<ScheduledRidesScreen> {
                 actionLabel: 'Schedule a Ride',
                 onAction: () {
                   AppHaptics.light();
-                  context.push('/rides/schedule');
+                  context.push('/rides/scheduled');
                 },
               )
             : ListView.separated(

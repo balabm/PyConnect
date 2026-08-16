@@ -141,7 +141,7 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
       AppHaptics.success();
       if (mounted) setState(() { _otpSent = true; _isSendingOtp = false; });
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _isSendingOtp = false; });
+      if (mounted) setState(() { _error = 'Could not update phone number. Please try again.'; _isSendingOtp = false; });
     }
   }
 
@@ -166,7 +166,7 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _isVerifying = false; });
+      if (mounted) setState(() { _error = 'Could not update phone number. Please try again.'; _isVerifying = false; });
     }
   }
 }

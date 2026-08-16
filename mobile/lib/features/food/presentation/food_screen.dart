@@ -153,7 +153,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
             child: menuAsync.when(
               loading: () => const ShimmerList(withImage: false, count: 6),
               error: (e, _) => ErrorState(
-                message: e.toString(),
+                message: 'Could not load menu. Please try again.',
                 onRetry: () => ref.invalidate(menuProvider(widget.vendorId)),
               ),
               data: (items) {

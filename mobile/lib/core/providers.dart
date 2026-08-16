@@ -18,6 +18,7 @@ import '../features/vendor/data/vendor_onboarding_api.dart';
 import '../features/bookings/data/booking_api.dart';
 import '../features/auth/data/auth_api.dart';
 import '../features/auth/application/auth_controller.dart';
+import '../features/auth/application/vendor_auth_controller.dart';
 import '../features/food/data/food_api.dart';
 import '../features/essentials/data/essentials_api.dart';
 import '../features/rides/data/rides_api.dart';
@@ -37,6 +38,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       ref.read(authTokenProvider.notifier).state = null;
       // Invalidate auth so the router redirect sends the user to /auth.
       ref.invalidate(authControllerProvider);
+      ref.invalidate(vendorAuthControllerProvider);
     },
     onTokenRefreshed: (newToken) async {
       // Persist the refreshed token so it survives app restarts.

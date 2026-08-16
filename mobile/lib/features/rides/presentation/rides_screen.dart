@@ -1247,7 +1247,15 @@ class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
           });
         }
       } catch (_) {
-        if (mounted) setState(() => _isSearching = false);
+        if (mounted) {
+          setState(() => _isSearching = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not search addresses'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     });
   }

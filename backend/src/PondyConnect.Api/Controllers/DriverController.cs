@@ -84,6 +84,7 @@ public sealed class DriverController : ControllerBase
     }
 
     [HttpPost("register")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(DriverResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<DriverResponse>> Register([FromBody] RegisterDriverRequest request, CancellationToken ct)
@@ -240,6 +241,7 @@ public sealed class DriverController : ControllerBase
     public async Task<ActionResult<DriverWalletResponse>> GetWallet(CancellationToken ct)
     {
         var result = await _mediator.Send(new GetDriverWalletQuery(), ct);
+        if (result is null) return NotFound(new { Message = "Wallet not available." });
         return Ok(result);
     }
 
@@ -267,6 +269,7 @@ public sealed class DriverController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<DispatchTaskResponse>>> GetTasks(CancellationToken ct)
     {
         var result = await _mediator.Send(new GetAvailableTasksQuery(), ct);
+        if (result is null) return Ok(Array.Empty<DispatchTaskResponse>());
         return Ok(result);
     }
 

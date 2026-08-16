@@ -312,7 +312,26 @@ class _OrderCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 TextButton(
-                  onPressed: () => onAdvance('Cancelled'),
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Cancel Order?'),
+                        content: const Text('This action cannot be undone.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('No'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Yes, Cancel'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) onAdvance('Cancelled');
+                  },
                   style: TextButton.styleFrom(foregroundColor: AppTheme.emerald),
                   child: const Text('Cancel'),
                 ),

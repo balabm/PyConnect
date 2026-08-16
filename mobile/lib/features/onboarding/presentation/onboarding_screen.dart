@@ -265,7 +265,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             onPressed: () {
               AppHaptics.light();
               // Navigate to saved locations screen to add a location
-              context.go('/saved-locations?label=${label.toLowerCase()}');
+              context.go('/rides/saved-locations?label=${label.toLowerCase()}');
             },
             icon: const Icon(Icons.add_location_alt_outlined),
             label: Text('Add $label Location'),
