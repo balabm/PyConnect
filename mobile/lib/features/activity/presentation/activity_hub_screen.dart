@@ -208,9 +208,9 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
           id: (booking['id'] as String?) ?? '',
           isActive: isActive,
           createdAt: DateTime.tryParse(booking['createdAt'] as String? ?? '') ?? DateTime.now(),
-          onTap: () => context.push('/stays'),
+          onTap: () => context.push('/activity/stay/${booking['id']}'),
           ctaLabel: 'View Stay Pass',
-          ctaAction: () => context.push('/stays'),
+          ctaAction: () => context.push('/activity/stay/${booking['id']}'),
         ));
       }
     }
@@ -468,7 +468,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
   void _navigateToDetail(BuildContext context, _ActivityType type, String id) {
     switch (type) {
       case _ActivityType.stay:
-        context.push('/stays');
+        context.push('/activity/stay/$id');
       case _ActivityType.food:
         context.push('/food/orders/$id');
       case _ActivityType.ride:

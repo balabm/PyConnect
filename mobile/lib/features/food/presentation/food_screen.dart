@@ -11,6 +11,7 @@ import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
+import '../../checkout/cart_controller.dart';
 
 final menuProvider = FutureProvider.family<List<dynamic>, String>((ref, vendorId) async {
   final api = ref.watch(foodApiProvider);
@@ -22,26 +23,112 @@ class FoodScreen extends ConsumerStatefulWidget {
     super.key,
     required this.vendorId,
     this.vendorName,
+    this.deliveryFee = 20.0,
   });
 
   final String vendorId;
   final String? vendorName;
+  final double deliveryFee;
 
   @override
   ConsumerState<FoodScreen> createState() => _FoodScreenState();
 }
 
 class _FoodScreenState extends ConsumerState<FoodScreen> {
-  final _cart = <int, int>{}; // original index -> quantity
   bool _loading = false;
   String _searchQuery = '';
   String? _categoryFilter;
 
-  /// Syncs the local cart count to the global provider so the home screen
-  /// cart badge reflects the current number of items.
-  void _syncCartCount() {
-    final count = _cart.values.fold(0, (a, b) => a + b);
-    ref.read(cartItemCountProvider.notifier).state = count;
+  /// Service category for the universal cart guard. All food items share
+  /// this category so the cross-category guard only triggers when mixing
+  /// food with essentials, transit, etc.
+  static const _cartCategory = 'food';
+
+  /// Extracts a stable identifier from a menu item map.
+  /// Falls back to the item name when no `id` field is present.
+  String _itemId(Map<String, dynamic> item) {
+    return item['id'] as String? ?? item['name'] as String? ?? '';
+  }
+
+  /// Returns the quantity of [item] currently in the global cart, or 0.
+  int _qtyInCart(CartState cart, Map<String, dynamic> item) {
+    final id = _itemId(item);
+    final match = cart.items.where((i) => i.id == id).firstOrNull;
+    return match?.quantity ?? 0;
+  }
+
+  /// Builds a [CartItem] from a menu item map.
+  CartItem _toCartItem(Map<String, dynamic> item, {int quantity = 1}) {
+    return CartItem(
+      id: _itemId(item),
+      name: item['name'] as String? ?? '',
+      price: (item['price'] as num).toDouble(),
+      quantity: quantity,
+      imageUrl: item['imageUrl'] as String?,
+      category: item['category'] as String?,
+    );
+  }
+
+  /// Attempts to add [item] to the global cart. If the cart already holds
+  /// items from a different vendor or service category, shows a confirmation
+  /// dialog: "Clear existing cart to add this item?".
+  /// On confirm, clears the cart and adds the new item. On cancel, no-op.
+  void _addToCart(Map<String, dynamic> item, int quantity) {
+    final cartController = ref.read(cartProvider.notifier);
+    final cartItem = _toCartItem(item, quantity: quantity);
+
+    final result = cartController.addItem(
+      item: cartItem,
+      vendorId: widget.vendorId,
+      vendorName: widget.vendorName ?? 'Menu',
+      category: _cartCategory,
+    );
+
+    switch (result) {
+      case AddItemSuccess():
+        // Item added — no action needed.
+        break;
+      case AddItemConflict(:final item, :final vendorId, :final vendorName, :final category):
+        _showClearCartDialog(item, vendorId, vendorName, category);
+        break;
+    }
+  }
+
+  /// Shows the cross-vendor / cross-category confirmation dialog.
+  Future<void> _showClearCartDialog(
+    CartItem item,
+    String vendorId,
+    String vendorName,
+    String category,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear existing cart?'),
+        content: const Text(
+          'Your cart already has items from a different store. '
+          'Clear existing cart to add this item?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear & Add'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      ref.read(cartProvider.notifier).clearAndAdd(
+            item: item,
+            vendorId: vendorId,
+            vendorName: vendorName,
+            category: category,
+          );
+    }
   }
 
   @override
@@ -83,6 +170,19 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     // when the vendor toggles off accepting orders via SignalR.
     final statusMap = ref.watch(vendorAcceptingOrdersProvider);
     final isAcceptingOrders = statusMap[widget.vendorId] ?? true;
+
+    // Watch the global cart so the UI reacts instantly to add / remove /
+    // clear operations from any screen.
+    final cartState = ref.watch(cartProvider);
+    // Sync the legacy cartItemCountProvider so the home screen badge stays
+    // in sync with the universal cart.
+    ref.read(cartItemCountProvider.notifier).state = cartState.itemCount;
+
+    // Only show the checkout bar if the cart belongs to this vendor.
+    final isThisVendorCart =
+        cartState.isNotEmpty && cartState.vendorId == widget.vendorId;
+    final cartCount = isThisVendorCart ? cartState.itemCount : 0;
+    final subtotal = isThisVendorCart ? cartState.subtotal : 0.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -192,11 +292,6 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                     subtitle: 'Try a different search or category.',
                   );
                 }
-                final cartCount = _cart.values.fold(0, (a, b) => a + b);
-                final subtotal = _cart.entries.fold(0.0, (sum, entry) {
-                  final item = items[entry.key] as Map<String, dynamic>;
-                  return sum + (item['price'] as num).toDouble() * entry.value;
-                });
 
                 return Stack(
                   children: [
@@ -207,8 +302,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final item = filtered[index] as Map<String, dynamic>;
-                          final originalIndex = items.indexOf(item);
-                          final qty = _cart[originalIndex] ?? 0;
+                          final qty = _qtyInCart(cartState, item);
                           return FadeSlideIn(
                             delay: Duration(milliseconds: index * 50),
                             child: _MenuItemTile(
@@ -223,25 +317,15 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                               isEnabled: isAcceptingOrders,
                               onAdd: () {
                                 AppHaptics.light();
-                                setState(() {
-                                  _cart[originalIndex] = qty + 1;
-                                  _syncCartCount();
-                                });
+                                _addToCart(item, 1);
                               },
                               onRemove: () {
                                 AppHaptics.light();
-                                setState(() {
-                                  if (qty <= 1) {
-                                    _cart.remove(originalIndex);
-                                  } else {
-                                    _cart[originalIndex] = qty - 1;
-                                  }
-                                  _syncCartCount();
-                                });
+                                ref.read(cartProvider.notifier).decrementQuantity(_itemId(item));
                               },
                               onCardTap: () {
                                 AppHaptics.light();
-                                _showCustomizationSheet(item, originalIndex, qty);
+                                _showCustomizationSheet(item, qty);
                               },
                             ),
                           );
@@ -265,10 +349,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                             },
                             onClear: () {
                               AppHaptics.light();
-                              setState(() {
-                                _cart.clear();
-                                _syncCartCount();
-                              });
+                              ref.read(cartProvider.notifier).clear();
                             },
                           ),
                         ),
@@ -284,7 +365,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   }
 
   Future<void> _showCustomizationSheet(
-      Map<String, dynamic> item, int originalIndex, int currentQty) async {
+      Map<String, dynamic> item, int currentQty) async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
@@ -294,10 +375,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     if (result != null && mounted) {
       AppHaptics.light();
       final qty = result['quantity'] as int? ?? 1;
-      setState(() {
-        _cart[originalIndex] = (_cart[originalIndex] ?? 0) + qty;
-        _syncCartCount();
-      });
+      _addToCart(item, qty);
     }
   }
 
@@ -333,16 +411,14 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   }
 
   Future<void> _showCartSummarySheet(List<dynamic> items, double subtotal) async {
+    final cartState = ref.read(cartProvider);
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _CartSummarySheet(
-        items: items,
-        cart: Map.fromEntries(
-          _cart.entries.map((e) => MapEntry(e.key, e.value)),
-        ),
-        subtotal: subtotal,
+        cartState: cartState,
+        deliveryFee: widget.deliveryFee,
       ),
     );
     if (result != null && result['confirmed'] == true && mounted) {
@@ -374,12 +450,12 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
 
     setState(() => _loading = true);
     try {
-      final cartItems = _cart.entries.map((e) {
-        final item = items[e.key] as Map<String, dynamic>;
+      final cartState = ref.read(cartProvider);
+      final cartItems = cartState.items.map((item) {
         return {
-          'name': item['name'],
-          'quantity': e.value,
-          'unitPrice': item['price'],
+          'name': item.name,
+          'quantity': item.quantity,
+          'unitPrice': item.price,
         };
       }).toList();
 
@@ -418,14 +494,15 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         'items': cartItems,
       });
 
-      final totalAmount = (result['totalAmount'] as num?)?.toDouble() ?? subtotal;
+      // Use the backend-returned total if available; otherwise compute from
+      // the transparent billing breakdown so the Razorpay payload matches
+      // exactly what the user saw in the cart summary.
+      final totalAmount = (result['totalAmount'] as num?)?.toDouble() ??
+          cartState.grandTotal(widget.deliveryFee);
       final foodOrderId = result['orderId'] as String?;
 
       if (mounted) {
-        setState(() {
-          _cart.clear();
-          _syncCartCount();
-        });
+        ref.read(cartProvider.notifier).clear();
         if (paymentMethod == 1) {
           // Cash on Delivery — skip Razorpay, show success directly
           if (mounted) {
@@ -471,12 +548,24 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       // Show processing overlay while Razorpay checkout opens
       _showProcessingOverlay();
 
-      final paymentResult = await paymentService.startPayment(
-        orderId: order.providerOrderId,
-        amount: (amount * 100).round(), // paise
-        phone: authSession?.phone ?? '',
-        userName: authSession?.name,
-      );
+      // Wrap in a timeout so the app never freezes on the processing
+      // spinner if the Razorpay SDK fails to fire a success/error event
+      // (e.g. user dismisses the native sheet without triggering a
+      // callback, or the SDK crashes).
+      final paymentResult = await paymentService
+          .startPayment(
+            orderId: order.providerOrderId,
+            amount: (amount * 100).round(), // paise
+            phone: authSession?.phone ?? '',
+            userName: authSession?.name,
+          )
+          .timeout(
+            const Duration(minutes: 5),
+            onTimeout: () => PaymentError(
+              code: -1,
+              message: 'Payment timed out. Please try again.',
+            ),
+          );
 
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop(); // dismiss overlay
@@ -864,14 +953,12 @@ class _CheckoutResultSheet extends StatelessWidget {
 /// and bill details (including taxes) before confirming order.
 class _CartSummarySheet extends StatefulWidget {
   const _CartSummarySheet({
-    required this.items,
-    required this.cart,
-    required this.subtotal,
+    required this.cartState,
+    required this.deliveryFee,
   });
 
-  final List<dynamic> items;
-  final Map<int, int> cart;
-  final double subtotal;
+  final CartState cartState;
+  final double deliveryFee;
 
   @override
   State<_CartSummarySheet> createState() => _CartSummarySheetState();
@@ -881,11 +968,11 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
   String _deliveryAddress = 'Current Location, Pondicherry';
   int _paymentMethod = 0; // 0 = Razorpay, 1 = Cash on Delivery
 
-  static const _deliveryFee = 20.0;
-  static const _platformFee = 5.0;
-
-  double get _taxes => widget.subtotal * 0.05;
-  double get _total => widget.subtotal + _deliveryFee + _platformFee + _taxes;
+  double get _subtotal => widget.cartState.subtotal;
+  double get _taxes => widget.cartState.taxes;
+  double get _platformFee => CartState.platformFee;
+  double get _deliveryFee => widget.deliveryFee;
+  double get _total => _subtotal + _taxes + _platformFee + _deliveryFee;
 
   Future<void> _changeAddress() async {
     final controller = TextEditingController(text: _deliveryAddress);
@@ -924,8 +1011,8 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final cart = widget.cart;
-    final subtotal = widget.subtotal;
+    final cartItems = widget.cartState.items;
+    final subtotal = _subtotal;
 
     return Container(
       decoration: BoxDecoration(
@@ -959,7 +1046,7 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                   children: [
                     const Text('Cart Summary', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     const Spacer(),
-                    Text('${cart.values.fold(0, (a, b) => a + b)} items',
+                    Text('${widget.cartState.itemCount} items',
                         style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   ],
                 ),
@@ -1003,13 +1090,12 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                 Flexible(
                   child: ListView.builder(
                     shrinkWrap: true,
-                    itemCount: cart.length,
+                    itemCount: cartItems.length,
                     itemBuilder: (_, i) {
-                      final entry = cart.entries.elementAt(i);
-                      final item = widget.items[entry.key] as Map<String, dynamic>;
-                      final name = item['name'] as String? ?? '';
-                      final price = (item['price'] as num).toDouble();
-                      final qty = entry.value;
+                      final item = cartItems[i];
+                      final name = item.name;
+                      final price = item.price;
+                      final qty = item.quantity;
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
@@ -1076,7 +1162,7 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                 ),
                 const Divider(height: 24),
                 // Bill details — 100% transparent breakdown
-                _BillRow(label: 'Base Item Total', value: '\u20B9${subtotal.toStringAsFixed(0)}'),
+                _BillRow(label: 'Item Total', value: '\u20B9${subtotal.toStringAsFixed(0)}'),
                 _BillRow(label: 'Taxes (GST 5%)', value: '\u20B9${_taxes.toStringAsFixed(0)}'),
                 _BillRow(
                   label: 'Platform Fee',
@@ -1084,7 +1170,7 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                   tooltip: 'This keeps the servers running without charging exorbitant merchant commissions.',
                 ),
                 _BillRow(
-                  label: 'Driver Delivery Fee',
+                  label: 'Delivery Fee',
                   value: '\u20B9${_deliveryFee.toStringAsFixed(0)}',
                   badge: '100% to driver',
                   tooltip: 'The full delivery fee goes directly to the captain. PY Connect takes zero cut.',
@@ -1093,7 +1179,7 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text('Grand Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     Text('\u20B9${_total.toStringAsFixed(0)}',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.emerald)),
                   ],

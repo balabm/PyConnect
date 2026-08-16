@@ -32,10 +32,13 @@ class RestaurantCard extends StatelessWidget {
     // Pricing tier: 1=₹, 2=₹₹, 3=₹₹₹
     final priceTierStr = List.generate(priceTier, (_) => '\u20B9').join();
 
+    final deliveryFeeValue = (deliveryFee ?? 0).toDouble();
+
     return AppCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       onTap: isAcceptingOrders
-          ? () => context.push('/food/vendor/$id?name=${Uri.encodeComponent(name)}')
+          ? () => context.push(
+              '/food/vendor/$id?name=${Uri.encodeComponent(name)}&deliveryFee=$deliveryFeeValue')
           : null,
       child: Opacity(
         opacity: isAcceptingOrders ? 1.0 : 0.5,
@@ -57,9 +60,16 @@ class RestaurantCard extends StatelessWidget {
                           )
                         : Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppTheme.emerald.withValues(alpha: 0.08),
+                                  AppTheme.emerald.withValues(alpha: 0.03),
+                                ],
+                              ),
                             ),
-                            child: const Icon(Icons.restaurant, size: 40, color: Color(0xFF6B7280)),
+                            child: Icon(Icons.restaurant, size: 40, color: AppTheme.emerald.withValues(alpha: 0.4)),
                           ),
                   ),
                 ),

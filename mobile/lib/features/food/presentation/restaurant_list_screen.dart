@@ -27,14 +27,29 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
   String? _cuisineFilter;
   bool _foodVendorsOnly = true; // true = Food Delivery, false = Quick Essentials
 
+  /// Vendor categories that serve food and should appear in the Food Delivery tab.
+  /// Matches the backend VendorCategory enum names returned as strings in the API response.
+  static const _foodCategories = {'Restaurant', 'Cafe', 'Pizzeria'};
+
   static const _cuisines = [
     'Italian', 'Indian', 'Chinese', 'French', 'Cafe',
     'Bakery', 'Breakfast', 'Street Food', 'Seafood'
   ];
 
   List<dynamic> _filterRestaurants(List<dynamic> vendors) {
-    if (_searchQuery.isEmpty && _cuisineFilter == null) return vendors;
-    return vendors.where((vendor) {
+    // Client-side category safety net: ensure non-food vendors (e.g. LuggageCloak,
+  // ScooterRental, TaxiOperator) never appear in the Food Delivery tab, and food
+  // vendors never appear in the Quick Essentials tab — even if the backend filter
+  // is missed or returns unexpected data.
+    final categoryFiltered = vendors.where((vendor) {
+      final map = vendor as Map<String, dynamic>;
+      final category = map['category'] as String? ?? '';
+      final isFood = _foodCategories.contains(category);
+      return _foodVendorsOnly ? isFood : !isFood;
+    }).toList();
+
+    if (_searchQuery.isEmpty && _cuisineFilter == null) return categoryFiltered;
+    return categoryFiltered.where((vendor) {
       final map = vendor as Map<String, dynamic>;
       final name = (map['name'] as String? ?? '').toLowerCase();
       final cuisine = map['cuisineType'] as String? ?? '';

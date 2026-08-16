@@ -19,6 +19,7 @@ import '../features/food/presentation/food_screen.dart';
 import '../features/food/presentation/restaurant_list_screen.dart';
 import '../features/hub/services_hub_screen.dart';
 import '../features/activity/presentation/activity_hub_screen.dart';
+import '../features/activity/presentation/stay_receipt_screen.dart';
 import '../features/notifications/application/notification_providers.dart';
 import '../features/rides/presentation/ride_history_screen.dart';
 import '../features/rides/presentation/ride_rating_screen.dart';
@@ -62,8 +63,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return '/auth';
       }
 
-      // Booking an experience requires identity.
-      final requiresAuth = path.startsWith('/venues/') && path.endsWith('/book');
+      // Routes that require an authenticated identity.
+      // - Venue booking flow
+      // - Profile management (viewing profile, changing phone number)
+      final requiresAuth =
+          (path.startsWith('/venues/') && path.endsWith('/book')) ||
+          path == '/profile' ||
+          path == '/change-phone';
       if (requiresAuth && !authenticated) {
         // Remember where the user was trying to go so we can return after login.
         ref.read(pendingAuthRedirectProvider.notifier).state = state.uri.toString();
@@ -152,6 +158,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (_, state) => FoodScreen(
                   vendorId: state.pathParameters['vendorId']!,
                   vendorName: state.uri.queryParameters['name'],
+                  deliveryFee: double.tryParse(
+                          state.uri.queryParameters['deliveryFee'] ?? '') ??
+                      20.0,
                 ),
               ),
               GoRoute(
@@ -244,6 +253,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'activity',
             builder: (_, _) => const ActivityHubScreen(),
+            routes: [
+              GoRoute(
+                path: 'stay/:id',
+                builder: (_, state) => StayReceiptScreen(
+                  bookingId: state.pathParameters['id']!,
+                ),
+              ),
+            ],
+          ),
+          // Deep-link aliases for activity hub entries. These redirect
+          // /activity/food/:id and /activity/ride/:id to the canonical
+          // detail screens so FCM notifications and shared links work.
+          GoRoute(
+            path: 'activity/food/:id',
+            builder: (_, state) => FoodOrderDetailScreen(
+              orderId: state.pathParameters['id']!,
+            ),
+          ),
+          GoRoute(
+            path: 'activity/ride/:id',
+            builder: (_, state) => RideTrackingScreen(
+              rideId: state.pathParameters['id']!,
+            ),
           ),
           GoRoute(
             path: 'rentals',

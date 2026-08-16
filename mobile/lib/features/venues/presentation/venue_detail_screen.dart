@@ -83,6 +83,8 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     final vibe = Vibe.fromOccupancy(venue.occupancy);
     final occupancyPct = venue.occupancy.clamp(0, 100).toInt();
     final isAtCapacity = occupancyPct >= 100;
+    final isClosed = !venue.isOpen;
+    final bookingsDisabled = isAtCapacity || isClosed;
 
     // Use curated fallback image when no venue image is available.
     final heroImageUrl = (venue.imageUrl != null && venue.imageUrl!.isNotEmpty)
@@ -273,6 +275,49 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  // Proactive closed banner
+                  if (isClosed)
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 250),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.danger.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.do_not_disturb, color: AppTheme.danger, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Currently Unavailable — Closed',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.danger,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'This venue is not accepting bookings right now. Check the operating hours below or try another spot.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.danger.withValues(alpha: 0.8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   // Proactive capacity banner
                   if (isAtCapacity)
                     FadeSlideIn(
@@ -489,7 +534,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     child: SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: isAtCapacity
+                        onPressed: bookingsDisabled
                             ? null
                             : () async {
                                 AppHaptics.light();
@@ -503,9 +548,13 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                                   );
                                 }
                               },
-                        icon: Icon(isAtCapacity ? Icons.do_not_disturb : Icons.event_seat),
+                        icon: Icon(bookingsDisabled ? Icons.do_not_disturb : Icons.event_seat),
                         label: Text(
-                          isAtCapacity ? 'Sold Out - At Full Capacity' : 'Book cover / reservations',
+                          isClosed
+                              ? 'Closed — Not accepting bookings'
+                              : isAtCapacity
+                                  ? 'Sold Out - At Full Capacity'
+                                  : 'Book cover / reservations',
                         ),
                       ),
                     ),

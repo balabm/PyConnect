@@ -84,7 +84,9 @@ class ApiClient {
         if (e.response?.statusCode == 401) {
           // Only attempt refresh if we actually had a token — a 401 without
           // a token means the request raced ahead of AuthController.build().
-          if (_token != null && _token!.isNotEmpty && attempt == 1) {
+          // Attempt refresh on the first 401 (attempt == 0); subsequent 401s
+          // after a failed refresh fall through to onUnauthorized.
+          if (_token != null && _token!.isNotEmpty && attempt == 0) {
             // Attempt silent token refresh via POST /api/auth/refresh.
             final refreshed = await _attemptTokenRefresh();
             if (refreshed) {

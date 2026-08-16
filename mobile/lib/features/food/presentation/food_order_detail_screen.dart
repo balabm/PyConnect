@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,10 +23,53 @@ class FoodOrderDetailScreen extends ConsumerStatefulWidget {
 
 class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
   bool _completionSheetShown = false;
+  Timer? _pollTimer;
+
+  /// Statuses that are considered "active" — the order is still in progress
+  /// and the screen should poll for live updates.
+  static const _activeStatuses = {
+    'pending',
+    'confirmed',
+    'preparing',
+    'ready',
+    'outfordelivery',
+    'out_for_delivery',
+  };
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Starts or stops the polling timer based on the current order status.
+  /// The backend does not yet have a SignalR hub for food orders, so we poll
+  /// every 10 seconds while the order is in an active state. Once the order
+  /// reaches a terminal state (delivered, cancelled), polling stops.
+  void _updatePolling(String status) {
+    final isActive = _activeStatuses.contains(status.toLowerCase());
+
+    if (isActive && _pollTimer == null) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+        if (mounted) {
+          ref.invalidate(foodOrderDetailProvider(widget.orderId));
+        }
+      });
+    } else if (!isActive && _pollTimer != null) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final orderAsync = ref.watch(foodOrderDetailProvider(widget.orderId));
+
+    // Manage the polling timer based on the latest order status.
+    orderAsync.whenData((order) {
+      final status = (order['status'] as String?) ?? '';
+      _updatePolling(status);
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Order Details')),
