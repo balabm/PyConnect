@@ -352,7 +352,8 @@ public sealed class ListVendorsHandler : IRequestHandler<ListVendorsQuery, IRead
             .Select(v => new
             {
                 v.Id, v.Name, v.Category, v.ContactPhone, v.MerchantReference,
-                v.CuisineType, v.Rating, v.ImageUrl, v.Description, v.DeliveryFee, v.PrepTimeMinutes
+                v.CuisineType, v.Rating, v.ImageUrl, v.Description, v.DeliveryFee, v.PrepTimeMinutes,
+                v.IsAcceptingOrders
             })
             .ToListAsync(cancellationToken);
 
@@ -378,6 +379,6 @@ public sealed class ListVendorsHandler : IRequestHandler<ListVendorsQuery, IRead
         return vendors.Select(v => new VendorResponse(
             v.Id, v.Name, v.Category.ToString(), v.ContactPhone, v.MerchantReference,
             v.CuisineType, v.Rating, v.ImageUrl, v.Description, v.DeliveryFee, v.PrepTimeMinutes,
-            menuCounts.GetValueOrDefault(v.Id, 0))).ToList();
+            menuCounts.GetValueOrDefault(v.Id, 0), v.IsAcceptingOrders)).ToList();
     }
 }

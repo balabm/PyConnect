@@ -4,19 +4,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers.dart';
+import '../../activity/presentation/post_completion_sheet.dart';
 
 final foodOrderDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, orderId) async {
   final api = ref.watch(foodApiProvider);
   return await api.getOrder(orderId);
 });
 
-class FoodOrderDetailScreen extends ConsumerWidget {
+class FoodOrderDetailScreen extends ConsumerStatefulWidget {
   const FoodOrderDetailScreen({super.key, required this.orderId});
   final String orderId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final orderAsync = ref.watch(foodOrderDetailProvider(orderId));
+  ConsumerState<FoodOrderDetailScreen> createState() => _FoodOrderDetailScreenState();
+}
+
+class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
+  bool _completionSheetShown = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final orderAsync = ref.watch(foodOrderDetailProvider(widget.orderId));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Order Details')),
@@ -24,11 +32,35 @@ class FoodOrderDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           message: e.toString(),
-          onRetry: () => ref.invalidate(foodOrderDetailProvider(orderId)),
+          onRetry: () => ref.invalidate(foodOrderDetailProvider(widget.orderId)),
         ),
-        data: (order) => _OrderDetailBody(order: order),
+        data: (order) {
+          _maybeShowCompletionSheet(order);
+          return _OrderDetailBody(order: order);
+        },
       ),
     );
+  }
+
+  void _maybeShowCompletionSheet(Map<String, dynamic> order) {
+    final status = (order['status'] as String?)?.toLowerCase() ?? '';
+    if (status != 'delivered' || _completionSheetShown) return;
+    _completionSheetShown = true;
+
+    final vendorId = order['vendorId']?.toString();
+    final orderId = order['id']?.toString();
+    final vendorName = order['vendorName'] as String? ?? 'the restaurant';
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      PostCompletionSheet.show(
+        context,
+        title: vendorName,
+        subtitle: 'How was your order?',
+        vendorId: vendorId,
+        orderId: orderId,
+      );
+    });
   }
 }
 

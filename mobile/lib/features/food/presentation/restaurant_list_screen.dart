@@ -47,6 +47,8 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
   @override
   Widget build(BuildContext context) {
     final restaurantsAsync = ref.watch(restaurantListProvider(_foodVendorsOnly));
+    // Watch the real-time vendor status map so cards update instantly.
+    final statusMap = ref.watch(vendorAcceptingOrdersProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -163,6 +165,10 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
                 onRetry: () => ref.invalidate(restaurantListProvider(_foodVendorsOnly)),
               ),
               data: (vendors) {
+                // Seed the real-time status map with the initial API data.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  ref.read(vendorAcceptingOrdersProvider.notifier).seedFromVendorList(vendors);
+                });
                 final filtered = _filterRestaurants(vendors);
                 if (filtered.isEmpty) {
                   return const EmptyState(
@@ -181,9 +187,15 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final vendor = filtered[index] as Map<String, dynamic>;
+                      final vendorId = vendor['id'] as String? ?? '';
+                      final isAccepting = statusMap[vendorId] ??
+                          (vendor['isAcceptingOrders'] as bool? ?? true);
                       return FadeSlideIn(
                         delay: Duration(milliseconds: index * 60),
-                        child: RestaurantCard(vendor: vendor),
+                        child: RestaurantCard(
+                          vendor: vendor,
+                          isAcceptingOrders: isAccepting,
+                        ),
                       );
                     },
                   ),

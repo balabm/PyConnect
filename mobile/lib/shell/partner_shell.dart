@@ -64,32 +64,41 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
       });
     }
     try {
-      final venues = await ref.read(vendorDashboardApiProvider).getVenues();
+      // Load the master "Accepting Orders" status from the vendor profile.
+      final api = ref.read(vendorDashboardApiProvider);
+      final profile = await api.getProfile();
+      if (mounted) {
+        setState(() {
+          _acceptingOrders = profile.isAcceptingOrders;
+        });
+      }
+      // Also load venue info for the dashboard screen.
+      final venues = await api.getVenues();
       if (venues.isNotEmpty && mounted) {
         setState(() {
           _venueId = venues.first.venueId;
-          _acceptingOrders = venues.first.isActive;
         });
       }
     } catch (_) {}
   }
 
   Future<void> _toggleAcceptingOrders() async {
-    if (_venueId == null || _toggling) return;
+    if (_toggling) return;
     AppHaptics.light();
     setState(() => _toggling = true);
     try {
-      final isActive =
-          await ref.read(vendorDashboardApiProvider).toggleVenueAvailability(_venueId!);
+      final newStatus = !_acceptingOrders;
+      final isAccepting =
+          await ref.read(vendorDashboardApiProvider).toggleStatus(newStatus);
       if (mounted) {
         setState(() {
-          _acceptingOrders = isActive;
+          _acceptingOrders = isAccepting;
           _toggling = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isActive ? 'Now accepting orders' : 'Orders paused'),
-            backgroundColor: isActive ? AppTheme.emerald : AppTheme.coral,
+            content: Text(isAccepting ? 'Now accepting orders' : 'Orders paused'),
+            backgroundColor: isAccepting ? AppTheme.emerald : AppTheme.coral,
             duration: const Duration(seconds: 2),
           ),
         );

@@ -53,4 +53,5 @@ public sealed record VendorResponse(
     string? Description,
     decimal? DeliveryFee,
     int? PrepTimeMinutes,
-    int MenuItemCount);
+    int MenuItemCount,
+    bool IsAcceptingOrders = true);

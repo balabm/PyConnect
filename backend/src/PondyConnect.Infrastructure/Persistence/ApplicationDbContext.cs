@@ -93,6 +93,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<ScheduledRide> ScheduledRides => Set<ScheduledRide>();
 
+    public DbSet<Review> Reviews => Set<Review>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -96,6 +98,17 @@ final driverHubProvider = Provider<SignalRClient>((ref) {
   );
 });
 
+/// SignalR client for real-time vendor status updates. The consumer app
+/// listens to "VendorStatusChanged" events to instantly grey out vendor
+/// cards and disable "Add to Cart" when a vendor stops accepting orders.
+/// No auth required — guests can browse vendors.
+final vendorStatusHubProvider = Provider<SignalRClient>((ref) {
+  return SignalRClient(
+    hubPath: '/hubs/vendor',
+    tokenProvider: () => ref.read(authTokenProvider),
+  );
+});
+
 /// OSM Nominatim geocoding service for address search + reverse geocoding.
 final geocodingProvider = Provider<OsmGeocodingService>((ref) => OsmGeocodingService());
 
@@ -112,6 +125,66 @@ final razorpayPaymentProvider = Provider<RazorpayPaymentService>((ref) {
 
 /// Global cart item count provider shared between food screen and home badge.
 final cartItemCountProvider = StateProvider<int>((ref) => 0);
+
+/// Real-time vendor status map. Keys are vendor IDs (strings), values are
+/// `true` when the vendor is accepting orders. Updated instantly via SignalR
+/// "VendorStatusChanged" events so the consumer app can grey out cards and
+/// disable "Add to Cart" without a page refresh.
+final vendorAcceptingOrdersProvider =
+    StateNotifierProvider<VendorAcceptingOrdersNotifier, Map<String, bool>>(
+  (ref) => VendorAcceptingOrdersNotifier(ref),
+);
+
+class VendorAcceptingOrdersNotifier extends StateNotifier<Map<String, bool>> {
+  VendorAcceptingOrdersNotifier(this._ref) : super({}) {
+    _init();
+  }
+
+  final Ref _ref;
+  StreamSubscription<List<Object?>>? _sub;
+
+  Future<void> _init() async {
+    final hub = _ref.read(vendorStatusHubProvider);
+    try {
+      await hub.connect();
+    } catch (_) {
+      // Connection will auto-retry; non-fatal.
+    }
+    _sub = hub.on('VendorStatusChanged').listen((args) {
+      if (args.isEmpty) return;
+      final payload = args.first as Map<String, dynamic>?;
+      if (payload == null) return;
+      final vendorId = payload['vendorId'] as String?;
+      final isAccepting = payload['isAcceptingOrders'] as bool?;
+      if (vendorId == null || isAccepting == null) return;
+      state = {...state, vendorId: isAccepting};
+    });
+  }
+
+  /// Seeds the initial status from the vendor list API response so cards
+  /// are correct before any SignalR events arrive.
+  void seedFromVendorList(List<dynamic> vendors) {
+    final map = <String, bool>{};
+    for (final v in vendors) {
+      final vendor = v as Map<String, dynamic>;
+      final id = vendor['id'] as String?;
+      if (id != null) {
+        map[id] = vendor['isAcceptingOrders'] as bool? ?? true;
+      }
+    }
+    state = {...state, ...map};
+  }
+
+  /// Returns whether a specific vendor is currently accepting orders.
+  /// Defaults to `true` if no SignalR update has been received yet.
+  bool isAccepting(String vendorId) => state[vendorId] ?? true;
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+}
 
 /// SharedPreferences instance for the offline mutation queue and other
 /// lightweight persistence needs.

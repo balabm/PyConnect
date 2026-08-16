@@ -21,6 +21,13 @@ public sealed class Vendor : BaseEntity
 
     public bool IsActive { get; private set; } = true;
 
+    /// <summary>
+    /// Master toggle: when false, the vendor is not accepting new orders.
+    /// Broadcasts in real-time to the consumer app via SignalR so cards are
+    /// greyed out and "Add to Cart" is disabled instantly.
+    /// </summary>
+    public bool IsAcceptingOrders { get; private set; } = true;
+
     public SaaSTier SaaSTier { get; private set; } = SaaSTier.Free;
 
     public DateTimeOffset? SaaSPlanExpiry { get; private set; }
@@ -156,6 +163,17 @@ public sealed class Vendor : BaseEntity
     public void Deactivate()
     {
         IsActive = false;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Toggles the master "Accepting Orders" switch. When set to false,
+    /// the consumer app greys out the vendor card and disables ordering
+    /// in real-time via SignalR.
+    /// </summary>
+    public void SetAcceptingOrders(bool isAcceptingOrders)
+    {
+        IsAcceptingOrders = isAcceptingOrders;
         MarkUpdated();
     }
 

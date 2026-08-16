@@ -9,6 +9,7 @@ public sealed record GetFoodOrderQuery(Guid OrderId) : IRequest<FoodOrderDetailR
 
 public sealed record FoodOrderDetailResponse(
     Guid Id,
+    Guid VendorId,
     string VendorName,
     string Status,
     decimal VendorPayout,
@@ -61,6 +62,7 @@ public sealed class GetFoodOrderHandler : IRequestHandler<GetFoodOrderQuery, Foo
 
         return new FoodOrderDetailResponse(
             Id: order.Id,
+            VendorId: order.VendorId,
             VendorName: vendor?.Name ?? "Unknown",
             Status: order.Status.ToString(),
             VendorPayout: order.VendorPayout,

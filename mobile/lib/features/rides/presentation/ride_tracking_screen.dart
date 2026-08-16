@@ -9,6 +9,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../activity/presentation/post_completion_sheet.dart';
 import '../application/ride_signalr_provider.dart';
 import 'widgets/driver_info_card.dart';
 import 'widgets/fare_card.dart';
@@ -47,6 +48,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
   StreamSubscription? _completedSub;
   StreamSubscription? _cancelledSub;
   Timer? _refreshTimer;
+  bool _completionSheetShown = false;
 
   @override
   void initState() {
@@ -132,7 +134,30 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
       if (_routePoints == null) {
         _fetchRoute(ride);
       }
+      // Show the post-completion rating sheet when the ride completes.
+      _maybeShowCompletionSheet(ride);
     } catch (_) {}
+  }
+
+  void _maybeShowCompletionSheet(Map<String, dynamic> ride) {
+    final status = (ride['status'] as String?)?.toLowerCase() ?? '';
+    if (status != 'completed' || _completionSheetShown) return;
+    _completionSheetShown = true;
+
+    final driverId = ride['driverId']?.toString();
+    final rideId = (ride['rideId'] ?? ride['id'])?.toString();
+    final driverName = _driverInfo?['driverName'] as String? ?? 'your driver';
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      PostCompletionSheet.show(
+        context,
+        title: driverName,
+        subtitle: 'How was your ride?',
+        driverId: driverId,
+        rideId: rideId,
+      );
+    });
   }
 
   Future<void> _fetchRoute(Map<String, dynamic> ride) async {

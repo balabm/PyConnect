@@ -85,6 +85,8 @@ public interface IApplicationDbContext
 
     DbSet<ScheduledRide> ScheduledRides { get; }
 
+    DbSet<Review> Reviews { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

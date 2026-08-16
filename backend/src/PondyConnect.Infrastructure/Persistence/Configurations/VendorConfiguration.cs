@@ -34,6 +34,9 @@ public sealed class VendorConfiguration : IEntityTypeConfiguration<Vendor>
         builder.HasIndex(v => v.Category);
         builder.HasIndex(v => v.IsApproved);
 
+        builder.Property(v => v.IsAcceptingOrders)
+            .HasDefaultValue(true);
+
         builder.Property(v => v.SaaSTier)
             .HasConversion<string>()
             .HasMaxLength(20)

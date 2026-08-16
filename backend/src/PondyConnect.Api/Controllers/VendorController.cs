@@ -3,7 +3,9 @@ namespace PondyConnect.Api.Controllers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PondyConnect.Api.Hubs;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.FoodDelivery;
 using PondyConnect.Application.Features.Luggage;
@@ -24,14 +26,22 @@ public sealed class VendorController : ControllerBase
     private readonly ICurrentUserService _currentUser;
     private readonly IStorageService _storage;
     private readonly IPaymentGateway _paymentGateway;
+    private readonly IHubContext<VendorHub> _hubContext;
 
-    public VendorController(IMediator mediator, IApplicationDbContext context, ICurrentUserService currentUser, IStorageService storage, IPaymentGateway paymentGateway)
+    public VendorController(
+        IMediator mediator,
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        IStorageService storage,
+        IPaymentGateway paymentGateway,
+        IHubContext<VendorHub> hubContext)
     {
         _mediator = mediator;
         _context = context;
         _currentUser = currentUser;
         _storage = storage;
         _paymentGateway = paymentGateway;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -224,7 +234,8 @@ public sealed class VendorController : ControllerBase
             vendor.ContactPhone,
             vendor.Description,
             vendor.IsApproved,
-            vendor.IsActive));
+            vendor.IsActive,
+            vendor.IsAcceptingOrders));
     }
 
     [HttpPut("profile")]
@@ -272,6 +283,41 @@ public sealed class VendorController : ControllerBase
         await _context.SaveChangesAsync(cancellationToken);
 
         return Ok(new ToggleActiveResponse(vendor.IsActive));
+    }
+
+    /// <summary>
+    /// Master "Accepting Orders" emergency toggle. When set to false, the
+    /// consumer app instantly greys out the vendor card and disables
+    /// "Add to Cart" via a SignalR <c>VendorStatusChanged</c> broadcast.
+    /// </summary>
+    [HttpPut("status")]
+    [ProducesResponseType(typeof(ToggleVendorStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ToggleVendorStatusResponse>> ToggleStatus(
+        [FromBody] ToggleVendorStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized();
+
+        var vendor = await _context.Vendors
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone, cancellationToken);
+
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor not found." });
+
+        vendor.SetAcceptingOrders(request.IsAcceptingOrders);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Broadcast via SignalR so the consumer app reacts in real-time.
+        await _hubContext.Clients.All.SendAsync("VendorStatusChanged", new
+        {
+            vendorId = vendor.Id,
+            isAcceptingOrders = request.IsAcceptingOrders,
+        }, cancellationToken);
+
+        return Ok(new ToggleVendorStatusResponse(vendor.IsAcceptingOrders));
     }
 
     [HttpGet("venues/{venueId:guid}")]
@@ -917,12 +963,16 @@ public sealed record VendorProfileResponse(
     string? ContactPhone,
     string? Description,
     bool IsApproved,
-    bool IsActive);
+    bool IsActive,
+    bool IsAcceptingOrders = true);
 
 public sealed record UpdateVendorProfileRequest(string? Description);
 public sealed record SetVenueAvailabilityRequest(bool? IsActive);
 
 public sealed record ToggleActiveResponse(bool IsActive);
+
+public sealed record ToggleVendorStatusRequest(bool IsAcceptingOrders);
+public sealed record ToggleVendorStatusResponse(bool IsAcceptingOrders);
 
 public sealed record VendorVenueResponse(
     Guid Id,

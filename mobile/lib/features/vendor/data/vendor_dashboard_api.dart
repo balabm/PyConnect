@@ -73,6 +73,34 @@ class BookingSummary {
   final String? vehiclePlate;
 }
 
+/// Vendor profile data including the master "Accepting Orders" toggle state.
+class VendorProfile {
+  VendorProfile({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.isApproved,
+    required this.isActive,
+    required this.isAcceptingOrders,
+  });
+
+  factory VendorProfile.fromJson(Map<String, dynamic> json) => VendorProfile(
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        category: json['category'] as String? ?? '',
+        isApproved: json['isApproved'] as bool? ?? false,
+        isActive: json['isActive'] as bool? ?? false,
+        isAcceptingOrders: json['isAcceptingOrders'] as bool? ?? true,
+      );
+
+  final String id;
+  final String name;
+  final String category;
+  final bool isApproved;
+  final bool isActive;
+  final bool isAcceptingOrders;
+}
+
 class ActivatePriorityResult {
   ActivatePriorityResult({
     required this.success,
@@ -103,6 +131,13 @@ class VendorDashboardApi {
   Future<DashboardData> getDashboard() async {
     final body = await _api.get('/api/vendor/dashboard');
     return DashboardData.fromJson(body as Map<String, dynamic>);
+  }
+
+  /// Fetches the vendor profile including the master "Accepting Orders"
+  /// toggle state so the partner app can show the correct status on startup.
+  Future<VendorProfile> getProfile() async {
+    final body = await _api.get('/api/vendor/profile');
+    return VendorProfile.fromJson(body as Map<String, dynamic>);
   }
 
   Future<List<BookingSummary>> getBookings() async {
@@ -149,6 +184,17 @@ class VendorDashboardApi {
     final body = await _api.put('/api/vendor/venues/$venueId/availability');
     final json = body as Map<String, dynamic>;
     return json['isActive'] as bool? ?? false;
+  }
+
+  /// Master "Accepting Orders" emergency toggle. When set to false, the
+  /// consumer app instantly greys out the vendor card and disables
+  /// "Add to Cart" via a SignalR VendorStatusChanged broadcast.
+  Future<bool> toggleStatus(bool isAcceptingOrders) async {
+    final body = await _api.put('/api/vendor/status', data: {
+      'isAcceptingOrders': isAcceptingOrders,
+    });
+    final json = body as Map<String, dynamic>;
+    return json['isAcceptingOrders'] as bool? ?? isAcceptingOrders;
   }
 
   /// Fetches the vendor's venue list to resolve the real venue ID.

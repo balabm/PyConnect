@@ -79,6 +79,10 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   @override
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(menuProvider(widget.vendorId));
+    // Watch real-time vendor status so "Add to Cart" disables instantly
+    // when the vendor toggles off accepting orders via SignalR.
+    final statusMap = ref.watch(vendorAcceptingOrdersProvider);
+    final isAcceptingOrders = statusMap[widget.vendorId] ?? true;
 
     return Scaffold(
       appBar: AppBar(
@@ -93,6 +97,29 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       ),
       body: Column(
         children: [
+          // "Currently Unavailable" banner when vendor has paused orders
+          if (!isAcceptingOrders)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: AppTheme.danger.withValues(alpha: 0.1),
+              child: Row(
+                children: [
+                  Icon(Icons.pause_circle, size: 20, color: AppTheme.danger),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This restaurant is currently not accepting orders.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.danger,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           FadeSlideIn(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -193,6 +220,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                               isVeg: item['isVeg'] as bool? ?? false,
                               imageUrl: item['imageUrl'] as String?,
                               quantity: qty,
+                              isEnabled: isAcceptingOrders,
                               onAdd: () {
                                 AppHaptics.light();
                                 setState(() {
@@ -230,6 +258,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                             itemCount: cartCount,
                             subtotal: subtotal,
                             loading: _loading,
+                            enabled: isAcceptingOrders,
                             onCheckout: () {
                               AppHaptics.medium();
                               _showCartSummarySheet(items, subtotal);
@@ -557,6 +586,7 @@ class _MenuItemTile extends StatelessWidget {
     required this.onRemove,
     required this.onCardTap,
     this.imageUrl,
+    this.isEnabled = true,
   });
 
   final String name;
@@ -570,6 +600,7 @@ class _MenuItemTile extends StatelessWidget {
   final VoidCallback onRemove;
   final VoidCallback onCardTap;
   final String? imageUrl;
+  final bool isEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -674,13 +705,17 @@ class _MenuItemTile extends StatelessWidget {
           const SizedBox(width: 12),
           quantity == 0
               ? GestureDetector(
-                  onTap: onAdd,
+                  onTap: isEnabled ? onAdd : null,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.emerald,
+                      color: isEnabled
+                          ? AppTheme.emerald
+                          : AppTheme.emerald.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
+                      boxShadow: isEnabled
+                          ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))]
+                          : [],
                     ),
                     child: const Icon(Icons.add, color: Colors.white, size: 20),
                   ),
@@ -693,9 +728,9 @@ class _MenuItemTile extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(icon: const Icon(Icons.remove, size: 18), onPressed: onRemove, color: AppTheme.emerald),
+                      IconButton(icon: const Icon(Icons.remove, size: 18), onPressed: isEnabled ? onRemove : null, color: AppTheme.emerald),
                       Text('$quantity', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      IconButton(icon: const Icon(Icons.add, size: 18), onPressed: onAdd, color: AppTheme.emerald),
+                      IconButton(icon: const Icon(Icons.add, size: 18), onPressed: isEnabled ? onAdd : null, color: AppTheme.emerald),
                     ],
                   ),
                 ),
@@ -707,19 +742,21 @@ class _MenuItemTile extends StatelessWidget {
 }
 
 class _CheckoutBar extends StatelessWidget {
-  const _CheckoutBar({required this.itemCount, required this.subtotal, required this.loading, required this.onCheckout, required this.onClear});
+  const _CheckoutBar({required this.itemCount, required this.subtotal, required this.loading, required this.onCheckout, required this.onClear, this.enabled = true});
   final int itemCount;
   final double subtotal;
   final bool loading;
   final VoidCallback onCheckout;
   final VoidCallback onClear;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Container(
         decoration: BoxDecoration(
-          gradient: AppTheme.emeraldGradient,
+          gradient: enabled ? AppTheme.emeraldGradient : null,
+          color: enabled ? null : Colors.grey,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
@@ -751,7 +788,7 @@ class _CheckoutBar extends StatelessWidget {
                         backgroundColor: Colors.white,
                         foregroundColor: AppTheme.emerald,
                       ),
-                      onPressed: loading ? null : onCheckout,
+                      onPressed: (loading || !enabled) ? null : onCheckout,
                       child: loading
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                           : const Text('Checkout'),

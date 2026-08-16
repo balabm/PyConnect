@@ -70,6 +70,33 @@ Future<void> _initLocalNotifications() async {
   }
 }
 
+/// Resolves the notification payload to a deep-link route.
+///
+/// The backend sends a `type` field (e.g. `ride_accepted`, `order_ready`)
+/// together with an `id`/`rideId`/`orderId` field. This maps the combination
+/// to the correct in-app route. If the backend already includes an explicit
+/// `route` field, that is used as a fallback / override.
+String? _resolveRoute(Map<String, dynamic> data) {
+  final type = data['type'] as String?;
+  final id = data['id'] as String? ??
+      data['rideId'] as String? ??
+      data['orderId'] as String?;
+  switch (type) {
+    case 'ride_accepted':
+    case 'ride_started':
+      return id != null ? '/rides/$id' : null;
+    case 'ride_completed':
+      return id != null ? '/rides/$id/receipt' : null;
+    case 'order_ready':
+    case 'order_delivered':
+      return id != null ? '/food/orders/$id' : null;
+    case 'booking_confirmed':
+      return '/activity';
+    default:
+      return data['route'] as String?;
+  }
+}
+
 void _showLocalNotificationFromPayload(RemoteMessage message) {
   final type = message.data['type'] as String? ?? '';
   final title = message.notification?.title ?? message.data['title'] as String? ?? _defaultTitle(type);
@@ -122,7 +149,7 @@ void _showLocalNotificationFromPayload(RemoteMessage message) {
   final notificationId = message.hashCode;
 
   _localNotificationsPlugin.show(notificationId, title, body, details,
-      payload: message.data['route'] as String?);
+      payload: _resolveRoute(message.data));
 }
 
 String _defaultTitle(String type) {
@@ -182,7 +209,7 @@ class FcmService {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      final route = message.data['route'] as String?;
+      final route = _resolveRoute(message.data);
       if (route != null) {
         service._tapController.add(route);
       }
@@ -190,7 +217,7 @@ class FcmService {
 
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
-      final route = initialMessage.data['route'] as String?;
+      final route = _resolveRoute(initialMessage.data);
       if (route != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           service._tapController.add(route);

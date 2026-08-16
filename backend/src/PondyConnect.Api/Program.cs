@@ -287,6 +287,7 @@ app.MapControllers();
 app.MapHub<DriverHub>("/hubs/driver");
 app.MapHub<RideHub>("/hubs/ride");
 app.MapHub<AdminHub>("/hubs/admin");
+app.MapHub<VendorHub>("/hubs/vendor");
 
 // Apply migrations + seed known venues on startup. Log a warning when the
 // database is unreachable so local development can still boot the API.

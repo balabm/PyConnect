@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import 'animated_vehicle_marker.dart';
 
 /// CartoDB Positron (light) and Dark Matter (dark) tiles per MasterPlan spec.
 /// Falls back to OSM standard tiles if CartoDB is unavailable.
@@ -60,15 +61,48 @@ class _RideMapState extends State<RideMap> {
   late final MapController _mapController;
   bool _hasFitRoute = false;
 
+  /// The geographic position the driver marker is currently displayed at.
+  /// This is updated every animation frame by [AnimatedVehicleMarker] so the
+  /// marker glides smoothly from the previous GPS fix to the new one.
+  LatLng? _animatedDriverLocation;
+
+  /// The start (previous) and end (new) positions for the current glide
+  /// segment. When a new driver location arrives, [_animStart] is set to the
+  /// currently displayed position and [_animEnd] to the new fix.
+  LatLng? _animStart;
+  LatLng? _animEnd;
+
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
+    // Seed the animated position with the initial driver location (if any) so
+    // the first fix doesn't animate from nowhere.
+    _animatedDriverLocation = widget.driverLocation;
+    _animStart = widget.driverLocation;
+    _animEnd = widget.driverLocation;
   }
 
   @override
   void didUpdateWidget(RideMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // When a new driver location arrives, begin a new glide segment from the
+    // currently displayed position to the new fix. The [AnimatedVehicleMarker]
+    // (keyed by this segment) drives [_animatedDriverLocation] via callback.
+    if (widget.driverLocation != null &&
+        widget.driverLocation != oldWidget.driverLocation) {
+      if (_animatedDriverLocation == null) {
+        // First fix — no animation, just place the marker.
+        _animatedDriverLocation = widget.driverLocation;
+        _animStart = widget.driverLocation;
+        _animEnd = widget.driverLocation;
+      } else {
+        _animStart = _animatedDriverLocation;
+        _animEnd = widget.driverLocation;
+      }
+    }
+
     if (widget.fitRoute && !_hasFitRoute && widget.routePoints != null && widget.routePoints!.isNotEmpty) {
       _fitBounds();
       _hasFitRoute = true;
@@ -142,30 +176,29 @@ class _RideMapState extends State<RideMap> {
             label: 'B',
           ),
         ),
-      // Driver marker — pulsing green circle
-      if (widget.driverLocation != null)
+      // Driver marker — glides smoothly between GPS fixes and rotates to
+      // face the direction of travel. The marker point is the animated
+      // position; the child widget drives that position via callback.
+      if (widget.driverLocation != null &&
+          _animatedDriverLocation != null &&
+          _animStart != null &&
+          _animEnd != null)
         Marker(
-          point: widget.driverLocation!,
+          point: _animatedDriverLocation!,
           width: 44,
           height: 44,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.emerald, AppTheme.emeraldLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.emerald.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.directions_car, color: Colors.white, size: 22),
+          child: AnimatedVehicleMarker(
+            // Keying by the segment ensures the animation restarts whenever a
+            // new GPS fix arrives, while persisting across the per-frame
+            // rebuilds triggered by the position callback.
+            key: ValueKey('${_animStart!.latitude},${_animStart!.longitude}'
+                '->${_animEnd!.latitude},${_animEnd!.longitude}'),
+            startLatLng: _animStart!,
+            endLatLng: _animEnd!,
+            icon: Icons.directions_car,
+            onPositionUpdate: (latlng) {
+              if (mounted) setState(() => _animatedDriverLocation = latlng);
+            },
           ),
         ),
     ];
