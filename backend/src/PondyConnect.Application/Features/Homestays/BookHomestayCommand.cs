@@ -64,6 +64,12 @@ public sealed class BookHomestayCommandHandler : IRequestHandler<BookHomestayCom
 
         try
         {
+            // Pessimistic row-level lock on the homestay so concurrent booking
+            // attempts for the same property cannot interleave their
+            // read-modify-write on the RoomAvailability rows. On PostgreSQL
+            // this issues SELECT 1 FROM homestays WHERE "Id" = ... FOR UPDATE.
+            await _context.AcquireRowLockAsync("homestays", request.HomestayId, cancellationToken);
+
             var nights = request.CheckOut.DayNumber - request.CheckIn.DayNumber;
             if (nights <= 0)
                 throw new InvalidOperationException("Check-out must be at least one day after check-in.");
@@ -78,7 +84,7 @@ public sealed class BookHomestayCommandHandler : IRequestHandler<BookHomestayCom
                 throw new InvalidOperationException("Room availability not initialized for the requested date range.");
 
             if (availabilityEntries.Any(r => r.IsBooked))
-                throw new InvalidOperationException("Homestay is not available for the selected dates.");
+                throw new BookingConflictException("Homestay is not available for the selected dates.");
 
             // Use UTC offset — Npgsql 6+ requires UTC DateTimeOffset for timestamptz columns.
             // The 12:00 IST check-in time is stored as 06:30 UTC (offset 0).

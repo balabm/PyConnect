@@ -95,6 +95,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<Review> Reviews => Set<Review>();
 
+    public DbSet<ProcessedWebhook> ProcessedWebhooks => Set<ProcessedWebhook>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
@@ -135,5 +137,31 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
         return await Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
+    }
+
+    /// <summary>
+    /// Acquires a pessimistic row-level lock (<c>SELECT ... FOR UPDATE</c>)
+    /// on the specified row within the current transaction. Only effective on
+    /// PostgreSQL; a no-op on other providers. The lock is held until the
+    /// enclosing transaction commits or rolls back.
+    /// </summary>
+    public async Task AcquireRowLockAsync(string tableName, Guid rowId, CancellationToken cancellationToken = default)
+    {
+        if (!IsPostgreSQL)
+            return;
+
+        var connection = Database.GetDbConnection();
+        var transaction = Database.CurrentTransaction?.GetDbTransaction();
+
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"SELECT 1 FROM \"{tableName}\" WHERE \"Id\" = @rowId FOR UPDATE";
+
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "@rowId";
+        parameter.Value = rowId;
+        command.Parameters.Add(parameter);
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }

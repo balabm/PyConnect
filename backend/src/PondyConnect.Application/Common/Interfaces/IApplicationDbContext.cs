@@ -87,6 +87,8 @@ public interface IApplicationDbContext
 
     DbSet<Review> Reviews { get; }
 
+    DbSet<ProcessedWebhook> ProcessedWebhooks { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -105,4 +107,15 @@ public interface IApplicationDbContext
     /// </summary>
     Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction?> BeginTransactionAsync(
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Acquires a pessimistic row-level lock (<c>SELECT ... FOR UPDATE</c>)
+    /// on the specified row within the current transaction. Only effective on
+    /// PostgreSQL; a no-op on other providers (SQLite/in-memory rely on the
+    /// Serializable transaction + distributed lock). The lock is held until
+    /// the enclosing transaction commits or rolls back.
+    /// </summary>
+    /// <param name="tableName">The database table name to lock a row in.</param>
+    /// <param name="rowId">The primary key value of the row to lock.</param>
+    Task AcquireRowLockAsync(string tableName, Guid rowId, CancellationToken cancellationToken = default);
 }

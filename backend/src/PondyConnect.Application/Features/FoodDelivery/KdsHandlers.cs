@@ -3,6 +3,7 @@ namespace PondyConnect.Application.Features.FoodDelivery;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Domain.Enums;
 
 // ── KDS Query ──
@@ -101,12 +102,14 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
     private readonly IFoodDeliveryDispatchService? _foodDispatch;
+    private readonly INotificationService? _notifications;
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
         _foodDispatch = null;
+        _notifications = null;
     }
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch)
@@ -114,6 +117,15 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         _context = context;
         _currentUser = currentUser;
         _foodDispatch = foodDispatch;
+        _notifications = null;
+    }
+
+    public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch, INotificationService notifications)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _foodDispatch = foodDispatch;
+        _notifications = notifications;
     }
 
     public async Task<KdsOrderResponse> Handle(AdvanceKdsOrderCommand request, CancellationToken cancellationToken)
@@ -122,6 +134,8 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken)
             ?? throw new InvalidOperationException("Order not found.");
+
+        var previousStatus = order.Status;
 
         // Track whether this advance transitions to OutForDelivery so we can
         // trigger driver dispatch after saving.
@@ -156,6 +170,12 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
             await _foodDispatch.DispatchFoodOrderAsync(order.Id, cancellationToken);
         }
 
+        // Fire-and-forget push to the consumer on key state transitions.
+        if (_notifications is not null)
+        {
+            _ = SendFoodOrderStatusPushAsync(order, previousStatus, cancellationToken);
+        }
+
         var vendorName = await _context.Vendors.AsNoTracking()
             .Where(v => v.Id == order.VendorId)
             .Select(v => v.Name)
@@ -183,5 +203,54 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
             Notes: order.Notes,
             PlacedAt: order.PlacedAt,
             Items: order.Items.Select(i => new KdsOrderItemResponse(i.Name, i.Quantity, i.SpecialInstructions)).ToList());
+    }
+
+    /// <summary>
+    /// Best-effort FCM push to the consumer when a food order transitions to
+    /// Preparing (ready) or OutForDelivery via the KDS advance flow.
+    /// All exceptions are swallowed.
+    /// </summary>
+    private async Task SendFoodOrderStatusPushAsync(Domain.Entities.FoodOrder order, FoodOrderStatus previousStatus, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var (title, body, route) = order.Status switch
+            {
+                FoodOrderStatus.Preparing =>
+                    ("Your order is being prepared!",
+                     $"The kitchen has started on your order #{order.Id.ToString().Substring(0, 8).ToUpperInvariant()}.",
+                     $"/activity/food/{order.Id}"),
+                FoodOrderStatus.OutForDelivery =>
+                    ("Order out for delivery!",
+                     $"Your order #{order.Id.ToString().Substring(0, 8).ToUpperInvariant()} is on the way.",
+                     $"/activity/food/{order.Id}"),
+                FoodOrderStatus.Delivered =>
+                    ("Order delivered!",
+                     $"Your order #{order.Id.ToString().Substring(0, 8).ToUpperInvariant()} has been delivered. Enjoy!",
+                     $"/activity/food/{order.Id}"),
+                _ => (null, null, null),
+            };
+
+            if (title is null)
+                return;
+
+            await _notifications!.SendTargetedPushAsync(
+                order.UserId,
+                title,
+                body!,
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", route! },
+                    { "type", "food_order_status" },
+                    { "order_id", order.Id.ToString() },
+                    { "status", order.Status.ToString() },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort delivery — never crash the KDS advance flow.
+        }
     }
 }

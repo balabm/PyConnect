@@ -79,6 +79,15 @@ public sealed class RazorpayGateway : IPaymentGateway
         {
             using var doc = JsonDocument.Parse(payload);
             var root = doc.RootElement;
+
+            // Razorpay webhook envelope: { "entity": "event", "id": "evt_...", "event": "payment.captured", "payload": { ... } }
+            var eventId = root.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String
+                ? idEl.GetString()
+                : null;
+            var eventType = root.TryGetProperty("event", out var eventEl) && eventEl.ValueKind == JsonValueKind.String
+                ? eventEl.GetString()
+                : null;
+
             var payment = root.GetProperty("payload").GetProperty("payment").GetProperty("entity");
             var paymentId = payment.GetProperty("id").GetString();
             var orderId = payment.GetProperty("order_id").GetString();
@@ -89,7 +98,9 @@ public sealed class RazorpayGateway : IPaymentGateway
                 IsValid: true,
                 ProviderPaymentId: paymentId,
                 ProviderOrderId: orderId,
-                Status: status));
+                Status: status,
+                EventId: eventId,
+                EventType: eventType));
         }
         catch (Exception ex)
         {

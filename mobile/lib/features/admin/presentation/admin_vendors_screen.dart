@@ -120,22 +120,7 @@ class _AdminVendorsScreenState extends ConsumerState<AdminVendorsScreen> {
                     ),
                   );
                 }
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    final crossAxisCount = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 600 ? 2 : 1);
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(12),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: crossAxisCount == 1 ? 2.4 : 1.6,
-                      ),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, i) => _VendorCard(vendor: filtered[i]),
-                    );
-                  },
-                );
+                return _VendorTable(vendors: filtered);
               },
             ),
           ),
@@ -225,124 +210,256 @@ Color categoryColor(String category) {
   }
 }
 
-class _VendorCard extends ConsumerWidget {
+// ---------------------------------------------------------------------------
+// Sortable vendor DataTable
+// ---------------------------------------------------------------------------
+
+enum _VendorSort { name, category, rating, approved, active }
+
+class _VendorTable extends StatefulWidget {
+  const _VendorTable({required this.vendors});
+  final List<AdminVendor> vendors;
+
+  @override
+  State<_VendorTable> createState() => _VendorTableState();
+}
+
+class _VendorTableState extends State<_VendorTable> {
+  _VendorSort _sortField = _VendorSort.name;
+  bool _sortAscending = true;
+
+  List<AdminVendor> get _sorted {
+    final list = [...widget.vendors];
+    int compare(AdminVendor a, AdminVendor b) {
+      int cmp;
+      switch (_sortField) {
+        case _VendorSort.name:
+          cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case _VendorSort.category:
+          cmp = a.category.toLowerCase().compareTo(b.category.toLowerCase());
+        case _VendorSort.rating:
+          cmp = (a.rating ?? 0).compareTo(b.rating ?? 0);
+        case _VendorSort.approved:
+          cmp = (a.isApproved ? 1 : 0).compareTo(b.isApproved ? 1 : 0);
+        case _VendorSort.active:
+          cmp = (a.isActive ? 1 : 0).compareTo(b.isActive ? 1 : 0);
+      }
+      return _sortAscending ? cmp : -cmp;
+    }
+
+    list.sort(compare);
+    return list;
+  }
+
+  DataColumn _column(String label, _VendorSort field) {
+    final active = _sortField == field;
+    return DataColumn(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  color: active ? AdminColors.accent : AdminColors.textMuted,
+                  fontWeight: FontWeight.w600)),
+          if (active)
+            Icon(
+              _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+              size: 14,
+              color: AdminColors.accent,
+            ),
+        ],
+      ),
+      onSort: (_, ascending) {
+        setState(() {
+          _sortField = field;
+          _sortAscending = ascending;
+        });
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _sorted;
+    return Scrollbar(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: DataTable(
+          sortColumnIndex: _VendorSort.values.indexOf(_sortField),
+          sortAscending: _sortAscending,
+          columnSpacing: 20,
+          columns: [
+            _column('Name', _VendorSort.name),
+            const DataColumn(label: Text('Phone')),
+            _column('Category', _VendorSort.category),
+            _column('Rating', _VendorSort.rating),
+            _column('Approved', _VendorSort.approved),
+            _column('Active', _VendorSort.active),
+            const DataColumn(label: Text('Actions')),
+          ],
+          rows: rows.map((v) {
+            return DataRow(cells: [
+              DataCell(Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: categoryColor(v.category).withValues(alpha: 0.15),
+                    child: Text(v.name.isNotEmpty ? v.name[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                            color: AdminColors.textPrimary,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(v.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AdminColors.textPrimary)),
+                  ),
+                ],
+              )),
+              DataCell(Text(v.contactPhone == null || v.contactPhone!.isEmpty
+                  ? '—'
+                  : v.contactPhone!)),
+              DataCell(Text(v.category)),
+              DataCell(Text(v.rating == null
+                  ? '—'
+                  : v.rating!.toStringAsFixed(1))),
+              DataCell(_VendorApprovedChip(approved: v.isApproved)),
+              DataCell(_VendorActiveChip(active: v.isActive)),
+              DataCell(_VendorActions(vendor: v)),
+            ]);
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _VendorApprovedChip extends StatelessWidget {
+  const _VendorApprovedChip({required this.approved});
+  final bool approved;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: approved
+            ? AdminColors.success.withValues(alpha: 0.15)
+            : AdminColors.warning.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(approved ? 'Approved' : 'Pending',
+          style: TextStyle(
+              color: approved ? AdminColors.success : AdminColors.warning,
+              fontSize: 11,
+              fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+class _VendorActiveChip extends StatelessWidget {
+  const _VendorActiveChip({required this.active});
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: active ? AdminColors.accent : AdminColors.textMuted,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(active ? 'Active' : 'Inactive',
+            style: TextStyle(
+                fontSize: 12,
+                color: active ? AdminColors.accent : AdminColors.textMuted,
+                fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+
+/// Row actions for a vendor: view compliance docs, approve, or reject.
+class _VendorActions extends ConsumerWidget {
+  const _VendorActions({required this.vendor});
   final AdminVendor vendor;
-  const _VendorCard({required this.vendor});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    vendor.name,
-                    style: const TextStyle(
-                      color: AdminColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Icon(
-                  vendor.isApproved ? Icons.check_circle : Icons.pending,
-                  color: vendor.isApproved ? AdminColors.success : AdminColors.textMuted,
-                  size: 20,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                Chip(
-                  label: Text(vendor.category, style: const TextStyle(color: AdminColors.textPrimary)),
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  backgroundColor: AdminColors.surfaceHover,
-                  side: const BorderSide(color: AdminColors.border),
-                ),
-                if (vendor.cuisineType != null && vendor.cuisineType!.isNotEmpty)
-                  Chip(
-                    label: Text(vendor.cuisineType!, style: const TextStyle(color: AdminColors.textPrimary)),
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                    backgroundColor: AdminColors.surfaceHover,
-                    side: const BorderSide(color: AdminColors.border),
-                  ),
-              ],
-            ),
-            const Spacer(),
-            if (vendor.contactPhone != null && vendor.contactPhone!.isNotEmpty)
-              _iconLine(Icons.phone, vendor.contactPhone!),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                if (vendor.rating != null) ...[
-                  const Icon(Icons.star, color: AdminColors.warning, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    vendor.rating!.toStringAsFixed(1),
-                    style: const TextStyle(color: AdminColors.textMuted, fontSize: 13),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Icon(
-                  vendor.isActive ? Icons.toggle_on : Icons.toggle_off,
-                  color: vendor.isActive ? AdminColors.accent : AdminColors.textMuted,
-                  size: 18,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  vendor.isActive ? 'Active' : 'Inactive',
-                  style: TextStyle(
-                    color: vendor.isActive ? AdminColors.accent : AdminColors.textMuted,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-            // KYC document preview (side-by-side thumbnails) for pending vendors
-            if (!vendor.isApproved && vendor.isActive) ...[
-              const SizedBox(height: 8),
-              _VendorKycDocumentSection(vendor: vendor),
-            ],
-            // Approval action buttons for pending vendors
-            if (!vendor.isApproved && vendor.isActive) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      icon: const Icon(Icons.check, size: 16),
-                      label: const Text('Approve', style: TextStyle(fontSize: 12)),
-                      onPressed: () => _approveVendor(context, ref),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.close, size: 16),
-                      label: const Text('Reject', style: TextStyle(fontSize: 12)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AdminColors.danger,
-                      ),
-                      onPressed: () => _rejectVendor(context, ref),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
+    if (vendor.isApproved) {
+      return const Icon(Icons.check_circle_rounded,
+          color: AdminColors.success, size: 18);
+    }
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert_rounded, color: AdminColors.textMuted),
+      tooltip: 'Actions',
+      onSelected: (v) {
+        switch (v) {
+          case 'docs':
+            _showDocsDialog(context);
+          case 'approve':
+            _approveVendor(context, ref);
+          case 'reject':
+            _rejectVendor(context, ref);
+        }
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'docs',
+          child: ListTile(
+            leading: Icon(Icons.document_scanner_rounded),
+            title: Text('View Compliance Docs'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
         ),
+        const PopupMenuItem(
+          value: 'approve',
+          child: ListTile(
+            leading: Icon(Icons.check_circle_rounded, color: AdminColors.success),
+            title: Text('Approve'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'reject',
+          child: ListTile(
+            leading: Icon(Icons.block_rounded, color: AdminColors.danger),
+            title: Text('Reject'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showDocsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Compliance Documents — ${vendor.name}'),
+        content: SizedBox(
+          width: 520,
+          child: _VendorKycDocumentSection(vendor: vendor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -366,10 +483,10 @@ class _VendorCard extends ConsumerWidget {
   }
 
   Future<void> _rejectVendor(BuildContext context, WidgetRef ref) async {
-    final reason = await _showRejectDialog(context);
-    if (reason == null) return; // User cancelled
-
     final messenger = ScaffoldMessenger.of(context);
+    final reason = await _showRejectDialog(context);
+    if (reason == null) return;
+
     try {
       await ref.read(adminApiProvider).rejectVendor(vendor.id, reason: reason);
       ref.invalidate(adminVendorsProvider);
@@ -413,28 +530,12 @@ class _VendorCard extends ConsumerWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AdminColors.danger),
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim().isEmpty ? null : controller.text.trim()),
+            onPressed: () => Navigator.of(ctx).pop(
+                controller.text.trim().isEmpty ? null : controller.text.trim()),
             child: const Text('Reject'),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _iconLine(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, color: AdminColors.textMuted, size: 14),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(color: AdminColors.textMuted, fontSize: 13),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 using PondyConnect.Domain.ValueObjects;
@@ -188,11 +189,20 @@ public sealed class AcceptRideHandler : IRequestHandler<AcceptRideCommand, RideR
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService? _notifications;
 
     public AcceptRideHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
+        _notifications = null;
+    }
+
+    public AcceptRideHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = notifications;
     }
 
     public async Task<RideRequestResponse> Handle(AcceptRideCommand request, CancellationToken cancellationToken)
@@ -215,10 +225,45 @@ public sealed class AcceptRideHandler : IRequestHandler<AcceptRideCommand, RideR
 
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Fire-and-forget push to the consumer so they know a driver is on the
+        // way. The push must not fail the ride-acceptance transaction.
+        if (_notifications is not null)
+        {
+            _ = SendDriverAcceptedPushAsync(ride, driver, cancellationToken);
+        }
+
         return new RideRequestResponse(
             ride.Id, ride.DistanceKm, ride.EstimatedDurationMin, ride.Fare,
             ride.Fare, ride.PlatformBookingFee, ride.TotalAmount, ride.Status.ToString(),
             ride.VehicleType.ToString(), ride.PaymentMethod.ToString());
+    }
+
+    /// <summary>
+    /// Best-effort FCM push to the rider when a driver accepts their ride.
+    /// All exceptions are swallowed so a Firebase failure never surfaces.
+    /// </summary>
+    private async Task SendDriverAcceptedPushAsync(RideRequest ride, Driver driver, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notifications!.SendHighPriorityPushAsync(
+                ride.UserId,
+                "Driver on the way!",
+                $"{driver.Name} is heading to your pickup location.",
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", $"/ride/{ride.Id}" },
+                    { "type", "ride_accepted" },
+                    { "ride_id", ride.Id.ToString() },
+                    { "driver_id", driver.Id.ToString() },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort delivery — never crash the ride-acceptance flow.
+        }
     }
 
     private async Task<Guid?> ResolveDriverIdAsync(CancellationToken cancellationToken)
@@ -275,11 +320,20 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService? _notifications;
 
     public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
+        _notifications = null;
+    }
+
+    public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = notifications;
     }
 
     public async Task<Unit> Handle(CompleteRideCommand request, CancellationToken cancellationToken)
@@ -301,7 +355,41 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
         _context.RideEvents.Add(RideEvent.Create(ride.Id, RideEventType.Completed, ride.DriverId));
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Fire-and-forget push to the consumer — ride is complete, prompt for rating.
+        if (_notifications is not null)
+        {
+            _ = SendRideCompletedPushAsync(ride, cancellationToken);
+        }
+
         return Unit.Value;
+    }
+
+    /// <summary>
+    /// Best-effort FCM push to the rider when the ride is completed.
+    /// All exceptions are swallowed so a Firebase failure never surfaces.
+    /// </summary>
+    private async Task SendRideCompletedPushAsync(RideRequest ride, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notifications!.SendTargetedPushAsync(
+                ride.UserId,
+                "Ride completed!",
+                $"Your ride has been completed. Fare: \u20B9{ride.TotalAmount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}. Rate your experience!",
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", $"/ride/{ride.Id}/receipt" },
+                    { "type", "ride_completed" },
+                    { "ride_id", ride.Id.ToString() },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort delivery — never crash the ride-completion flow.
+        }
     }
 
     private async Task ValidateDriverOwnershipAsync(Domain.Entities.RideRequest ride, CancellationToken cancellationToken)
@@ -693,11 +781,20 @@ public sealed class CompleteRideWithMetricsHandler : IRequestHandler<CompleteRid
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService? _notifications;
 
     public CompleteRideWithMetricsHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
+        _notifications = null;
+    }
+
+    public CompleteRideWithMetricsHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = notifications;
     }
 
     public async Task<Unit> Handle(CompleteRideWithMetricsCommand request, CancellationToken cancellationToken)
@@ -728,7 +825,37 @@ public sealed class CompleteRideWithMetricsHandler : IRequestHandler<CompleteRid
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Fire-and-forget push to the consumer — ride is complete, prompt for rating.
+        if (_notifications is not null)
+        {
+            _ = SendRideCompletedPushAsync(ride, cancellationToken);
+        }
+
         return Unit.Value;
+    }
+
+    private async Task SendRideCompletedPushAsync(RideRequest ride, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notifications!.SendTargetedPushAsync(
+                ride.UserId,
+                "Ride completed!",
+                $"Your ride has been completed. Fare: \u20B9{ride.TotalAmount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}. Rate your experience!",
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", $"/ride/{ride.Id}/receipt" },
+                    { "type", "ride_completed" },
+                    { "ride_id", ride.Id.ToString() },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort delivery — never crash the ride-completion flow.
+        }
     }
 }
 

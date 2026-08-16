@@ -3,6 +3,7 @@ namespace PondyConnect.Api.Middleware;
 using System.Text.Json;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using PondyConnect.Application.Features.Bookings;
 using PondyConnect.Application.Features.GeoFence;
 
 public sealed partial class ExceptionHandlingMiddleware
@@ -40,6 +41,9 @@ public sealed partial class ExceptionHandlingMiddleware
                 (object)new { Message = serviceAreaEx.Message, distanceKm = serviceAreaEx.DistanceKm, radiusKm = serviceAreaEx.RadiusKm }),
             UnauthorizedAccessException => (
                 StatusCodes.Status401Unauthorized,
+                (object)new { Message = ex.Message }),
+            BookingConflictException => (
+                StatusCodes.Status409Conflict,
                 (object)new { Message = ex.Message }),
             InvalidOperationException => (
                 StatusCodes.Status400BadRequest,

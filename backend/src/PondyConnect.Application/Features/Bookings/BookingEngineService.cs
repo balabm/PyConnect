@@ -2,6 +2,7 @@ namespace PondyConnect.Application.Features.Bookings;
 
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Features.Settlement;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
@@ -30,6 +31,7 @@ public sealed class BookingEngineService : IBookingEngineService
     private readonly IAvailabilityCache _availabilityCache;
     private readonly ISettlementCalculationService _settlementService;
     private readonly IWhatsAppSender? _whatsAppSender;
+    private readonly INotificationService? _notifications;
 
     public BookingEngineService(
         IApplicationDbContext context,
@@ -42,6 +44,7 @@ public sealed class BookingEngineService : IBookingEngineService
         _availabilityCache = availabilityCache;
         _settlementService = settlementService;
         _whatsAppSender = null;
+        _notifications = null;
     }
 
     public BookingEngineService(
@@ -56,6 +59,23 @@ public sealed class BookingEngineService : IBookingEngineService
         _availabilityCache = availabilityCache;
         _settlementService = settlementService;
         _whatsAppSender = whatsAppSender;
+        _notifications = null;
+    }
+
+    public BookingEngineService(
+        IApplicationDbContext context,
+        IDistributedLock distributedLock,
+        IAvailabilityCache availabilityCache,
+        ISettlementCalculationService settlementService,
+        IWhatsAppSender whatsAppSender,
+        INotificationService notifications)
+    {
+        _context = context;
+        _lock = distributedLock;
+        _availabilityCache = availabilityCache;
+        _settlementService = settlementService;
+        _whatsAppSender = whatsAppSender;
+        _notifications = notifications;
     }
 
     public async Task<VenueSlotReservationResult> ReserveVenueSlotAsync(
@@ -73,6 +93,13 @@ public sealed class BookingEngineService : IBookingEngineService
 
         try
         {
+            // Pessimistic row-level lock: on PostgreSQL this issues
+            // SELECT 1 FROM venues WHERE "Id" = ... FOR UPDATE, blocking
+            // any concurrent transaction that tries to lock the same row.
+            // The second waiter blocks until the first commits/rolls back,
+            // then re-reads capacity and fails with 409 if sold out.
+            await _context.AcquireRowLockAsync("venues", request.VenueId, cancellationToken);
+
             var venue = await _context.Venues
                 .FirstOrDefaultAsync(v => v.Id == request.VenueId && v.IsActive, cancellationToken)
                 ?? throw new InvalidOperationException("Venue not found or is not active.");
@@ -227,6 +254,12 @@ public sealed class BookingEngineService : IBookingEngineService
                 _ = SendWhatsAppConfirmationAsync(payment, passToken, cancellationToken);
             }
 
+            // Fire-and-forget FCM push to the consumer — booking confirmed.
+            if (_notifications is not null && payment.ServiceBookingId is { } confirmedBookingId)
+            {
+                _ = SendBookingConfirmedPushAsync(confirmedBookingId, passToken, cancellationToken);
+            }
+
             return new PaymentReconciliationResult(
                 payment.Id,
                 payment.ServiceBookingId,
@@ -295,6 +328,52 @@ public sealed class BookingEngineService : IBookingEngineService
         }
     }
 
+    /// <summary>
+    /// Best-effort FCM push to the consumer when a booking is confirmed
+    /// (payment captured). All exceptions are swallowed so a Firebase
+    /// failure never surfaces to the caller.
+    /// </summary>
+    private async Task SendBookingConfirmedPushAsync(Guid bookingId, string passToken, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var booking = await _context.ServiceBookings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Id == bookingId, cancellationToken);
+
+            if (booking is null)
+                return;
+
+            var serviceLabel = booking.ServiceType switch
+            {
+                ServiceType.Nightlife => "Venue cover charge",
+                ServiceType.Homestay => "Homestay stay",
+                ServiceType.Transit => "Transit pickup",
+                ServiceType.Luggage => "Luggage cloak",
+                ServiceType.Rental => "Scooter rental",
+                _ => "Booking",
+            };
+
+            await _notifications!.SendTargetedPushAsync(
+                booking.UserId,
+                "Booking confirmed!",
+                $"Your {serviceLabel} is confirmed. Show your pass at the venue.",
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", $"/activity/booking/{bookingId}" },
+                    { "type", "booking_confirmed" },
+                    { "booking_id", bookingId.ToString() },
+                    { "pass_token", passToken },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort delivery — never crash the reconciliation flow.
+        }
+    }
+
     public async Task<BundleReservationResult> ReserveBundleAsync(
         ReserveBundleRequest request,
         CancellationToken cancellationToken = default)
@@ -311,12 +390,16 @@ public sealed class BookingEngineService : IBookingEngineService
 
         try
         {
+            // Pessimistic row-level lock on the venue so concurrent bundle
+            // reservations cannot over-read capacity.
+            await _context.AcquireRowLockAsync("venues", request.VenueId, cancellationToken);
+
             var venue = await _context.Venues
                 .FirstOrDefaultAsync(v => v.Id == request.VenueId && v.IsActive, cancellationToken)
                 ?? throw new InvalidOperationException("Venue not found or is not active.");
 
             if (!venue.HasAvailability(request.VenueSeats))
-                throw new InvalidOperationException($"Venue '{venue.Name}' is at full capacity.");
+                throw new BookingConflictException($"Venue '{venue.Name}' is at full capacity.");
 
             venue.IncreaseOccupancy(request.VenueSeats);
 

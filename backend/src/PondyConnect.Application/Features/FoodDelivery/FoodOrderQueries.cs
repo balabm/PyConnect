@@ -3,6 +3,8 @@ namespace PondyConnect.Application.Features.FoodDelivery;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 
 public sealed record GetFoodOrderQuery(Guid OrderId) : IRequest<FoodOrderDetailResponse>;
@@ -166,13 +168,26 @@ public sealed record UpdateFoodOrderStatusCommand(Guid OrderId, string NewStatus
 public sealed class UpdateFoodOrderStatusHandler : IRequestHandler<UpdateFoodOrderStatusCommand, Unit>
 {
     private readonly IApplicationDbContext _context;
+    private readonly INotificationService? _notifications;
 
-    public UpdateFoodOrderStatusHandler(IApplicationDbContext context) => _context = context;
+    public UpdateFoodOrderStatusHandler(IApplicationDbContext context)
+    {
+        _context = context;
+        _notifications = null;
+    }
+
+    public UpdateFoodOrderStatusHandler(IApplicationDbContext context, INotificationService notifications)
+    {
+        _context = context;
+        _notifications = notifications;
+    }
 
     public async Task<Unit> Handle(UpdateFoodOrderStatusCommand request, CancellationToken cancellationToken)
     {
         var order = await _context.FoodOrders.FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken)
             ?? throw new InvalidOperationException("Order not found.");
+
+        var previousStatus = order.Status;
 
         switch (request.NewStatus.ToLowerInvariant())
         {
@@ -185,7 +200,63 @@ public sealed class UpdateFoodOrderStatusHandler : IRequestHandler<UpdateFoodOrd
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Fire-and-forget push to the consumer on key state transitions.
+        // The push must not fail the status-update transaction.
+        if (_notifications is not null)
+        {
+            _ = SendFoodOrderStatusPushAsync(order, previousStatus, cancellationToken);
+        }
+
         return Unit.Value;
+    }
+
+    /// <summary>
+    /// Best-effort FCM push to the consumer when a food order transitions to
+    /// Preparing (ready) or OutForDelivery. All exceptions are swallowed.
+    /// </summary>
+    private async Task SendFoodOrderStatusPushAsync(FoodOrder order, Domain.Enums.FoodOrderStatus previousStatus, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var (title, body, route) = order.Status switch
+            {
+                Domain.Enums.FoodOrderStatus.Preparing =>
+                    ("Your order is being prepared!",
+                     $"The kitchen has started on your order #{order.Id.ToString().Substring(0, 8).ToUpperInvariant()}.",
+                     $"/activity/food/{order.Id}"),
+                Domain.Enums.FoodOrderStatus.OutForDelivery =>
+                    ("Order out for delivery!",
+                     $"Your order #{order.Id.ToString().Substring(0, 8).ToUpperInvariant()} is on the way.",
+                     $"/activity/food/{order.Id}"),
+                Domain.Enums.FoodOrderStatus.Delivered =>
+                    ("Order delivered!",
+                     $"Your order #{order.Id.ToString().Substring(0, 8).ToUpperInvariant()} has been delivered. Enjoy!",
+                     $"/activity/food/{order.Id}"),
+                _ => (null, null, null),
+            };
+
+            if (title is null)
+                return;
+
+            await _notifications!.SendTargetedPushAsync(
+                order.UserId,
+                title,
+                body!,
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", route! },
+                    { "type", "food_order_status" },
+                    { "order_id", order.Id.ToString() },
+                    { "status", order.Status.ToString() },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort delivery — never crash the status-update flow.
+        }
     }
 }
 

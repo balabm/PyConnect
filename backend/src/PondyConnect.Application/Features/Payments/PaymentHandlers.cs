@@ -147,15 +147,57 @@ public sealed class VerifyPaymentWebhookHandler : IRequestHandler<VerifyPaymentW
         if (!result.IsValid)
             return new VerifyPaymentWebhookResponse(false);
 
+        // ── Idempotency: if this Razorpay event has already been processed,
+        // short-circuit to 200 OK without re-charging or double-confirming.
+        // Razorpay redelivers webhooks on timeout, so this guard is critical
+        // for financial safety.
+        var eventId = result.EventId;
+        if (!string.IsNullOrWhiteSpace(eventId))
+        {
+            var alreadyProcessed = await _context.ProcessedWebhooks
+                .AsNoTracking()
+                .AnyAsync(w => w.EventId == eventId, cancellationToken);
+
+            if (alreadyProcessed)
+                return new VerifyPaymentWebhookResponse(true, eventId, PaymentStatus.Captured);
+        }
+
         if (result.Status == PaymentStatus.Captured)
         {
-            var reconciled = await _engine.ReconcilePaymentAsync(
-                new ReconcilePaymentRequest(
-                    result.ProviderOrderId!,
-                    result.ProviderPaymentId!),
-                cancellationToken);
+            // Process the payment and record the event idempotency within a
+            // single atomic transaction. If the reconciliation succeeds but
+            // the ProcessedWebhook insert fails, the whole transaction rolls
+            // back — so a retry will re-reconcile (which is itself idempotent)
+            // and then record the event.
+            await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var reconciled = await _engine.ReconcilePaymentAsync(
+                    new ReconcilePaymentRequest(
+                        result.ProviderOrderId!,
+                        result.ProviderPaymentId!),
+                    cancellationToken);
 
-            return new VerifyPaymentWebhookResponse(true, reconciled.PaymentId.ToString(), PaymentStatus.Captured);
+                if (!string.IsNullOrWhiteSpace(eventId))
+                {
+                    _context.ProcessedWebhooks.Add(ProcessedWebhook.Create(
+                        eventId,
+                        result.EventType ?? "payment.captured",
+                        request.Payload));
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
+                if (transaction is not null)
+                    await transaction.CommitAsync(cancellationToken);
+
+                return new VerifyPaymentWebhookResponse(true, reconciled.PaymentId.ToString(), PaymentStatus.Captured);
+            }
+            catch
+            {
+                if (transaction is not null)
+                    await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
 
         // Non-captured result: record the failed payment idempotently.
@@ -166,6 +208,16 @@ public sealed class VerifyPaymentWebhookHandler : IRequestHandler<VerifyPaymentW
         if (payment is not null && payment.Status == PaymentStatus.Unpaid)
         {
             payment.MarkFailed(result.ErrorMessage ?? "Payment failed");
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        // Record the event even for failed payments so a redelivery is a no-op.
+        if (!string.IsNullOrWhiteSpace(eventId))
+        {
+            _context.ProcessedWebhooks.Add(ProcessedWebhook.Create(
+                eventId,
+                result.EventType ?? "payment.failed",
+                request.Payload));
             await _context.SaveChangesAsync(cancellationToken);
         }
 

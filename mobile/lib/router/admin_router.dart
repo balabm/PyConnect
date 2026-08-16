@@ -11,6 +11,8 @@ import '../features/admin/presentation/admin_users_screen.dart';
 import '../features/admin/presentation/admin_drivers_screen.dart';
 import '../features/admin/presentation/admin_vendors_screen.dart';
 import '../features/admin/presentation/admin_live_rides_screen.dart';
+import '../features/admin/presentation/live_ops_screen.dart';
+import '../features/admin/presentation/kyc_approval_screen.dart';
 import '../features/admin/presentation/admin_sos_screen.dart';
 import '../features/admin/presentation/admin_tickets_screen.dart';
 import '../features/admin/presentation/admin_logs_screen.dart';
@@ -53,6 +55,18 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/',
             builder: (_, _) => const AdminDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/live-map',
+            builder: (_, _) => const LiveOpsScreen(),
+          ),
+          GoRoute(
+            path: '/kyc',
+            builder: (_, _) => const KycApprovalScreen(),
+          ),
+          GoRoute(
+            path: '/disputes',
+            builder: (_, _) => const AdminTicketsScreen(),
           ),
           GoRoute(
             path: '/users',

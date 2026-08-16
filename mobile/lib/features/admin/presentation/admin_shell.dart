@@ -10,15 +10,15 @@ import '../application/admin_providers.dart';
 /// dashboard sections. This is the "God Mode" single point of control.
 /// Uses the unified admin dark SaaS theme.
 ///
-/// Restructured to 5 primary tabs per the PY Connect MasterPlan:
-///   1. Analytics & Metrics   → /
-///   2. Merchant Approvals    → /vendors
-///   3. Captain KYC Queue     → /drivers
-///   4. Live Ops & SOS        → /rides
-///   5. Finance & Audit       → /finance
+/// Primary navigation (5 tabs per the PY Connect Admin production standard):
+///   1. Dashboard       → /
+///   2. Live Map        → /live-map
+///   3. KYC Approvals   → /kyc
+///   4. Disputes        → /disputes
+///   5. Finance         → /finance
 ///
-/// Secondary routes (users, tickets, audit logs, sos) remain accessible
-/// from the dashboard / sub-menus but are not shown as primary nav items.
+/// Secondary routes (users, vendors, drivers, live rides, SOS, tickets,
+/// audit logs) remain accessible from the "More" sub-menu.
 class AdminShell extends ConsumerStatefulWidget {
   const AdminShell({super.key, required this.child});
 
@@ -30,31 +30,31 @@ class AdminShell extends ConsumerStatefulWidget {
 
 class _AdminShellState extends ConsumerState<AdminShell>
     with SingleTickerProviderStateMixin {
-  /// Primary navigation destinations (5 tabs per MasterPlan).
+  /// Primary navigation destinations (5 tabs).
   static const _destinations = [
     _NavDest(
-      icon: Icons.insights_rounded,
-      label: 'Analytics & Metrics',
+      icon: Icons.dashboard_rounded,
+      label: 'Dashboard',
       path: '/',
     ),
     _NavDest(
-      icon: Icons.store_rounded,
-      label: 'Merchant Approvals',
-      path: '/vendors',
+      icon: Icons.map_rounded,
+      label: 'Live Map',
+      path: '/live-map',
     ),
     _NavDest(
-      icon: Icons.badge_rounded,
-      label: 'Captain KYC Queue',
-      path: '/drivers',
+      icon: Icons.verified_user_rounded,
+      label: 'KYC Approvals',
+      path: '/kyc',
     ),
     _NavDest(
-      icon: Icons.directions_car_rounded,
-      label: 'Live Ops & SOS',
-      path: '/rides',
+      icon: Icons.gavel_rounded,
+      label: 'Disputes',
+      path: '/disputes',
     ),
     _NavDest(
       icon: Icons.account_balance_wallet_rounded,
-      label: 'Finance & Audit',
+      label: 'Finance',
       path: '/finance',
     ),
   ];
@@ -63,6 +63,17 @@ class _AdminShellState extends ConsumerState<AdminShell>
   /// rail and accessible from the dashboard. Keeps existing routes working.
   static const _secondaryDestinations = [
     _NavDest(icon: Icons.people_rounded, label: 'Users', path: '/users'),
+    _NavDest(icon: Icons.store_rounded, label: 'Vendors', path: '/vendors'),
+    _NavDest(
+      icon: Icons.directions_car_rounded,
+      label: 'Drivers',
+      path: '/drivers',
+    ),
+    _NavDest(
+      icon: Icons.directions_run_rounded,
+      label: 'Live Rides',
+      path: '/rides',
+    ),
     _NavDest(icon: Icons.warning_rounded, label: 'SOS Alerts', path: '/sos'),
     _NavDest(
       icon: Icons.support_agent_rounded,

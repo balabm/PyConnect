@@ -227,15 +227,10 @@ class _AdminDriversScreenState extends ConsumerState<AdminDriversScreen> {
                       child: RefreshIndicator(
                         color: AdminColors.accent,
                         onRefresh: () async => ref.invalidate(adminDriversProvider(_params)),
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                          itemCount: result.items.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (_, i) => _DriverCard(
-                            driver: result.items[i],
-                            onApprove: _approve,
-                            onReject: _rejectKyc,
-                          ),
+                        child: _DriverTable(
+                          drivers: result.items,
+                          onApprove: _approve,
+                          onReject: _rejectKyc,
                         ),
                       ),
                     ),
@@ -260,11 +255,240 @@ class _AdminDriversScreenState extends ConsumerState<AdminDriversScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Driver card
+// Sortable driver DataTable
 // ---------------------------------------------------------------------------
 
-class _DriverCard extends StatelessWidget {
-  const _DriverCard({
+/// Sortable columns for the driver table.
+enum _DriverSort { name, phone, vehicle, rating, rides, online, kyc }
+
+class _DriverTable extends StatefulWidget {
+  const _DriverTable({
+    required this.drivers,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  final List<AdminDriver> drivers;
+  final Future<void> Function(AdminDriver) onApprove;
+  final Future<void> Function(AdminDriver) onReject;
+
+  @override
+  State<_DriverTable> createState() => _DriverTableState();
+}
+
+class _DriverTableState extends State<_DriverTable> {
+  _DriverSort _sortField = _DriverSort.name;
+  bool _sortAscending = true;
+
+  IconData _vehicleIcon(String type) => switch (type.toLowerCase()) {
+        'car' => Icons.directions_car,
+        'auto' => Icons.local_taxi,
+        'bike' => Icons.two_wheeler,
+        _ => Icons.directions_car,
+      };
+
+  List<AdminDriver> get _sorted {
+    final list = [...widget.drivers];
+    int compare(AdminDriver a, AdminDriver b) {
+      int cmp;
+      switch (_sortField) {
+        case _DriverSort.name:
+          cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case _DriverSort.phone:
+          cmp = a.phone.compareTo(b.phone);
+        case _DriverSort.vehicle:
+          cmp = a.vehicleType.toLowerCase().compareTo(b.vehicleType.toLowerCase());
+        case _DriverSort.rating:
+          cmp = a.rating.compareTo(b.rating);
+        case _DriverSort.rides:
+          cmp = a.totalRides.compareTo(b.totalRides);
+        case _DriverSort.online:
+          cmp = (a.isOnline ? 1 : 0).compareTo(b.isOnline ? 1 : 0);
+        case _DriverSort.kyc:
+          cmp = (a.isKycUploaded ? 1 : 0).compareTo(b.isKycUploaded ? 1 : 0);
+      }
+      return _sortAscending ? cmp : -cmp;
+    }
+
+    list.sort(compare);
+    return list;
+  }
+
+  DataColumn _column(
+    String label,
+    _DriverSort field, {
+    IconData? icon,
+  }) {
+    final active = _sortField == field;
+    return DataColumn(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: AdminColors.textMuted),
+            const SizedBox(width: 4),
+          ],
+          Text(label,
+              style: TextStyle(
+                  color: active ? AdminColors.accent : AdminColors.textMuted,
+                  fontWeight: FontWeight.w600)),
+          if (active)
+            Icon(
+              _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+              size: 14,
+              color: AdminColors.accent,
+            ),
+        ],
+      ),
+      onSort: (_, ascending) {
+        setState(() {
+          _sortField = field;
+          _sortAscending = ascending;
+        });
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _sorted;
+    return Scrollbar(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          sortColumnIndex: _DriverSort.values.indexOf(_sortField),
+          sortAscending: _sortAscending,
+          columnSpacing: 20,
+          columns: [
+            _column('Name', _DriverSort.name),
+            _column('Phone', _DriverSort.phone),
+            _column('Vehicle', _DriverSort.vehicle, icon: Icons.directions_car),
+            _column('Rating', _DriverSort.rating, icon: Icons.star),
+            _column('Rides', _DriverSort.rides),
+            _column('Online', _DriverSort.online),
+            _column('KYC', _DriverSort.kyc),
+            const DataColumn(label: Text('Actions')),
+          ],
+          rows: rows.map((d) {
+            return DataRow(cells: [
+              DataCell(Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AdminColors.accent.withValues(alpha: 0.12),
+                    child: Icon(_vehicleIcon(d.vehicleType),
+                        size: 16, color: AdminColors.accent),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(d.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AdminColors.textPrimary)),
+                  ),
+                ],
+              )),
+              DataCell(Text(d.phone.isEmpty ? '—' : d.phone)),
+              DataCell(Text(d.vehicleType)),
+              DataCell(Text(d.rating.toStringAsFixed(1))),
+              DataCell(Text('${d.totalRides}')),
+              DataCell(_OnlineDot(isOnline: d.isOnline)),
+              DataCell(_KycStatusChip(uploaded: d.isKycUploaded, approved: d.isApproved)),
+              DataCell(_DriverActions(
+                driver: d,
+                onApprove: widget.onApprove,
+                onReject: widget.onReject,
+              )),
+            ]);
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _OnlineDot extends StatelessWidget {
+  const _OnlineDot({required this.isOnline});
+  final bool isOnline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: isOnline ? AdminColors.success : AdminColors.textMuted,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(isOnline ? 'Online' : 'Offline',
+            style: TextStyle(
+                fontSize: 12,
+                color: isOnline ? AdminColors.success : AdminColors.textMuted,
+                fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+
+class _KycStatusChip extends StatelessWidget {
+  const _KycStatusChip({required this.uploaded, required this.approved});
+  final bool uploaded;
+  final bool approved;
+
+  @override
+  Widget build(BuildContext context) {
+    if (approved) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AdminColors.accent.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: const Text('Approved',
+            style: TextStyle(
+                color: AdminColors.accent,
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      );
+    }
+    if (uploaded) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AdminColors.warning.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: const Text('Pending',
+            style: TextStyle(
+                color: AdminColors.warning,
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AdminColors.textMuted.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text('No KYC',
+          style: TextStyle(
+              color: AdminColors.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+/// Row actions: view KYC documents, approve, or reject.
+class _DriverActions extends StatelessWidget {
+  const _DriverActions({
     required this.driver,
     required this.onApprove,
     required this.onReject,
@@ -274,240 +498,82 @@ class _DriverCard extends StatelessWidget {
   final Future<void> Function(AdminDriver) onApprove;
   final Future<void> Function(AdminDriver) onReject;
 
-  IconData get _vehicleIcon => switch (driver.vehicleType.toLowerCase()) {
-        'car' => Icons.directions_car,
-        'auto' => Icons.local_taxi,
-        'bike' => Icons.two_wheeler,
-        _ => Icons.directions_car,
-      };
-
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header row: avatar + name + vehicle
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: AdminColors.accent.withValues(alpha: 0.12),
-                  foregroundColor: AdminColors.accent,
-                  child: Icon(_vehicleIcon),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        driver.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: AdminColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(Icons.phone, size: 13, color: AdminColors.textMuted),
-                          const SizedBox(width: 4),
-                          Text(
-                            driver.phone.isEmpty ? '—' : driver.phone,
-                            style: const TextStyle(fontSize: 13, color: AdminColors.textMuted),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (driver.isOnRide)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AdminColors.warning,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Text(
-                      'On Ride',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // Stats row
-            Wrap(
-              spacing: 12,
-              runSpacing: 6,
-              children: [
-                _StatChip(
-                  icon: Icons.star,
-                  iconColor: AdminColors.warning,
-                  label: driver.rating.toStringAsFixed(1),
-                ),
-                _StatChip(
-                  icon: Icons.history,
-                  iconColor: AdminColors.info,
-                  label: '${driver.totalRides} rides',
-                ),
-                _StatChip(
-                  icon: _vehicleIcon,
-                  iconColor: AdminColors.textMuted,
-                  label: driver.vehicleType,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Status row: online / kyc / location
-            Row(
-              children: [
-                // Online status
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: driver.isOnline ? AdminColors.success : AdminColors.textMuted,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      driver.isOnline ? 'Online' : 'Offline',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: driver.isOnline ? AdminColors.success : AdminColors.textMuted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                // KYC status
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      driver.isKycUploaded ? Icons.verified_user : Icons.gpp_bad,
-                      size: 14,
-                      color: driver.isKycUploaded ? AdminColors.accent : AdminColors.textMuted,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      driver.isKycUploaded ? 'KYC Uploaded' : 'No KYC',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: driver.isKycUploaded ? AdminColors.accent : AdminColors.textMuted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            // Live location
-            if (driver.latitude != null && driver.longitude != null) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.location_on, size: 13, color: AdminColors.warning),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${driver.latitude!.toStringAsFixed(4)}, ${driver.longitude!.toStringAsFixed(4)}',
-                    style: const TextStyle(fontSize: 12, color: AdminColors.textMuted),
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 10),
-            // KYC document preview (side-by-side thumbnails)
-            if (driver.isKycUploaded) _KycDocumentSection(driver: driver),
-            const SizedBox(height: 10),
-            // Actions
-            _buildActions(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActions() {
     if (driver.isApproved) {
-      return Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AdminColors.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle, size: 16, color: AdminColors.accent),
-                SizedBox(width: 4),
-                Text('Approved', style: TextStyle(color: AdminColors.accent, fontWeight: FontWeight.w600, fontSize: 13)),
-              ],
-            ),
-          ),
-        ],
-      );
+      return const Icon(Icons.check_circle_rounded,
+          color: AdminColors.accent, size: 18);
     }
-
-    if (driver.isKycUploaded) {
-      return Row(
-        children: [
-          FilledButton.icon(
-            icon: const Icon(Icons.check, size: 18),
-            label: const Text('Approve'),
-            onPressed: () => onApprove(driver),
-          ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            icon: const Icon(Icons.block, size: 18),
-            label: const Text('Reject KYC'),
-            style: FilledButton.styleFrom(
-              backgroundColor: AdminColors.danger,
-              foregroundColor: Colors.white,
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert_rounded, color: AdminColors.textMuted),
+      tooltip: 'Actions',
+      onSelected: (v) {
+        switch (v) {
+          case 'docs':
+            _showDocsDialog(context);
+          case 'approve':
+            onApprove(driver);
+          case 'reject':
+            onReject(driver);
+        }
+      },
+      itemBuilder: (_) => [
+        if (driver.isKycUploaded)
+          const PopupMenuItem(
+            value: 'docs',
+            child: ListTile(
+              leading: Icon(Icons.document_scanner_rounded),
+              title: Text('View KYC Documents'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
             ),
-            onPressed: () => onReject(driver),
           ),
-        ],
-      );
-    }
-
-    return const Text(
-      'Awaiting KYC upload',
-      style: TextStyle(fontSize: 12, color: AdminColors.textMuted, fontStyle: FontStyle.italic),
+        if (driver.isKycUploaded)
+          const PopupMenuItem(
+            value: 'approve',
+            child: ListTile(
+              leading: Icon(Icons.check_circle_rounded, color: AdminColors.success),
+              title: Text('Approve'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        if (driver.isKycUploaded)
+          const PopupMenuItem(
+            value: 'reject',
+            child: ListTile(
+              leading: Icon(Icons.block_rounded, color: AdminColors.danger),
+              title: Text('Reject KYC'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        if (!driver.isKycUploaded)
+          const PopupMenuItem(
+            enabled: false,
+            child: Text('Awaiting KYC upload',
+                style: TextStyle(color: AdminColors.textMuted, fontStyle: FontStyle.italic)),
+          ),
+      ],
     );
   }
-}
 
-// ---------------------------------------------------------------------------
-// Small stat chip
-// ---------------------------------------------------------------------------
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.icon, required this.iconColor, required this.label});
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: iconColor),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 13, color: AdminColors.textPrimary, fontWeight: FontWeight.w500)),
-      ],
+  void _showDocsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('KYC Documents — ${driver.name}'),
+        content: SizedBox(
+          width: 520,
+          child: _KycDocumentSection(driver: driver),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 }

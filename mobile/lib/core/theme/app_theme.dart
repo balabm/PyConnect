@@ -423,15 +423,15 @@ abstract final class AppTheme {
   /// Admin web theme — enterprise dark SaaS palette (Stripe/Uber Fleet standard).
   /// Unified across all admin screens: Dashboard, Users, Drivers, Vendors, etc.
   static ThemeData get adminTheme {
-    const bg = Color(0xFF0B0F19);           // Deep Charcoal Slate
+    const bg = Color(0xFF0B0F19);           // Deep Slate background
     const surface = Color(0xFF111827);      // Card surface
-    const surfaceHover = Color(0xFF1F2937); // Hover/active surface
-    const border = Color(0x14FFFFFF);       // rgba(255,255,255,0.08)
+    const surfaceHover = Color(0xFF1F2937); // Hover/active surface + faint border
+    const border = Color(0xFF1F2937);       // 1px faint border (#1F2937)
     const textPrimary = Color(0xFFF9FAFB);  // High contrast white
     const textMuted = Color(0xFF9CA3AF);    // Clear readable slate
-    const accent = Color(0xFF0D9488);       // Lagoon (brand consistency)
-    const accentLight = Color(0xFF14B8A6);
-    const danger = Color(0xFFEF4444);
+    const accent = Color(0xFF00D290);       // Pondy Emerald — primary actions
+    const accentLight = Color(0xFF10E3A0);
+    const danger = Color(0xFFEF4444);       // Destructive actions
 
     final scheme = ColorScheme.fromSeed(
       seedColor: accent,
@@ -629,7 +629,7 @@ abstract final class AdminColors {
   static const bg = Color(0xFF0B0F19);
   static const surface = Color(0xFF111827);
   static const surfaceHover = Color(0xFF1F2937);
-  static const border = Color(0x14FFFFFF);
+  static const border = Color(0xFF1F2937);
   static const textPrimary = Color(0xFFF9FAFB);
   static const textMuted = Color(0xFF9CA3AF);
   static const accent = Color(0xFF00D290);

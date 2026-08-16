@@ -62,7 +62,9 @@ public sealed record PaymentVerificationResult(
     string? ProviderPaymentId = null,
     string? ProviderOrderId = null,
     PaymentStatus Status = PaymentStatus.Failed,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    string? EventId = null,
+    string? EventType = null);
 
 public sealed record RefundResult(
     bool Success,
