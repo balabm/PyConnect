@@ -5,8 +5,10 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers.dart';
+import '../../../core/network/razorpay_payment_service.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/driver_providers.dart';
-import '../data/driver_api.dart';
+import '../domain/driver_models.dart';
 
 final driverEarningsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final api = ref.watch(ridesApiProvider);
@@ -63,6 +65,9 @@ class _EarningsBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Cash-collection wallet card
+          const _WalletCard(),
+          const SizedBox(height: 16),
           // Today's earnings - big card
           AppCard(
             padding: const EdgeInsets.all(24),
@@ -437,5 +442,268 @@ class _ProfileTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       onTap: onTap,
     );
+  }
+}
+
+/// Cash-collection wallet card showing balance, suspended status, warning,
+/// settle-dues button, and recent wallet transactions.
+class _WalletCard extends ConsumerStatefulWidget {
+  const _WalletCard();
+
+  @override
+  ConsumerState<_WalletCard> createState() => _WalletCardState();
+}
+
+class _WalletCardState extends ConsumerState<_WalletCard> {
+  bool _settling = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final walletAsync = ref.watch(driverWalletDetailProvider);
+
+    return walletAsync.when(
+      loading: () => AppCard(
+        padding: const EdgeInsets.all(24),
+        child: const Center(
+          child: SizedBox(
+            height: 24,
+            width: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (e, _) => AppCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.wallet_outlined, color: AppTheme.slate),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text('Wallet unavailable', style: TextStyle(color: AppTheme.slate, fontSize: 13)),
+            ),
+          ],
+        ),
+      ),
+      data: (wallet) => _buildWalletContent(wallet),
+    );
+  }
+
+  Widget _buildWalletContent(DriverWalletDetailModel wallet) {
+    final isNegative = wallet.balance < 0;
+    final balanceColor = isNegative ? Colors.red : AppTheme.emerald;
+    final settleAmount = wallet.settleAmount;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Balance card
+        AppCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.account_balance_wallet, color: AppTheme.emerald, size: 22),
+                  const SizedBox(width: 8),
+                  const Text('Cash Collection Wallet', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  const Spacer(),
+                  if (wallet.suspended)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text('Suspended', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '${wallet.balance < 0 ? '-' : ''}\u20B9${wallet.balance.abs().toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: balanceColor),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isNegative
+                    ? 'You owe the platform \u20B9${settleAmount.toStringAsFixed(2)} in COD commission'
+                    : 'No outstanding dues',
+                style: TextStyle(fontSize: 12, color: isNegative ? Colors.red : AppTheme.slate),
+              ),
+              // Warning when approaching hard limit
+              if (wallet.isApproachingHardLimit && !wallet.suspended) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Warning: Your wallet is approaching the suspension limit (\u20B9${wallet.hardLimit.toStringAsFixed(0)}). Settle soon to avoid going offline.',
+                        style: TextStyle(fontSize: 11, color: Colors.orange.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              // Settle Dues button
+              if (settleAmount > 0) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _settling ? null : () => _settleDues(wallet, settleAmount),
+                    icon: _settling
+                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.payment),
+                    label: Text(_settling ? 'Processing...' : 'Settle Dues \u20B9${settleAmount.toStringAsFixed(2)}'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.emerald,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // Recent wallet transactions
+        if (wallet.recentTransactions.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text('Wallet Transactions', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          AppCard(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              children: [
+                for (final txn in wallet.recentTransactions.take(8))
+                  _WalletTransactionTile(txn: txn),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Initiates Razorpay checkout for the settle amount, then verifies the
+  /// payment on the backend to credit the wallet.
+  Future<void> _settleDues(DriverWalletDetailModel wallet, double amount) async {
+    AppHaptics.light();
+    setState(() => _settling = true);
+
+    try {
+      final api = ref.read(driverApiProvider);
+      final paymentService = ref.read(razorpayPaymentProvider);
+      final authSession = ref.read(authControllerProvider).valueOrNull;
+
+      // 1. Create a Razorpay order via the wallet topup endpoint
+      final order = await api.initiateTopUp(amount);
+
+      if (!mounted) return;
+
+      // 2. Open Razorpay checkout
+      final paymentResult = await paymentService
+          .startPayment(
+            orderId: order.orderId,
+            amount: (amount * 100).round(), // paise
+            phone: authSession?.phone ?? '',
+          )
+          .timeout(
+            const Duration(minutes: 5),
+            onTimeout: () => PaymentError(
+              code: -1,
+              message: 'Payment timed out. Please try again.',
+            ),
+          );
+
+      if (!mounted) return;
+
+      switch (paymentResult) {
+        case PaymentSuccess(:final paymentId, :final orderId, :final signature):
+          // 3. Verify the payment and credit the wallet
+          final verified = await api.verifyTopUp(
+            amount: amount,
+            paymentId: paymentId,
+            orderId: orderId,
+            signature: signature,
+          );
+          if (mounted) {
+            if (verified) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Dues settled successfully! Wallet credited.')),
+              );
+              ref.invalidate(driverWalletDetailProvider);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Payment verification failed. Please contact support.')),
+              );
+            }
+          }
+        case PaymentError(:final message):
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message)),
+            );
+          }
+        case PaymentExternalWallet():
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('External wallet selected. Please complete payment.')),
+            );
+          }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Settlement failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _settling = false);
+    }
+  }
+}
+
+/// A single wallet transaction row (commission deduction, top-up, etc.).
+class _WalletTransactionTile extends StatelessWidget {
+  const _WalletTransactionTile({required this.txn});
+  final WalletTransactionModel txn;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCredit = txn.amount >= 0;
+    final icon = isCredit ? Icons.add_circle : Icons.remove_circle;
+    final color = isCredit ? AppTheme.emerald : Colors.red;
+
+    return ListTile(
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      leading: Icon(icon, color: color, size: 20),
+      title: Text(
+        txn.description,
+        style: const TextStyle(fontSize: 13),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        '${txn.type} · ${_formatDate(txn.createdAt)}',
+        style: TextStyle(fontSize: 11, color: AppTheme.slate),
+      ),
+      trailing: Text(
+        '${isCredit ? '+' : ''}\u20B9${txn.amount.abs().toStringAsFixed(2)}',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+      ),
+    );
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      return '${dt.day}/${dt.month} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso;
+    }
   }
 }

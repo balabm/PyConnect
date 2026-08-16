@@ -35,10 +35,16 @@ public sealed class FoodDeliveryController : ControllerBase
     [ProducesResponseType(typeof(CheckoutResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<CheckoutResponse>> Checkout([FromBody] CreateFoodOrderRequest request, CancellationToken ct)
     {
-        var items = request.Items?.Select(i => new CreateFoodOrderItemRequest(i.Name, i.Quantity, i.UnitPrice, i.SpecialInstructions)).ToList()
+        var items = request.Items?.Select(i => new CreateFoodOrderItemRequest(
+            i.Name,
+            i.Quantity,
+            i.UnitPrice,
+            i.SpecialInstructions,
+            i.SelectedModifierIds)).ToList()
             ?? new List<CreateFoodOrderItemRequest>();
         var cmd = new CreateFoodOrderCommand(
             request.VendorId,
@@ -144,6 +150,62 @@ public sealed class FoodDeliveryController : ControllerBase
         return NoContent();
     }
 
+    // ── Modifier Groups ──────────────────────────────────────────────────
+
+    [HttpPost("vendor/menu/{itemId:guid}/modifier-groups")]
+    [Authorize(Roles = "Vendor")]
+    [ProducesResponseType(typeof(ModifierGroupResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ModifierGroupResponse>> CreateModifierGroup(
+        Guid itemId, [FromBody] CreateModifierGroupRequest request, CancellationToken ct)
+    {
+        var cmd = new CreateModifierGroupCommand(itemId, request.Name, request.MinSelections, request.MaxSelections, request.SortOrder);
+        var result = await _mediator.Send(cmd, ct);
+        return Ok(result);
+    }
+
+    // ── Modifiers ────────────────────────────────────────────────────────
+
+    [HttpPost("vendor/menu/{itemId:guid}/modifier-groups/{groupId:guid}/modifiers")]
+    [Authorize(Roles = "Vendor")]
+    [ProducesResponseType(typeof(ModifierResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ModifierResponse>> CreateModifier(
+        Guid itemId, Guid groupId, [FromBody] CreateModifierRequest request, CancellationToken ct)
+    {
+        var cmd = new CreateModifierCommand(groupId, request.Name, request.Price, request.IsAvailable, request.SortOrder);
+        var result = await _mediator.Send(cmd, ct);
+        return Ok(result);
+    }
+
+    [HttpPut("vendor/menu/modifiers/{id:guid}")]
+    [Authorize(Roles = "Vendor")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateModifier(Guid id, [FromBody] UpdateModifierRequest request, CancellationToken ct)
+    {
+        await _mediator.Send(new UpdateModifierCommand(id, request.Name, request.Price, request.IsAvailable), ct);
+        return NoContent();
+    }
+
+    [HttpDelete("vendor/menu/modifiers/{id:guid}")]
+    [Authorize(Roles = "Vendor")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteModifier(Guid id, CancellationToken ct)
+    {
+        await _mediator.Send(new DeleteModifierCommand(id), ct);
+        return NoContent();
+    }
+
     [HttpPost("orders/{id:guid}/cancel")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -202,7 +264,12 @@ public sealed record CreateFoodOrderRequest(
     string? Notes = null,
     IReadOnlyList<CreateFoodOrderItemDto>? Items = null);
 
-public sealed record CreateFoodOrderItemDto(string Name, int Quantity, decimal UnitPrice, string? SpecialInstructions = null);
+public sealed record CreateFoodOrderItemDto(
+    string Name,
+    int Quantity,
+    decimal UnitPrice,
+    string? SpecialInstructions = null,
+    IReadOnlyList<Guid>? SelectedModifierIds = null);
 
 public sealed record CreateMenuItemRequest(
     string Name,
@@ -214,6 +281,23 @@ public sealed record CreateMenuItemRequest(
     bool IsLateNight = false);
 
 public sealed record UpdateMenuItemRequest(string Name, string? Description, string Category, decimal? NewPrice);
+
+public sealed record CreateModifierGroupRequest(
+    string Name,
+    int MinSelections = 0,
+    int MaxSelections = 0,
+    int SortOrder = 0);
+
+public sealed record CreateModifierRequest(
+    string Name,
+    decimal Price = 0m,
+    bool IsAvailable = true,
+    int SortOrder = 0);
+
+public sealed record UpdateModifierRequest(
+    string Name,
+    decimal Price,
+    bool IsAvailable);
 
 public sealed record UpdateOrderStatusRequest(string NewStatus);
 

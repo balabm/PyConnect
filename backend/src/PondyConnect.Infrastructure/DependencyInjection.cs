@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Services;
 using PondyConnect.Infrastructure.Cache;
 using PondyConnect.Infrastructure.Locking;
 using PondyConnect.Infrastructure.Persistence;
@@ -62,6 +63,10 @@ public static class DependencyInjection
 
         services.AddSingleton<RedisCacheService>();
         services.AddSingleton<IAvailabilityCache, AvailabilityCache>();
+
+        // OTP rate limiter: 3 requests per 15 minutes per IP and per phone.
+        // Backed by IDistributedCache (Redis in production, in-memory in dev).
+        services.AddScoped<IOtpRateLimiter, OtpRateLimiter>();
 
         // SMS sender: toggle via Sms:UseMock (true = Console, false = Fast2SMS)
         var smsUseMock = configuration.GetValue("Sms:UseMock", true);

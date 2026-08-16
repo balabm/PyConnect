@@ -43,6 +43,10 @@ public interface IApplicationDbContext
 
     DbSet<MenuItem> MenuItems { get; }
 
+    DbSet<ModifierGroup> ModifierGroups { get; }
+
+    DbSet<Modifier> Modifiers { get; }
+
     DbSet<Product> Products { get; }
 
     DbSet<ProductOrder> ProductOrders { get; }
@@ -60,6 +64,10 @@ public interface IApplicationDbContext
     DbSet<PaymentSettlement> PaymentSettlements { get; }
 
     DbSet<DriverLedgerEntry> DriverLedgerEntries { get; }
+
+    DbSet<DriverWallet> DriverWallets { get; }
+
+    DbSet<DriverWalletTransaction> DriverWalletTransactions { get; }
 
     DbSet<DispatchTask> DispatchTasks { get; }
 
@@ -88,6 +96,8 @@ public interface IApplicationDbContext
     DbSet<Review> Reviews { get; }
 
     DbSet<ProcessedWebhook> ProcessedWebhooks { get; }
+
+    DbSet<ConsumerFlag> ConsumerFlags { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

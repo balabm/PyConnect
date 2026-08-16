@@ -51,6 +51,10 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
 
+    public DbSet<ModifierGroup> ModifierGroups => Set<ModifierGroup>();
+
+    public DbSet<Modifier> Modifiers => Set<Modifier>();
+
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<ProductOrder> ProductOrders => Set<ProductOrder>();
@@ -68,6 +72,10 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<PaymentSettlement> PaymentSettlements => Set<PaymentSettlement>();
 
     public DbSet<DriverLedgerEntry> DriverLedgerEntries => Set<DriverLedgerEntry>();
+
+    public DbSet<DriverWallet> DriverWallets => Set<DriverWallet>();
+
+    public DbSet<DriverWalletTransaction> DriverWalletTransactions => Set<DriverWalletTransaction>();
 
     public DbSet<DispatchTask> DispatchTasks => Set<DispatchTask>();
 
@@ -96,6 +104,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Review> Reviews => Set<Review>();
 
     public DbSet<ProcessedWebhook> ProcessedWebhooks => Set<ProcessedWebhook>();
+
+    public DbSet<ConsumerFlag> ConsumerFlags => Set<ConsumerFlag>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

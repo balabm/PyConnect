@@ -43,6 +43,7 @@ public sealed class RideHailingController : ControllerBase
     [ProducesResponseType(typeof(RideRequestResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<RideRequestResponse>> RequestRide([FromBody] RequestRideRequest request, CancellationToken ct)
     {

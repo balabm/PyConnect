@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers.dart';
 import '../data/vendor_dashboard_api.dart';
 import '../data/kds_api.dart';
+import '../services/thermal_printer_service.dart';
 import '../../scanner/data/scanner_api.dart';
 
 final vendorDashboardApiProvider = Provider<VendorDashboardApi>((ref) {
@@ -15,6 +16,11 @@ final kdsApiProvider = Provider<KdsApi>((ref) {
 
 final scannerApiProvider = Provider<ScannerApi>((ref) {
   return ScannerApi(ref.read(apiClientProvider));
+});
+
+/// Singleton thermal printer service for Bluetooth ESC/POS printing.
+final thermalPrinterProvider = Provider<ThermalPrinterService>((ref) {
+  return ThermalPrinterService();
 });
 
 final vendorMenuProvider =

@@ -14,7 +14,9 @@ using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Features.Payments;
 using PondyConnect.Application.Features.RideHailing;
 using PondyConnect.Application.Features.Telemetry;
+using PondyConnect.Application.Features.Wallet;
 using PondyConnect.Application.Features.Vendor;
+using PondyConnect.Application.Services;
 using PondyConnect.Infrastructure;
 using PondyConnect.Infrastructure.Configuration;
 using PondyConnect.Infrastructure.Persistence;
@@ -50,7 +52,9 @@ builder.Services.AddHostedService<FlashPromoExpiryWorker>();
 builder.Services.AddHostedService<ScheduledPayoutWorker>();
 builder.Services.AddHostedService<TelemetryBatchProcessor>();
 builder.Services.AddHostedService<PaymentReconciliationWorker>();
+builder.Services.AddHostedService<FraudDetectionWorker>();
 builder.Services.AddScoped<DriverPayoutService>();
+builder.Services.AddScoped<WalletService>();
 
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SectionName));
 builder.Services.AddHttpClient<WhatsAppHttpClient>(client =>
@@ -77,8 +81,10 @@ var rateLimitConfig = builder.Configuration
 
 builder.Services.AddRateLimiter(options =>
 {
-    // Auth/OTP policy: 3 requests per 5-minute window, partitioned by IP or
+    // Auth/OTP policy: 3 requests per 15-minute window, partitioned by IP or
     // phone number (from request body) to prevent brute-force OTP attacks.
+    // OTP endpoints additionally enforce per-IP and per-phone limits via
+    // IOtpRateLimiter (see AuthController/VendorAuthController).
     options.AddFixedWindowLimiter("AuthPolicy", opt =>
     {
         opt.PermitLimit = rateLimitConfig.Auth.PermitLimit;

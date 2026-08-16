@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Application.Features.Wallet;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 
@@ -169,17 +170,27 @@ public sealed class UpdateFoodOrderStatusHandler : IRequestHandler<UpdateFoodOrd
 {
     private readonly IApplicationDbContext _context;
     private readonly INotificationService? _notifications;
+    private readonly WalletService? _walletService;
 
     public UpdateFoodOrderStatusHandler(IApplicationDbContext context)
     {
         _context = context;
         _notifications = null;
+        _walletService = null;
     }
 
     public UpdateFoodOrderStatusHandler(IApplicationDbContext context, INotificationService notifications)
     {
         _context = context;
         _notifications = notifications;
+        _walletService = null;
+    }
+
+    public UpdateFoodOrderStatusHandler(IApplicationDbContext context, INotificationService notifications, WalletService walletService)
+    {
+        _context = context;
+        _notifications = notifications;
+        _walletService = walletService;
     }
 
     public async Task<Unit> Handle(UpdateFoodOrderStatusCommand request, CancellationToken cancellationToken)
@@ -201,6 +212,17 @@ public sealed class UpdateFoodOrderStatusHandler : IRequestHandler<UpdateFoodOrd
 
         await _context.SaveChangesAsync(cancellationToken);
 
+        // COD commission: when the customer pays cash on delivery, the driver
+        // collects the full order total and owes the platform a 10% commission.
+        // Debit the driver's cash-collection wallet and suspend if needed.
+        if (_walletService is not null
+            && order.Status == FoodOrderStatus.Delivered
+            && order.PaymentMethod == PaymentMethod.Cash
+            && order.TotalAmount > 0m)
+        {
+            await RecordFoodOrderCodCommissionAsync(order, cancellationToken);
+        }
+
         // Fire-and-forget push to the consumer on key state transitions.
         // The push must not fail the status-update transaction.
         if (_notifications is not null)
@@ -209,6 +231,32 @@ public sealed class UpdateFoodOrderStatusHandler : IRequestHandler<UpdateFoodOrd
         }
 
         return Unit.Value;
+    }
+
+    /// <summary>
+    /// Resolves the driver assigned to this food order via the DispatchTask
+    /// and records the 10% COD commission against their wallet.
+    /// </summary>
+    private async Task RecordFoodOrderCodCommissionAsync(FoodOrder order, CancellationToken cancellationToken)
+    {
+        var task = await _context.DispatchTasks.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.SourceEntityId == order.Id && t.DriverId.HasValue, cancellationToken);
+
+        if (task?.DriverId is null)
+            return;
+
+        var commission = Math.Round(order.TotalAmount * 0.1m, 2, MidpointRounding.AwayFromZero);
+        if (commission <= 0m)
+            return;
+
+        await _walletService!.RecordCommissionAsync(
+            task.DriverId.Value,
+            commission,
+            order.Id.ToString(),
+            $"COD commission for order {order.Id}",
+            cancellationToken);
+
+        await _walletService.CheckAndSuspendIfNeededAsync(task.DriverId.Value, cancellationToken);
     }
 
     /// <summary>

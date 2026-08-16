@@ -154,6 +154,14 @@ final driverWalletProvider = FutureProvider<DriverWalletModel>((ref) async {
   return api.getWallet();
 });
 
+/// Cash-collection ledger wallet (balance, suspended status, transactions).
+/// Used by the earnings screen wallet card and settle-dues flow.
+final driverWalletDetailProvider =
+    FutureProvider<DriverWalletDetailModel>((ref) async {
+  final api = ref.read(driverApiProvider);
+  return api.getWalletDetail();
+});
+
 final dispatchTaskStreamProvider =
     StreamProvider<List<DispatchTaskModel>>((ref) async* {
   final api = ref.read(driverApiProvider);

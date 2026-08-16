@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Application.Features.Wallet;
 using PondyConnect.Domain.Enums;
 
 // ── KDS Query ──
@@ -103,6 +104,7 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
     private readonly ICurrentUserService _currentUser;
     private readonly IFoodDeliveryDispatchService? _foodDispatch;
     private readonly INotificationService? _notifications;
+    private readonly WalletService? _walletService;
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
@@ -110,6 +112,7 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         _currentUser = currentUser;
         _foodDispatch = null;
         _notifications = null;
+        _walletService = null;
     }
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch)
@@ -118,6 +121,7 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         _currentUser = currentUser;
         _foodDispatch = foodDispatch;
         _notifications = null;
+        _walletService = null;
     }
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch, INotificationService notifications)
@@ -126,6 +130,16 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         _currentUser = currentUser;
         _foodDispatch = foodDispatch;
         _notifications = notifications;
+        _walletService = null;
+    }
+
+    public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch, INotificationService notifications, WalletService walletService)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _foodDispatch = foodDispatch;
+        _notifications = notifications;
+        _walletService = walletService;
     }
 
     public async Task<KdsOrderResponse> Handle(AdvanceKdsOrderCommand request, CancellationToken cancellationToken)
@@ -168,6 +182,34 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         if (transitionsToOutForDelivery && _foodDispatch is not null)
         {
             await _foodDispatch.DispatchFoodOrderAsync(order.Id, cancellationToken);
+        }
+
+        // COD commission: when a cash order is delivered via the KDS advance
+        // flow, debit the driver's cash-collection wallet for the 10% platform
+        // commission and suspend if the hard limit is reached.
+        if (_walletService is not null
+            && order.Status == FoodOrderStatus.Delivered
+            && order.PaymentMethod == PaymentMethod.Cash
+            && order.TotalAmount > 0m)
+        {
+            var task = await _context.DispatchTasks.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.SourceEntityId == order.Id && t.DriverId.HasValue, cancellationToken);
+
+            if (task?.DriverId is not null)
+            {
+                var commission = Math.Round(order.TotalAmount * 0.1m, 2, MidpointRounding.AwayFromZero);
+                if (commission > 0m)
+                {
+                    await _walletService.RecordCommissionAsync(
+                        task.DriverId.Value,
+                        commission,
+                        order.Id.ToString(),
+                        $"COD commission for order {order.Id}",
+                        cancellationToken);
+
+                    await _walletService.CheckAndSuspendIfNeededAsync(task.DriverId.Value, cancellationToken);
+                }
+            }
         }
 
         // Fire-and-forget push to the consumer on key state transitions.

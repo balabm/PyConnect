@@ -53,6 +53,43 @@ class DriverApi {
     return DriverWalletModel.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Fetches the cash-collection ledger wallet (balance, suspended status,
+  /// recent transactions) from GET /api/driver/wallet.
+  Future<DriverWalletDetailModel> getWalletDetail() async {
+    final data = await _api.get('api/driver/wallet');
+    return DriverWalletDetailModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Initiates a Razorpay top-up order for settling wallet dues via
+  /// POST /api/driver/wallet/topup. Returns the provider order ID.
+  Future<WalletTopUpOrderModel> initiateTopUp(double amount) async {
+    final data = await _api.post('api/driver/wallet/topup', data: {
+      'amount': amount,
+    });
+    return WalletTopUpOrderModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Verifies a Razorpay payment and credits the wallet via
+  /// POST /api/driver/wallet/topup/verify. Returns true on success.
+  Future<bool> verifyTopUp({
+    required double amount,
+    required String paymentId,
+    required String orderId,
+    String? signature,
+  }) async {
+    try {
+      await _api.post('api/driver/wallet/topup/verify', data: {
+        'amount': amount,
+        'razorpayPaymentId': paymentId,
+        'razorpayOrderId': orderId,
+        if (signature != null) 'razorpaySignature': signature,
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<InstantPayoutResultModel> requestInstantPayout() async {
     final data = await _api.post('api/driver/wallet/instant-payout');
     return InstantPayoutResultModel.fromJson(data as Map<String, dynamic>);

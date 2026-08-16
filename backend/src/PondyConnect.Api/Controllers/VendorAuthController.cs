@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Vendor;
+using PondyConnect.Application.Services;
 
 [ApiController]
 [Route("api/vendor/auth")]
@@ -19,26 +20,40 @@ public sealed class VendorAuthController : ControllerBase
     private readonly ICurrentUserService _currentUser;
     private readonly IApplicationDbContext _dbContext;
     private readonly IJwtTokenFactory _jwtTokenFactory;
+    private readonly IOtpRateLimiter _rateLimiter;
 
     public VendorAuthController(
         IMediator mediator,
         IOtpService otpService,
         ICurrentUserService currentUser,
         IApplicationDbContext dbContext,
-        IJwtTokenFactory jwtTokenFactory)
+        IJwtTokenFactory jwtTokenFactory,
+        IOtpRateLimiter rateLimiter)
     {
         _mediator = mediator;
         _otpService = otpService;
         _currentUser = currentUser;
         _dbContext = dbContext;
         _jwtTokenFactory = jwtTokenFactory;
+        _rateLimiter = rateLimiter;
     }
 
     [HttpPost("otp/request")]
     [ProducesResponseType(typeof(VendorOtpRequestedResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<VendorOtpRequestedResponse>> RequestOtp([FromBody] RequestVendorOtpCommand command)
     {
+        // Enforce per-IP and per-phone OTP rate limiting (3 requests / 15 min).
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var phone = command.Phone ?? string.Empty;
+
+        if (!await _rateLimiter.TryConsumeAsync($"otp:{ip}"))
+            return OtpRateLimited();
+
+        if (!string.IsNullOrEmpty(phone) && !await _rateLimiter.TryConsumeAsync($"otp:{phone}"))
+            return OtpRateLimited();
+
         try
         {
             var result = await _mediator.Send(command);
@@ -48,6 +63,18 @@ public sealed class VendorAuthController : ControllerBase
         {
             return BadRequest(new { Message = "Validation failed.", Errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
+    }
+
+    /// <summary>
+    /// Returns a 429 response with a Retry-After header and a user-friendly
+    /// message indicating how long the caller should wait before retrying.
+    /// </summary>
+    private ObjectResult OtpRateLimited()
+    {
+        var minutes = (int)Math.Ceiling(_rateLimiter.Window.TotalMinutes);
+        Response.Headers["Retry-After"] = ((int)_rateLimiter.Window.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return StatusCode(StatusCodes.Status429TooManyRequests,
+            new { Message = $"Too many OTP requests. Please try again in {minutes} minutes." });
     }
 
     [HttpPost("otp/verify")]

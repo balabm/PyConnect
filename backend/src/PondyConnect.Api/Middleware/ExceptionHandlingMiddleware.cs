@@ -4,7 +4,9 @@ using System.Text.Json;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 using PondyConnect.Application.Features.Bookings;
+using PondyConnect.Application.Features.Fraud;
 using PondyConnect.Application.Features.GeoFence;
+using PondyConnect.Application.Features.Wallet;
 
 public sealed partial class ExceptionHandlingMiddleware
 {
@@ -44,6 +46,12 @@ public sealed partial class ExceptionHandlingMiddleware
                 (object)new { Message = ex.Message }),
             BookingConflictException => (
                 StatusCodes.Status409Conflict,
+                (object)new { Message = ex.Message }),
+            CodRestrictedException => (
+                StatusCodes.Status403Forbidden,
+                (object)new { Message = ex.Message }),
+            WalletSuspendedException => (
+                StatusCodes.Status403Forbidden,
                 (object)new { Message = ex.Message }),
             InvalidOperationException => (
                 StatusCodes.Status400BadRequest,

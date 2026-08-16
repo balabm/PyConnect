@@ -82,6 +82,105 @@ class DriverWalletModel {
   }
 }
 
+/// Cash-collection ledger wallet returned by GET /api/driver/wallet.
+/// Tracks COD commission balance, suspension status, and recent transactions.
+class DriverWalletDetailModel {
+  DriverWalletDetailModel({
+    required this.id,
+    required this.balance,
+    required this.hardLimit,
+    required this.currency,
+    required this.suspended,
+    required this.recentTransactions,
+    this.lastSettledAt,
+  });
+
+  final String id;
+  final double balance;
+  final double hardLimit;
+  final String currency;
+  final bool suspended;
+  final String? lastSettledAt;
+  final List<WalletTransactionModel> recentTransactions;
+
+  /// Amount needed to bring the balance to zero (only when negative).
+  double get settleAmount => balance < 0 ? -balance : 0;
+
+  /// True when the balance is within 20% of the hard limit (approaching).
+  bool get isApproachingHardLimit {
+    if (hardLimit >= 0) return false;
+    final threshold = hardLimit * 0.8;
+    return balance <= threshold && balance > hardLimit;
+  }
+
+  factory DriverWalletDetailModel.fromJson(Map<String, dynamic> json) {
+    final txnsRaw = json['recentTransactions'] as List<dynamic>? ?? [];
+    return DriverWalletDetailModel(
+      id: json['id'] as String? ?? '',
+      balance: (json['balance'] as num?)?.toDouble() ?? 0,
+      hardLimit: (json['hardLimit'] as num?)?.toDouble() ?? -1000,
+      currency: json['currency'] as String? ?? 'INR',
+      suspended: json['suspended'] as bool? ?? false,
+      lastSettledAt: json['lastSettledAt'] as String?,
+      recentTransactions: txnsRaw
+          .map((e) =>
+              WalletTransactionModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// A single wallet ledger entry (commission, top-up, settlement, adjustment).
+class WalletTransactionModel {
+  WalletTransactionModel({
+    required this.id,
+    required this.type,
+    required this.amount,
+    required this.description,
+    required this.createdAt,
+    this.referenceId,
+  });
+
+  final String id;
+  final String type;
+  final double amount;
+  final String description;
+  final String? referenceId;
+  final String createdAt;
+
+  factory WalletTransactionModel.fromJson(Map<String, dynamic> json) {
+    return WalletTransactionModel(
+      id: json['id'] as String? ?? '',
+      type: json['type'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      description: json['description'] as String? ?? '',
+      referenceId: json['referenceId'] as String?,
+      createdAt: json['createdAt'] as String? ?? '',
+    );
+  }
+}
+
+/// Result of initiating a Razorpay wallet top-up order.
+class WalletTopUpOrderModel {
+  WalletTopUpOrderModel({
+    required this.orderId,
+    required this.amount,
+    required this.currency,
+  });
+
+  final String orderId;
+  final double amount;
+  final String currency;
+
+  factory WalletTopUpOrderModel.fromJson(Map<String, dynamic> json) {
+    return WalletTopUpOrderModel(
+      orderId: json['orderId'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? 'INR',
+    );
+  }
+}
+
 class LedgerEntryModel {
   LedgerEntryModel({
     required this.id,

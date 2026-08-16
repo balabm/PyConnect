@@ -12,6 +12,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../checkout/cart_controller.dart';
+import '../data/food_api.dart';
+import 'widgets/item_customization_sheet.dart';
 
 final menuProvider = FutureProvider.family<List<dynamic>, String>((ref, vendorId) async {
   final api = ref.watch(foodApiProvider);
@@ -58,14 +60,26 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   }
 
   /// Builds a [CartItem] from a menu item map.
-  CartItem _toCartItem(Map<String, dynamic> item, {int quantity = 1}) {
+  /// [unitPrice] overrides the base price when the item has been customized
+  /// with modifiers (base + selected modifier prices).
+  /// [selectedModifierIds] and [selectedModifierNames] carry the modifier
+  /// selections for backend validation and cart display.
+  CartItem _toCartItem(
+    Map<String, dynamic> item, {
+    int quantity = 1,
+    double? unitPrice,
+    List<String>? selectedModifierIds,
+    List<String>? selectedModifierNames,
+  }) {
     return CartItem(
       id: _itemId(item),
       name: item['name'] as String? ?? '',
-      price: (item['price'] as num).toDouble(),
+      price: unitPrice ?? (item['price'] as num).toDouble(),
       quantity: quantity,
       imageUrl: item['imageUrl'] as String?,
       category: item['category'] as String?,
+      selectedModifierIds: selectedModifierIds ?? const [],
+      selectedModifierNames: selectedModifierNames ?? const [],
     );
   }
 
@@ -73,9 +87,22 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   /// items from a different vendor or service category, shows a confirmation
   /// dialog: "Clear existing cart to add this item?".
   /// On confirm, clears the cart and adds the new item. On cancel, no-op.
-  void _addToCart(Map<String, dynamic> item, int quantity) {
+  /// [unitPrice] overrides the base price for customized items.
+  void _addToCart(
+    Map<String, dynamic> item,
+    int quantity, {
+    double? unitPrice,
+    List<String>? selectedModifierIds,
+    List<String>? selectedModifierNames,
+  }) {
     final cartController = ref.read(cartProvider.notifier);
-    final cartItem = _toCartItem(item, quantity: quantity);
+    final cartItem = _toCartItem(
+      item,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      selectedModifierIds: selectedModifierIds,
+      selectedModifierNames: selectedModifierNames,
+    );
 
     final result = cartController.addItem(
       item: cartItem,
@@ -317,7 +344,14 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
                               isEnabled: isAcceptingOrders,
                               onAdd: () {
                                 AppHaptics.light();
-                                _addToCart(item, 1);
+                                // If the item has modifier groups, open the
+                                // customization sheet instead of adding directly.
+                                final parsed = MenuItem.fromJson(item);
+                                if (parsed.hasModifiers) {
+                                  _showCustomizationSheet(item, qty);
+                                } else {
+                                  _addToCart(item, 1);
+                                }
                               },
                               onRemove: () {
                                 AppHaptics.light();
@@ -366,6 +400,29 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
 
   Future<void> _showCustomizationSheet(
       Map<String, dynamic> item, int currentQty) async {
+    // Parse the raw map into a typed MenuItem to check for modifier groups.
+    final menuItem = MenuItem.fromJson(item);
+
+    if (menuItem.hasModifiers) {
+      // Item has modifier groups — use the new typed customization sheet.
+      final result = await ItemCustomizationSheet.show(
+        context,
+        item: menuItem,
+        initialQuantity: 1,
+      );
+      if (result != null && mounted) {
+        _addToCart(
+          item,
+          result.quantity,
+          unitPrice: result.unitPrice,
+          selectedModifierIds: result.selectedModifierIds,
+          selectedModifierNames: result.selectedModifierNames,
+        );
+      }
+      return;
+    }
+
+    // No modifier groups — fall back to the legacy variant/add-on sheet.
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
@@ -375,7 +432,8 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     if (result != null && mounted) {
       AppHaptics.light();
       final qty = result['quantity'] as int? ?? 1;
-      _addToCart(item, qty);
+      final unitPrice = (result['unitPrice'] as num?)?.toDouble();
+      _addToCart(item, qty, unitPrice: unitPrice);
     }
   }
 
@@ -456,6 +514,8 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
           'name': item.name,
           'quantity': item.quantity,
           'unitPrice': item.price,
+          if (item.selectedModifierIds.isNotEmpty)
+            'selectedModifierIds': item.selectedModifierIds,
         };
       }).toList();
 
@@ -1119,10 +1179,25 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text(name,
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name,
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                  if (item.selectedModifierNames.isNotEmpty)
+                                    Text(
+                                      item.selectedModifierNames.join(', '),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
                             ),
                             Text('\u20B9${(price * qty).toStringAsFixed(0)}',
                                 style: const TextStyle(fontWeight: FontWeight.w600)),

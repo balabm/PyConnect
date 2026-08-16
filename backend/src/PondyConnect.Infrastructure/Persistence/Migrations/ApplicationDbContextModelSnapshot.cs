@@ -246,6 +246,49 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                     b.ToTable("bundle_items", (string)null);
                 });
 
+            modelBuilder.Entity("PondyConnect.Domain.Entities.ConsumerFlag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CodRestricted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ConsumerId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<int>("FlagType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("ShadowBanned")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsumerId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("consumer_flags", (string)null);
+                });
+
             modelBuilder.Entity("PondyConnect.Domain.Entities.DispatchTask", b =>
                 {
                     b.Property<Guid>("Id")
@@ -475,6 +518,96 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                     b.HasIndex("DriverId");
 
                     b.ToTable("driver_ledger_entries", (string)null);
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.DriverWallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Balance")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("INR");
+
+                    b.Property<Guid>("DriverId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("HardLimit")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(-1000.00m);
+
+                    b.Property<DateTimeOffset?>("LastSettledAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<bool>("Suspended")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DriverId")
+                        .IsUnique();
+
+                    b.ToTable("driver_wallets", (string)null);
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.DriverWalletTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ReferenceId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WalletId", "CreatedAt");
+
+                    b.ToTable("driver_wallet_transactions", (string)null);
                 });
 
             modelBuilder.Entity("PondyConnect.Domain.Entities.EmergencyContact", b =>
@@ -820,6 +953,87 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                     b.HasIndex("VendorId", "IsAvailable");
 
                     b.ToTable("menu_items", (string)null);
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.Modifier", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<Guid>("ModifierGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("Price")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModifierGroupId");
+
+                    b.ToTable("modifiers", (string)null);
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.ModifierGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<int>("MaxSelections")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MenuItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MinSelections")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("modifier_groups", (string)null);
                 });
 
             modelBuilder.Entity("PondyConnect.Domain.Entities.Payment", b =>
@@ -2696,6 +2910,28 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PondyConnect.Domain.Entities.DriverWallet", b =>
+                {
+                    b.HasOne("PondyConnect.Domain.Entities.Driver", "Driver")
+                        .WithOne()
+                        .HasForeignKey("PondyConnect.Domain.Entities.DriverWallet", "DriverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Driver");
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.DriverWalletTransaction", b =>
+                {
+                    b.HasOne("PondyConnect.Domain.Entities.DriverWallet", "Wallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Wallet");
+                });
+
             modelBuilder.Entity("PondyConnect.Domain.Entities.FoodOrder", b =>
                 {
                     b.OwnsOne("PondyConnect.Domain.ValueObjects.GeoLocation", "DeliveryLocation", b1 =>
@@ -2741,6 +2977,28 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Vendor");
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.Modifier", b =>
+                {
+                    b.HasOne("PondyConnect.Domain.Entities.ModifierGroup", "ModifierGroup")
+                        .WithMany("Modifiers")
+                        .HasForeignKey("ModifierGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ModifierGroup");
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.ModifierGroup", b =>
+                {
+                    b.HasOne("PondyConnect.Domain.Entities.MenuItem", "MenuItem")
+                        .WithMany("ModifierGroups")
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MenuItem");
                 });
 
             modelBuilder.Entity("PondyConnect.Domain.Entities.PaymentSettlement", b =>
@@ -3103,6 +3361,16 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("PondyConnect.Domain.Entities.FoodOrder", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.MenuItem", b =>
+                {
+                    b.Navigation("ModifierGroups");
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.ModifierGroup", b =>
+                {
+                    b.Navigation("Modifiers");
                 });
 
             modelBuilder.Entity("PondyConnect.Domain.Entities.ProductOrder", b =>

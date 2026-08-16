@@ -105,6 +105,16 @@ class ManageHubScreen extends ConsumerWidget {
                     context.push('/venue');
                   },
                 ),
+                _ManageTile(
+                  icon: Icons.print,
+                  label: 'Printer Settings',
+                  subtitle: 'Connect thermal printer',
+                  color: AppTheme.info,
+                  onTap: () {
+                    AppHaptics.light();
+                    context.push('/printer-settings');
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 24),

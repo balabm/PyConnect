@@ -25,6 +25,9 @@ public sealed class MenuItem : BaseEntity
 
     public bool IsLateNight { get; private set; }
 
+    private readonly List<ModifierGroup> _modifierGroups = [];
+    public IReadOnlyCollection<ModifierGroup> ModifierGroups => _modifierGroups.AsReadOnly();
+
     private MenuItem()
     {
     }

@@ -25,7 +25,26 @@ public sealed record MenuItemResponse(
     string Category,
     bool IsAvailable,
     bool IsLateNight,
-    string? ImageUrl);
+    string? ImageUrl,
+    IReadOnlyList<ModifierGroupResponse>? ModifierGroups = null);
+
+public sealed record ModifierGroupResponse(
+    Guid Id,
+    Guid MenuItemId,
+    string Name,
+    int MinSelections,
+    int MaxSelections,
+    int SortOrder,
+    bool IsRequired,
+    IReadOnlyList<ModifierResponse> Modifiers);
+
+public sealed record ModifierResponse(
+    Guid Id,
+    Guid ModifierGroupId,
+    string Name,
+    decimal Price,
+    bool IsAvailable,
+    int SortOrder);
 
 public sealed class CreateMenuItemValidator : AbstractValidator<CreateMenuItemCommand>
 {
@@ -75,7 +94,7 @@ public sealed class CreateMenuItemHandler : IRequestHandler<CreateMenuItemComman
         _context.MenuItems.Add(item);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new MenuItemResponse(item.Id, item.VendorId, item.Name, item.Description, item.Price, item.Category, item.IsAvailable, item.IsLateNight, item.ImageUrl);
+        return new MenuItemResponse(item.Id, item.VendorId, item.Name, item.Description, item.Price, item.Category, item.IsAvailable, item.IsLateNight, item.ImageUrl, []);
     }
 }
 
@@ -139,8 +158,12 @@ public sealed class ListMenuItemsHandler : IRequestHandler<ListMenuItemsQuery, I
         if (request.OnlyAvailable)
             query = query.Where(m => m.IsAvailable);
 
-        var items = await query.OrderBy(m => m.Category).ThenBy(m => m.Name).ToListAsync(cancellationToken);
-        return items.Select(m => new MenuItemResponse(m.Id, m.VendorId, m.Name, m.Description, m.Price, m.Category, m.IsAvailable, m.IsLateNight, m.ImageUrl)).ToList();
+        var items = await query
+            .OrderBy(m => m.Category).ThenBy(m => m.Name)
+            .Include(m => m.ModifierGroups.OrderBy(g => g.SortOrder))
+                .ThenInclude(g => g.Modifiers.OrderBy(mod => mod.SortOrder))
+            .ToListAsync(cancellationToken);
+        return items.Select(MenuItemMapper.MapMenuItemResponse).ToList();
     }
 }
 
@@ -174,9 +197,11 @@ public sealed class ListVendorMenuItemsHandler : IRequestHandler<ListVendorMenuI
         var items = await _context.MenuItems.AsNoTracking()
             .Where(m => m.VendorId == vendorId)
             .OrderBy(m => m.Category).ThenBy(m => m.Name)
+            .Include(m => m.ModifierGroups.OrderBy(g => g.SortOrder))
+                .ThenInclude(g => g.Modifiers.OrderBy(mod => mod.SortOrder))
             .ToListAsync(cancellationToken);
 
-        return items.Select(m => new MenuItemResponse(m.Id, m.VendorId, m.Name, m.Description, m.Price, m.Category, m.IsAvailable, m.IsLateNight, m.ImageUrl)).ToList();
+        return items.Select(MenuItemMapper.MapMenuItemResponse).ToList();
     }
 }
 
@@ -196,5 +221,49 @@ public sealed class DeleteMenuItemHandler : IRequestHandler<DeleteMenuItemComman
         _context.MenuItems.Remove(item);
         await _context.SaveChangesAsync(cancellationToken);
         return Unit.Value;
+    }
+}
+
+/// <summary>
+/// Maps a <see cref="MenuItem"/> entity (with loaded modifier groups) to a
+/// <see cref="MenuItemResponse"/> DTO including the full modifier tree.
+/// </summary>
+internal static class MenuItemMapper
+{
+    public static MenuItemResponse MapMenuItemResponse(MenuItem m)
+    {
+        var groups = m.ModifierGroups
+            .OrderBy(g => g.SortOrder)
+            .Select(g => new ModifierGroupResponse(
+                g.Id,
+                g.MenuItemId,
+                g.Name,
+                g.MinSelections,
+                g.MaxSelections,
+                g.SortOrder,
+                g.IsRequired,
+                g.Modifiers
+                    .OrderBy(mod => mod.SortOrder)
+                    .Select(mod => new ModifierResponse(
+                        mod.Id,
+                        mod.ModifierGroupId,
+                        mod.Name,
+                        mod.Price,
+                        mod.IsAvailable,
+                        mod.SortOrder))
+                    .ToList()))
+            .ToList();
+
+        return new MenuItemResponse(
+            m.Id,
+            m.VendorId,
+            m.Name,
+            m.Description,
+            m.Price,
+            m.Category,
+            m.IsAvailable,
+            m.IsLateNight,
+            m.ImageUrl,
+            groups);
     }
 }

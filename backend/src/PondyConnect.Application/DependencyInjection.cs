@@ -5,6 +5,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using PondyConnect.Application.Common.Behaviours;
 using PondyConnect.Application.Features.Bookings;
+using PondyConnect.Application.Features.Fraud;
 using PondyConnect.Application.Features.Homestays;
 using PondyConnect.Application.Features.Settlement;
 using PondyConnect.Application.Features.Support;
@@ -36,6 +37,9 @@ public static class DependencyInjection
         services.AddSingleton<ITelemetryService>(sp => sp.GetRequiredService<ChannelTelemetryService>());
 
         services.AddScoped<SurgeCalculator>();
+
+        // Fraud prevention: cancellation tracking, shadow-bans, COD restrictions.
+        services.AddScoped<IFraudDetectionService, FraudDetectionService>();
 
         return services;
     }

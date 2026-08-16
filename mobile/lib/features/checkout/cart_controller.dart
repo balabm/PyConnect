@@ -12,6 +12,8 @@ class CartItem {
     required this.quantity,
     this.imageUrl,
     this.category,
+    this.selectedModifierIds = const [],
+    this.selectedModifierNames = const [],
   });
 
   /// Unique identifier for the menu item (from the backend menu API).
@@ -34,6 +36,12 @@ class CartItem {
   /// Used by the cross-category guard.
   final String? category;
 
+  /// IDs of selected modifiers (for backend order validation).
+  final List<String> selectedModifierIds;
+
+  /// Names of selected modifiers (for cart summary display).
+  final List<String> selectedModifierNames;
+
   /// Returns a copy of this item with the supplied fields overridden.
   CartItem copyWith({
     String? id,
@@ -42,6 +50,8 @@ class CartItem {
     int? quantity,
     String? imageUrl,
     String? category,
+    List<String>? selectedModifierIds,
+    List<String>? selectedModifierNames,
   }) {
     return CartItem(
       id: id ?? this.id,
@@ -50,6 +60,8 @@ class CartItem {
       quantity: quantity ?? this.quantity,
       imageUrl: imageUrl ?? this.imageUrl,
       category: category ?? this.category,
+      selectedModifierIds: selectedModifierIds ?? this.selectedModifierIds,
+      selectedModifierNames: selectedModifierNames ?? this.selectedModifierNames,
     );
   }
 }

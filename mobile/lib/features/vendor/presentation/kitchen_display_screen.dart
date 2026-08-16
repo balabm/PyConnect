@@ -10,6 +10,7 @@ import '../../../core/animations/modern_animations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/vendor_providers.dart';
 import '../domain/kds_models.dart';
+import '../services/thermal_printer_service.dart';
 
 /// Kitchen Display System screen — dark Kanban-style order board with
 /// stage progression. Uses kdsApiProvider for authenticated API access.
@@ -47,6 +48,12 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   /// Flash animation controller for highlighting incoming (new) order cards.
   late final AnimationController _flashController;
 
+  /// Order IDs that have already been auto-printed (to avoid duplicates).
+  final Set<String> _printedOrderIds = {};
+
+  /// Order IDs currently being printed (for the "Printing..." indicator).
+  final Set<String> _printingOrderIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -82,6 +89,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
         // Play chime if new orders arrived
         if (orders.length > _previousOrderCount && _previousOrderCount > 0) {
           _startChime();
+          // Auto-print newly arrived orders
+          _autoPrintNewOrders(orders);
         }
         _previousOrderCount = orders.length;
 
@@ -149,6 +158,89 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
       } catch (_) {
         // Last resort: vibration only.
         AppHaptics.heavy();
+      }
+    }
+  }
+
+  /// Auto-prints tickets for orders that have not been printed yet.
+  /// Called when new orders are detected during polling.
+  void _autoPrintNewOrders(List<KdsOrder> orders) {
+    for (final order in orders) {
+      if (!_printedOrderIds.contains(order.id)) {
+        _printOrder(order);
+      }
+    }
+  }
+
+  /// Converts a [KdsOrder] into an [OrderTicket] for the thermal printer.
+  OrderTicket _buildOrderTicket(KdsOrder order) {
+    return OrderTicket(
+      orderId: order.orderNumber.isNotEmpty ? order.orderNumber : order.id,
+      customerName: order.customerName,
+      items: order.items
+          .map((item) => OrderTicketItem(
+                name: item.name,
+                quantity: item.quantity,
+                modifiers: item.specialInstructions != null &&
+                        item.specialInstructions!.isNotEmpty
+                    ? [item.specialInstructions!]
+                    : [],
+              ))
+          .toList(),
+      total: 0, // KDS model does not carry the total; footer still prints.
+      paymentType: TicketPaymentType
+          .paid, // Default to paid; KDS doesn't expose payment type.
+      timestamp: order.placedAt,
+    );
+  }
+
+  /// Prints [order] to the connected thermal printer. Shows a "Printing..."
+  /// indicator on the card while in progress and a SnackBar with retry on
+  /// failure.
+  Future<void> _printOrder(KdsOrder order) async {
+    if (_printingOrderIds.contains(order.id)) return;
+
+    setState(() => _printingOrderIds.add(order.id));
+
+    try {
+      final service = ref.read(thermalPrinterProvider);
+      final ticket = _buildOrderTicket(order);
+      final success = await service.printOrderTicket(ticket);
+
+      if (success) {
+        _printedOrderIds.add(order.id);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Print failed for order #${order.orderNumber}'),
+            backgroundColor: AppTheme.danger,
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _printOrder(order),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Print error: $e'),
+            backgroundColor: AppTheme.danger,
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _printOrder(order),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _printingOrderIds.remove(order.id));
       }
     }
   }
@@ -481,7 +573,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Order number + elapsed time
+          // Order number + elapsed time + print button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -493,30 +585,80 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                   fontSize: 15,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: urgencyColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.timer, size: 12, color: urgencyColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${order.elapsedMinutes}m',
-                      style: TextStyle(
-                        color: urgencyColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Manual reprint button
+                  if (_printingOrderIds.contains(order.id))
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.info,
+                      ),
+                    )
+                  else
+                    GestureDetector(
+                      onTap: () => _printOrder(order),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.info.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.print,
+                          size: 14,
+                          color: AppTheme.info,
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: urgencyColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.timer, size: 12, color: urgencyColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${order.elapsedMinutes}m',
+                          style: TextStyle(
+                            color: urgencyColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          // "Printing..." indicator
+          if (_printingOrderIds.contains(order.id)) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.print, size: 12, color: AppTheme.info.withValues(alpha: 0.7)),
+                const SizedBox(width: 4),
+                Text(
+                  'Printing...',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.info.withValues(alpha: 0.7),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 4),
           Text(
             order.customerName,
@@ -586,21 +728,56 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
             ),
           ],
           const SizedBox(height: 8),
-          // Advance button
+          // Advance button + reprint button
           if (order.stage.next != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonal(
-                style: FilledButton.styleFrom(
-                  backgroundColor: columnAccent.withValues(alpha: 0.15),
-                  foregroundColor: columnAccent,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  minimumSize: Size.zero,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Reprint button
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.info,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    iconSize: 14,
+                    textStyle: const TextStyle(fontSize: 11),
+                  ),
+                  onPressed: _printingOrderIds.contains(order.id)
+                      ? null
+                      : () => _printOrder(order),
+                  icon: const Icon(Icons.print),
+                  label: const Text('Reprint'),
                 ),
-                onPressed: () => _advanceOrder(order),
-                child: Text(order.stage == KdsStage.incoming
-                    ? 'Accept Order'
-                    : 'Advance to ${order.stage.next!.label}'),
+                FilledButton.tonal(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: columnAccent.withValues(alpha: 0.15),
+                    foregroundColor: columnAccent,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                  ),
+                  onPressed: () => _advanceOrder(order),
+                  child: Text(order.stage == KdsStage.incoming
+                      ? 'Accept Order'
+                      : 'Advance to ${order.stage.next!.label}'),
+                ),
+              ],
+            )
+          else
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.info,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  iconSize: 14,
+                  textStyle: const TextStyle(fontSize: 11),
+                ),
+                onPressed: _printingOrderIds.contains(order.id)
+                    ? null
+                    : () => _printOrder(order),
+                icon: const Icon(Icons.print),
+                label: const Text('Reprint'),
               ),
             ),
         ],

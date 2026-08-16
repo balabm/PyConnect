@@ -10,6 +10,8 @@ using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 using PondyConnect.Domain.ValueObjects;
 using PondyConnect.Application.Features.GeoFence;
+using PondyConnect.Application.Features.Fraud;
+using PondyConnect.Application.Features.Wallet;
 
 public sealed record RequestRideCommand(
     double PickupLatitude,
@@ -56,6 +58,7 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
     private readonly ServiceAreaValidator _serviceArea;
     private readonly SurgeCalculator _surgeCalculator;
     private readonly IRoutingService? _routingService;
+    private readonly IFraudDetectionService? _fraudDetection;
 
     public RequestRideHandler(
         IApplicationDbContext context,
@@ -69,11 +72,36 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
         _serviceArea = serviceArea;
         _surgeCalculator = surgeCalculator;
         _routingService = routingService;
+        _fraudDetection = null;
+    }
+
+    public RequestRideHandler(
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        ServiceAreaValidator serviceArea,
+        SurgeCalculator surgeCalculator,
+        IFraudDetectionService fraudDetection,
+        IRoutingService? routingService = null)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _serviceArea = serviceArea;
+        _surgeCalculator = surgeCalculator;
+        _fraudDetection = fraudDetection;
+        _routingService = routingService;
     }
 
     public async Task<RideRequestResponse> Handle(RequestRideCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("User not authenticated.");
+
+        // COD enforcement: consumers flagged with CodRestricted cannot pay cash.
+        if (request.PaymentMethod == PaymentMethod.Cash
+            && _fraudDetection is not null
+            && await _fraudDetection.IsCodRestrictedAsync(userId.ToString()))
+        {
+            throw new CodRestrictedException();
+        }
 
         // Prevent multiple active rides for the same consumer
         var hasActiveRide = await _context.RideRequests.AsNoTracking()
@@ -321,12 +349,14 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
     private readonly INotificationService? _notifications;
+    private readonly WalletService? _walletService;
 
     public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
         _notifications = null;
+        _walletService = null;
     }
 
     public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications)
@@ -334,6 +364,15 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
         _context = context;
         _currentUser = currentUser;
         _notifications = notifications;
+        _walletService = null;
+    }
+
+    public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications, WalletService walletService)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = notifications;
+        _walletService = walletService;
     }
 
     public async Task<Unit> Handle(CompleteRideCommand request, CancellationToken cancellationToken)
@@ -355,6 +394,29 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
         _context.RideEvents.Add(RideEvent.Create(ride.Id, RideEventType.Completed, ride.DriverId));
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // COD commission: when the rider pays cash, the driver collects the
+        // full fare and owes the platform a 10% commission. Debit the
+        // driver's cash-collection wallet and suspend if the hard limit is
+        // reached.
+        if (_walletService is not null
+            && ride.PaymentMethod == PaymentMethod.Cash
+            && ride.DriverId.HasValue
+            && ride.Fare > 0m)
+        {
+            var commission = Math.Round(ride.Fare * 0.1m, 2, MidpointRounding.AwayFromZero);
+            if (commission > 0m)
+            {
+                await _walletService.RecordCommissionAsync(
+                    ride.DriverId.Value,
+                    commission,
+                    ride.Id.ToString(),
+                    $"COD commission for ride {ride.Id}",
+                    cancellationToken);
+
+                await _walletService.CheckAndSuspendIfNeededAsync(ride.DriverId.Value, cancellationToken);
+            }
+        }
 
         // Fire-and-forget push to the consumer — ride is complete, prompt for rating.
         if (_notifications is not null)
@@ -657,11 +719,20 @@ public sealed class ToggleDriverOnlineHandler : IRequestHandler<ToggleDriverOnli
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly WalletService? _walletService;
 
     public ToggleDriverOnlineHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
+        _walletService = null;
+    }
+
+    public ToggleDriverOnlineHandler(IApplicationDbContext context, ICurrentUserService currentUser, WalletService walletService)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _walletService = walletService;
     }
 
     public async Task<Unit> Handle(ToggleDriverOnlineCommand request, CancellationToken cancellationToken)
@@ -671,8 +742,23 @@ public sealed class ToggleDriverOnlineHandler : IRequestHandler<ToggleDriverOnli
         var driver = await _context.Drivers.FirstOrDefaultAsync(d => d.UserId == userId, cancellationToken)
             ?? throw new InvalidOperationException("Driver profile not found.");
 
-        if (request.GoOnline) driver.GoOnline();
-        else driver.GoOffline();
+        if (request.GoOnline)
+        {
+            // Block going online when the cash-collection wallet is suspended
+            // (driver owes outstanding COD commission dues past the hard limit).
+            if (_walletService is not null)
+            {
+                var wallet = await _walletService.GetOrCreateWalletAsync(driver.Id, cancellationToken);
+                if (wallet.Suspended)
+                    throw new WalletSuspendedException();
+            }
+
+            driver.GoOnline();
+        }
+        else
+        {
+            driver.GoOffline();
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
         return Unit.Value;
@@ -867,11 +953,20 @@ public sealed class CancelRideByRiderHandler : IRequestHandler<CancelRideByRider
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IFraudDetectionService? _fraudDetection;
 
     public CancelRideByRiderHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
+        _fraudDetection = null;
+    }
+
+    public CancelRideByRiderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFraudDetectionService fraudDetection)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _fraudDetection = fraudDetection;
     }
 
     public async Task<CancelRideResponse> Handle(CancelRideByRiderCommand request, CancellationToken cancellationToken)
@@ -885,6 +980,7 @@ public sealed class CancelRideByRiderHandler : IRequestHandler<CancelRideByRider
             throw new UnauthorizedAccessException("Only the rider who booked this ride can cancel it.");
 
         var fee = ride.CalculateCancellationFee();
+        var wasDriverAssigned = ride.DriverId.HasValue;
         ride.CancelByRider(request.Reason);
 
         // Free the driver if one was assigned
@@ -898,6 +994,15 @@ public sealed class CancelRideByRiderHandler : IRequestHandler<CancelRideByRider
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Track post-assignment cancellations for fraud detection. The service
+        // checks if this is the 3rd+ cancellation in 24h and applies a COD
+        // restriction flag if the threshold is met.
+        if (wasDriverAssigned && _fraudDetection is not null)
+        {
+            await _fraudDetection.RecordCancellationAsync(userId.ToString(), ride.Id.ToString());
+        }
+
         return new CancelRideResponse(fee, ride.Status.ToString());
     }
 }

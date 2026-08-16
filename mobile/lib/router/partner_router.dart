@@ -21,6 +21,7 @@ import '../features/vendor/presentation/taxi_fleet_screen.dart';
 import '../features/vendor/presentation/taxi_rides_screen.dart';
 import '../features/vendor/presentation/cloak_capacity_screen.dart';
 import '../features/vendor/presentation/vendor_registration_screen.dart';
+import '../features/vendor/presentation/printer_settings_screen.dart';
 import '../shell/partner_shell.dart';
 
 final partnerRouterProvider = Provider<GoRouter>((ref) {
@@ -134,6 +135,10 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'capacity',
             builder: (_, _) => const CloakCapacityScreen(),
+          ),
+          GoRoute(
+            path: 'printer-settings',
+            builder: (_, _) => const PrinterSettingsScreen(),
           ),
         ],
       ),

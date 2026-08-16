@@ -235,15 +235,9 @@ public sealed class DriverController : ControllerBase
         return Ok(new { Url = url, ExpiresInMinutes = expiryMinutes });
     }
 
-    [HttpGet("wallet")]
-    [HttpGet("earnings")]
-    [ProducesResponseType(typeof(DriverWalletResponse), StatusCodes.Status200OK)]
-    public async Task<ActionResult<DriverWalletResponse>> GetWallet(CancellationToken ct)
-    {
-        var result = await _mediator.Send(new GetDriverWalletQuery(), ct);
-        if (result is null) return NotFound(new { Message = "Wallet not available." });
-        return Ok(result);
-    }
+    // NOTE: GET /api/driver/wallet is now handled by WalletController which
+    // returns the cash-collection ledger wallet (balance, suspended status,
+    // recent transactions). The instant-payout endpoint remains here.
 
     [HttpPost("wallet/instant-payout")]
     [ProducesResponseType(typeof(InstantPayoutResult), StatusCodes.Status200OK)]

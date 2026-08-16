@@ -4,6 +4,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Fraud;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 using PondyConnect.Domain.ValueObjects;
@@ -19,7 +20,12 @@ public sealed record CreateFoodOrderCommand(
     string? Notes = null,
     IReadOnlyList<CreateFoodOrderItemRequest>? Items = null) : IRequest<CheckoutResponse>;
 
-public sealed record CreateFoodOrderItemRequest(string Name, int Quantity, decimal UnitPrice, string? SpecialInstructions = null);
+public sealed record CreateFoodOrderItemRequest(
+    string Name,
+    int Quantity,
+    decimal UnitPrice,
+    string? SpecialInstructions = null,
+    IReadOnlyList<Guid>? SelectedModifierIds = null);
 
 public sealed record CheckoutResponse(
     Guid OrderId,
@@ -48,17 +54,26 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
     private readonly ServiceAreaValidator _serviceArea;
+    private readonly IFraudDetectionService _fraudDetection;
 
-    public CreateFoodOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, ServiceAreaValidator serviceArea)
+    public CreateFoodOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, ServiceAreaValidator serviceArea, IFraudDetectionService fraudDetection)
     {
         _context = context;
         _currentUser = currentUser;
         _serviceArea = serviceArea;
+        _fraudDetection = fraudDetection;
     }
 
     public async Task<CheckoutResponse> Handle(CreateFoodOrderCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("User not authenticated.");
+
+        // COD enforcement: consumers flagged with CodRestricted cannot pay cash.
+        if (request.PaymentMethod == PaymentMethod.Cash
+            && await _fraudDetection.IsCodRestrictedAsync(userId.ToString()))
+        {
+            throw new CodRestrictedException();
+        }
 
         var vendor = await _context.Vendors.FirstOrDefaultAsync(v => v.Id == request.VendorId && v.IsActive, cancellationToken)
             ?? throw new InvalidOperationException("Vendor not found or inactive.");
@@ -66,27 +81,72 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
         var deliveryLocation = GeoLocation.Create(request.DeliveryLatitude, request.DeliveryLongitude);
         _serviceArea.EnsureWithinZone(deliveryLocation);
 
-        // Validate that ordered items exist in the vendor's menu and match the recorded price
+        // Validate that ordered items exist in the vendor's menu, match the
+        // recorded price, and satisfy all modifier group constraints.
         if (request.Items != null && request.Items.Count > 0)
         {
-            var menuItemIds = await _context.MenuItems.AsNoTracking()
+            var menuItems = await _context.MenuItems.AsNoTracking()
                 .Where(m => m.VendorId == request.VendorId)
-                .ToDictionaryAsync(m => m.Id, m => m, cancellationToken);
+                .Include(m => m.ModifierGroups.OrderBy(g => g.SortOrder))
+                    .ThenInclude(g => g.Modifiers)
+                .ToListAsync(cancellationToken);
+
+            var menuItemByExactName = menuItems.ToDictionary(
+                m => m.Name, m => m, StringComparer.OrdinalIgnoreCase);
 
             foreach (var item in request.Items)
             {
-                // If the item name doesn't match any menu item for this vendor, reject
-                var matchingItem = menuItemIds.Values.FirstOrDefault(m =>
-                    string.Equals(m.Name, item.Name, StringComparison.OrdinalIgnoreCase));
-
-                if (matchingItem is null)
+                if (!menuItemByExactName.TryGetValue(item.Name, out var matchingItem))
                     throw new InvalidOperationException($"Item '{item.Name}' is not available on this vendor's menu.");
 
                 if (!matchingItem.IsAvailable)
                     throw new InvalidOperationException($"Item '{item.Name}' is currently out of stock.");
 
-                if (matchingItem.Price != item.UnitPrice)
-                    throw new InvalidOperationException($"Price mismatch for item '{item.Name}'. Expected {matchingItem.Price}, got {item.UnitPrice}.");
+                // Validate modifier selections and compute the expected unit price.
+                var expectedUnitPrice = matchingItem.Price;
+                var selectedModifierIds = (item.SelectedModifierIds ?? []).ToList();
+
+                if (selectedModifierIds.Count > 0)
+                {
+                    // Build a lookup of all available modifiers for this menu item.
+                    var allModifiers = matchingItem.ModifierGroups
+                        .SelectMany(g => g.Modifiers)
+                        .ToDictionary(m => m.Id);
+
+                    // Verify every selected modifier exists and belongs to this item.
+                    foreach (var modId in selectedModifierIds)
+                    {
+                        if (!allModifiers.TryGetValue(modId, out var modifier))
+                            throw new InvalidOperationException($"Selected modifier '{modId}' does not belong to item '{item.Name}'.");
+
+                        if (!modifier.IsAvailable)
+                            throw new InvalidOperationException($"Modifier '{modifier.Name}' is not available.");
+                    }
+
+                    // Validate per-group min/max selection constraints.
+                    foreach (var group in matchingItem.ModifierGroups)
+                    {
+                        var selectedInGroup = selectedModifierIds
+                            .Where(id => group.Modifiers.Any(m => m.Id == id))
+                            .ToList();
+
+                        if (group.MinSelections > 0 && selectedInGroup.Count < group.MinSelections)
+                            throw new InvalidOperationException(
+                                $"Modifier group '{group.Name}' requires at least {group.MinSelections} selection(s) for item '{item.Name}'.");
+
+                        if (group.MaxSelections > 0 && selectedInGroup.Count > group.MaxSelections)
+                            throw new InvalidOperationException(
+                                $"Modifier group '{group.Name}' allows at most {group.MaxSelections} selection(s) for item '{item.Name}'.");
+                    }
+
+                    // Add modifier prices to the expected unit price.
+                    expectedUnitPrice += selectedModifierIds
+                        .Sum(id => allModifiers[id].Price);
+                }
+
+                if (matchingItem.Price != item.UnitPrice && expectedUnitPrice != item.UnitPrice)
+                    throw new InvalidOperationException(
+                        $"Price mismatch for item '{item.Name}'. Expected {expectedUnitPrice}, got {item.UnitPrice}.");
             }
         }
 
