@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../application/driver_providers.dart';
 import '../domain/driver_models.dart';
 import 'driver_ride_screen.dart';
+import 'post_trip_summary_sheet.dart';
 
 /// The Active Trip tab for the Captain app.
 ///
@@ -240,6 +241,14 @@ class _DeliveryLifecycleScreenState
   Future<void> _advancePhase(BuildContext context) async {
     AppHaptics.medium();
     if (_advancing) return;
+
+    // When confirming pickup at the store, require an explicit Yes/No
+    // confirmation that all items have been picked up.
+    if (_phase == _DeliveryPhase.atStore) {
+      final confirmed = await _showPickupConfirmationDialog(context);
+      if (!confirmed || !mounted) return;
+    }
+
     setState(() => _advancing = true);
 
     final nextPhase = switch (_phase) {
@@ -306,6 +315,39 @@ class _DeliveryLifecycleScreenState
     }
   }
 
+  /// Shows a Yes/No confirmation dialog before proceeding to dropoff.
+  /// Only proceeds to the en-route phase on "Yes".
+  Future<bool> _showPickupConfirmationDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.shopping_bag, color: AppTheme.emerald),
+            const SizedBox(width: 8),
+            const Text('Confirm Pickup'),
+          ],
+        ),
+        content: const Text('Have you picked up all items?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.emerald,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   /// Checks if an exception is a network error (vs a server error).
   bool _isNetworkError(Exception e) {
     // DioException network types are queued; other errors are surfaced.
@@ -324,15 +366,21 @@ class _DeliveryLifecycleScreenState
     try {
       await ref.read(driverApiProvider).completeTask(widget.task.id);
       if (mounted) {
-        ref.read(activeTaskProvider.notifier).state = null;
-        ref.read(driverSelectedTabProvider.notifier).state = 0;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Delivery completed. Earnings: \u20B9${widget.task.driverEarnings.toStringAsFixed(0)}',
-            ),
-            backgroundColor: AppTheme.emerald,
-          ),
+        // Show the celebratory post-trip summary sheet with the earnings
+        // breakdown before returning to the task pool.
+        final earnings = widget.task.driverEarnings;
+        PostTripSummarySheet.show(
+          context,
+          customerPaid: earnings, // Customer paid = driver earnings (0% commission)
+          driverEarnings: earnings,
+          tripType: widget.task.taskType == 'EssentialsDrop'
+              ? 'Essentials Delivery'
+              : 'Food Delivery',
+          onDone: () {
+            Navigator.pop(context); // Close the bottom sheet
+            ref.read(activeTaskProvider.notifier).state = null;
+            ref.read(driverSelectedTabProvider.notifier).state = 0;
+          },
         );
       }
     } catch (e) {
@@ -348,12 +396,24 @@ class _DeliveryLifecycleScreenState
                 ),
               );
           if (mounted) {
-            // Optimistically complete — the driver is done, just offline.
-            ref.read(activeTaskProvider.notifier).state = null;
-            ref.read(driverSelectedTabProvider.notifier).state = 0;
+            // Optimistically complete — show summary then return to task pool.
+            final earnings = widget.task.driverEarnings;
+            PostTripSummarySheet.show(
+              context,
+              customerPaid: earnings,
+              driverEarnings: earnings,
+              tripType: widget.task.taskType == 'EssentialsDrop'
+                  ? 'Essentials Delivery'
+                  : 'Food Delivery',
+              onDone: () {
+                Navigator.pop(context); // Close the bottom sheet
+                ref.read(activeTaskProvider.notifier).state = null;
+                ref.read(driverSelectedTabProvider.notifier).state = 0;
+              },
+            );
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Offline — completion saved. Will sync when back online.'),
+              const SnackBar(
+                content: Text('Offline — completion saved. Will sync when back online.'),
                 backgroundColor: AppTheme.warning,
               ),
             );

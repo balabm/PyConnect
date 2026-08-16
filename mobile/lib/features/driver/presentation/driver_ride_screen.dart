@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers.dart';
 import '../application/driver_providers.dart';
 import '../../rides/presentation/widgets/ride_map.dart';
+import 'post_trip_summary_sheet.dart';
 
 class DriverRideScreen extends ConsumerStatefulWidget {
   const DriverRideScreen({super.key, required this.rideId, required this.driverId});
@@ -270,33 +271,29 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
     }
   }
 
-  /// Shows the fare collection bottom sheet when a ride is completed.
+  /// Shows the post-trip summary bottom sheet when a ride is completed.
+  ///
+  /// Displays a celebratory earnings breakdown (Customer Paid, 0% Platform
+  /// Commission, Your Earnings) and a Done button that returns the driver
+  /// to the Tasks/Radar screen.
   void _showFareCollectionSheet(Map<String, dynamic> ride) {
     final fare = ride['fare'] ?? ride['totalAmount'] ?? 0;
     final paymentMethod = (ride['paymentMethod'] as String?) ?? 'Cash';
-    final isCash = paymentMethod.toLowerCase() == 'cash';
     final fareNum = (fare is num) ? fare.toDouble() : double.tryParse(fare.toString()) ?? 0.0;
 
-    showModalBottomSheet<void>(
-      context: context,
-      isDismissible: false,
-      isScrollControlled: true,
-      enableDrag: false,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) => _FareCollectionSheet(
-        fare: fareNum,
-        isCash: isCash,
-        onClose: () {
-          Navigator.pop(sheetContext);
-          // Navigate back to the task pool
-          ref.read(activeTaskProvider.notifier).state = null;
-          ref.read(driverSelectedTabProvider.notifier).state = 0;
-          if (mounted) Navigator.pop(context);
-        },
-      ),
+    PostTripSummarySheet.show(
+      context,
+      customerPaid: fareNum,
+      driverEarnings: fareNum, // 0% commission → driver keeps 100%
+      tripType: 'Ride',
+      paymentMethod: paymentMethod,
+      onDone: () {
+        Navigator.pop(context); // Close the bottom sheet
+        // Navigate back to the task pool (Tasks/Radar screen)
+        ref.read(activeTaskProvider.notifier).state = null;
+        ref.read(driverSelectedTabProvider.notifier).state = 0;
+        if (mounted) Navigator.pop(context); // Pop the ride screen
+      },
     );
   }
 
@@ -335,6 +332,71 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
         }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cancel failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Shows a confirmation dialog for emergency release. The driver's ride
+  /// is unassigned and re-dispatched to another driver. The driver is set
+  /// back to Online and not penalized.
+  void _showEmergencyReleaseDialog() {
+    AppHaptics.heavy();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.danger),
+            const SizedBox(width: 8),
+            const Text('Emergency Release'),
+          ],
+        ),
+        content: const Text(
+          'Release this task? It will be sent back to the dispatch queue.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _performEmergencyRelease();
+            },
+            child: const Text('Release Task'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performEmergencyRelease() async {
+    setState(() => _loading = true);
+    try {
+      await ref.read(driverApiProvider).emergencyRelease(widget.rideId);
+      if (mounted) {
+        ref.read(activeTaskProvider.notifier).state = null;
+        ref.read(driverSelectedTabProvider.notifier).state = 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Task released. Re-dispatched to another driver.'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to release: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -395,6 +457,13 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       appBar: AppBar(
         title: const Text('Active Ride'),
         leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.warning_amber_rounded, color: AppTheme.danger),
+            tooltip: 'Emergency / Vehicle Breakdown',
+            onPressed: () => _showEmergencyReleaseDialog(),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -442,7 +511,7 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
                           label: const Text('Arrive at Pickup'),
                         ),
                       ),
-                    if (isDriverAssigned || isArrived) ...[
+                    if (isArrived) ...[
                       const SizedBox(height: 12),
                       TextField(
                         controller: _otpController,
@@ -590,244 +659,6 @@ BadgeVariant _statusVariant(String status) {
     case 'enroute': return BadgeVariant.info;
     case 'arrivedatpickup': return BadgeVariant.warning;
     default: return BadgeVariant.neutral;
-  }
-}
-
-/// Fare collection bottom sheet shown when a ride reaches Completed status.
-///
-/// For Cash payments, the driver must first collect the cash and then
-/// confirm collection. For UPI/Online payments, the driver simply confirms
-/// the payment was received online and returns to the task pool.
-class _FareCollectionSheet extends StatefulWidget {
-  const _FareCollectionSheet({
-    required this.fare,
-    required this.isCash,
-    required this.onClose,
-  });
-
-  final double fare;
-  final bool isCash;
-  final VoidCallback onClose;
-
-  @override
-  State<_FareCollectionSheet> createState() => _FareCollectionSheetState();
-}
-
-class _FareCollectionSheetState extends State<_FareCollectionSheet> {
-  bool _cashCollected = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final fareStr = widget.fare.toStringAsFixed(0);
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: 24 + MediaQuery.of(context).viewPadding.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle bar
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Theme.of(context).dividerColor,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Success icon
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.emerald.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.check_circle, color: AppTheme.emerald, size: 48),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Ride Completed!',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 24),
-          // Total fare amount (large text)
-          Text(
-            '\u20B9$fareStr',
-            style: TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Total Fare',
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Payment method indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: widget.isCash
-                  ? AppTheme.warning.withValues(alpha: 0.1)
-                  : AppTheme.info.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  widget.isCash ? Icons.payments : Icons.account_balance_wallet,
-                  color: widget.isCash ? AppTheme.warning : AppTheme.info,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.isCash ? 'Cash' : 'Paid Online via UPI',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: widget.isCash ? AppTheme.warning : AppTheme.info,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Driver earnings breakdown
-          AppCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                FareRow(
-                  label: 'Total fare',
-                  value: '\u20B9$fareStr',
-                  small: true,
-                ),
-                const SizedBox(height: 8),
-                FareRow(
-                  label: 'Platform commission',
-                  value: '\u20B90',
-                  small: true,
-                  valueColor: AppTheme.emerald,
-                ),
-                const Divider(height: 20),
-                FareRow(
-                  label: 'Your earnings (100%)',
-                  value: '\u20B9$fareStr',
-                  bold: true,
-                  valueColor: AppTheme.emerald,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          // Action buttons
-          if (widget.isCash) ...[
-            if (!_cashCollected) ...[
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    AppHaptics.medium();
-                    setState(() => _cashCollected = true);
-                  },
-                  icon: const Icon(Icons.payments),
-                  label: Text('Collect \u20B9$fareStr Cash'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.warning,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ] else ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.emerald.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: AppTheme.emerald),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '\u20B9$fareStr cash collected from rider',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.emerald,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _cashCollected
-                    ? () {
-                        AppHaptics.success();
-                        widget.onClose();
-                      }
-                    : null,
-                icon: const Icon(Icons.check_circle),
-                label: const Text('Payment Collected'),
-              ),
-            ),
-          ] else ...[
-            // UPI/Online payment
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.info.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.account_balance_wallet, color: AppTheme.info),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Payment Received Online — \u20B9$fareStr paid via UPI',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.info,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () {
-                  AppHaptics.success();
-                  widget.onClose();
-                },
-                icon: const Icon(Icons.check_circle),
-                label: const Text('Complete & Return to Tasks'),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }
 

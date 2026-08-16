@@ -33,6 +33,10 @@ class _DriverShellState extends ConsumerState<DriverShell> {
   StreamSubscription? _foodOfferSub;
   int _consecutiveGpsFailures = 0;
 
+  /// Whether the SignalR dispatch connection is currently reconnecting.
+  /// When true, a yellow banner is shown at the top of the screen.
+  bool _isReconnecting = false;
+
   /// Queue of pending ride offers that arrived while another offer sheet
   /// was already open. When the current sheet closes, the next queued
   /// offer is shown automatically.
@@ -195,6 +199,11 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         _locationTimer = null;
         KeepAwakeService.disable();
         BackgroundLocationService.instance.stop();
+        // Clear the reconnecting banner and the callback before disconnecting
+        // so the intentional disconnect doesn't trigger the auth-offline path.
+        if (mounted) setState(() => _isReconnecting = false);
+        final hub = ref.read(driverHubProvider);
+        hub.onConnectionStateChanged = null;
         // Disconnect SignalR dispatch listener when going offline
         await ref.read(driverSignalRProvider).disconnect();
       } catch (e) {
@@ -223,6 +232,41 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         try {
           final profile = await ref.read(driverApiProvider).getProfile();
           if (profile.id.isNotEmpty) {
+            // Wire up the connection state callback before connecting so we
+            // catch the very first reconnecting/reconnected events.
+            final hub = ref.read(driverHubProvider);
+            hub.onConnectionStateChanged = (isReconnecting) {
+              if (!mounted) return;
+              if (isReconnecting) {
+                // Reconnecting started — show yellow banner, keep UI "Online".
+                // Transient network errors (SocketException/timeout) do NOT
+                // toggle the driver offline.
+                setState(() => _isReconnecting = true);
+              } else {
+                // Either reconnected or permanently disconnected.
+                setState(() => _isReconnecting = false);
+                // If the connection is NOT connected, it was permanently
+                // lost. This only happens on auth rejection (401/403) or
+                // intentional disconnect. If the driver is still marked
+                // online, this was an auth rejection — toggle offline.
+                if (!hub.isConnected && ref.read(driverOnlineStatusProvider)) {
+                  ref.read(driverOnlineStatusProvider.notifier).state = false;
+                  _locationTimer?.cancel();
+                  _locationTimer = null;
+                  KeepAwakeService.disable();
+                  BackgroundLocationService.instance.stop();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Authentication expired. Please log in again.'),
+                        backgroundColor: AppTheme.danger,
+                      ),
+                    );
+                  }
+                }
+              }
+            };
             await ref.read(driverSignalRProvider).connect(profile.id);
           }
         } catch (e) {
@@ -427,12 +471,48 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           ),
         ],
       ),
-      body: SafeArea(child: IndexedStack(
-        index: currentIndex,
-        children: const [
-          DriverHomeScreen(),
-          ActiveTripScreen(),
-          DriverEarningsScreen(),
+      body: SafeArea(child: Column(
+        children: [
+          if (_isReconnecting)
+            Material(
+              color: AppTheme.warning,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Reconnecting to dispatch...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Expanded(
+            child: IndexedStack(
+              index: currentIndex,
+              children: const [
+                DriverHomeScreen(),
+                ActiveTripScreen(),
+                DriverEarningsScreen(),
+              ],
+            ),
+          ),
         ],
       )),
       bottomNavigationBar: NavigationBar(

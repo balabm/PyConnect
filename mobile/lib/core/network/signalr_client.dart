@@ -17,6 +17,11 @@ class SignalRClient {
   bool _isConnecting = false;
   bool _shouldReconnect = true;
   bool _isReconnecting = false;
+  int _reconnectAttempts = 0;
+
+  /// Exponential backoff delays (in seconds) for manual reconnection in the
+  /// `onclose` handler. Capped at 30s. Reset to zero on a successful reconnect.
+  static const List<int> _backoffDelays = [3, 6, 12, 24, 30];
 
   /// Callback invoked when the reconnection state changes. Receives `true`
   /// when the connection is lost and a reconnect is in progress, `false`
@@ -58,18 +63,40 @@ class SignalRClient {
       });
 
       _connection!.onreconnected(({connectionId}) {
-        // Reconnected — handlers are automatically preserved
+        // Reconnected — handlers are automatically preserved.
+        // Reset the manual reconnect attempt counter on success.
+        _reconnectAttempts = 0;
         _isReconnecting = false;
         onConnectionStateChanged?.call(false);
       });
 
       _connection!.onclose(({error}) {
-        if (_shouldReconnect) {
-          Future.delayed(const Duration(seconds: 3), () {
+        // Detect auth rejection (401/403). For auth errors, stop retrying
+        // and signal permanent disconnection so the driver shell can toggle
+        // offline and prompt re-authentication. For transient network errors
+        // (SocketException, timeout), retry with exponential backoff.
+        final errorText = error?.toString().toLowerCase() ?? '';
+        final isAuthError = errorText.contains('401') ||
+            errorText.contains('403') ||
+            errorText.contains('unauthorized');
+
+        if (_shouldReconnect && !isAuthError) {
+          // Exponential backoff: 3s, 6s, 12s, 24s, 30s (capped).
+          final delayIndex = _reconnectAttempts < _backoffDelays.length
+              ? _reconnectAttempts
+              : _backoffDelays.length - 1;
+          final delaySeconds = _backoffDelays[delayIndex];
+          _reconnectAttempts++;
+          _isReconnecting = true;
+          onConnectionStateChanged?.call(true);
+          Future.delayed(Duration(seconds: delaySeconds), () {
             if (_shouldReconnect) connect();
           });
         } else {
+          // Intentional disconnect or auth rejection — stop retrying.
+          _shouldReconnect = false;
           _isReconnecting = false;
+          _reconnectAttempts = 0;
           onConnectionStateChanged?.call(false);
         }
       });
@@ -82,6 +109,8 @@ class SignalRClient {
       }
 
       await _connection!.start();
+      // Connection established — reset the manual reconnect attempt counter.
+      _reconnectAttempts = 0;
     } finally {
       _isConnecting = false;
     }

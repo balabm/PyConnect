@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -92,7 +93,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           _result = result;
         });
         _animationController.forward();
-        AppHaptics.success();
+        AppHaptics.heavy();
         _playSuccessSound();
       } else if (result.isDuplicate) {
         setState(() {
@@ -100,8 +101,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           _result = result;
         });
         _animationController.forward();
-        AppHaptics.error();
         _playErrorSound();
+        // Heavy double-vibration to flag fraud/duplicate scans distinctly.
+        AppHaptics.heavy();
+        Future.delayed(const Duration(milliseconds: 250), AppHaptics.heavy);
       } else {
         setState(() {
           _state = ScannerState.error;
@@ -130,13 +133,21 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   Future<void> _playSuccessSound() async {
     try {
       await _audioPlayer.play(AssetSource('sounds/success.mp3'));
-    } catch (_) {}
+    } catch (_) {
+      try {
+        await SystemSound.play(SystemSoundType.click);
+      } catch (_) {}
+    }
   }
 
   Future<void> _playErrorSound() async {
     try {
       await _audioPlayer.play(AssetSource('sounds/error.mp3'));
-    } catch (_) {}
+    } catch (_) {
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (_) {}
+    }
   }
 
   void _resetAfterDelay() {
@@ -405,14 +416,15 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   }
 
   Widget _buildDuplicateOverlay() {
+    final scanTime = _result?.previousScanAt ?? '';
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.red, Colors.red.shade900],
+            colors: [Color(0xFFFF0000), Color(0xFF8B0000)],
           ),
         ),
         child: Center(
@@ -428,34 +440,44 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.content_copy, color: Colors.white, size: 40),
+                  child: const Icon(Icons.block, color: Colors.white, size: 40),
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Duplicate Ticket',
+                  'INVALID',
                   style: TextStyle(
-                    color: Colors.orange,
-                    fontSize: 28,
+                    color: Colors.white,
+                    fontSize: 48,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: 4,
                   ),
                 ),
+                if (scanTime.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Scanned at $scanTime',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Text(
                   _result?.message.isNotEmpty == true
                       ? _result!.message
                       : 'This ticket has already been scanned.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 15),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 15),
                 ),
-                if (_result?.previousScanAt != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Previously scanned: ${_result!.previousScanAt}',
-                    style: const TextStyle(color: Colors.white54, fontSize: 13),
-                  ),
-                ],
                 const SizedBox(height: 32),
                 FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF8B0000),
+                  ),
                   onPressed: () {
                     AppHaptics.light();
                     setState(() {

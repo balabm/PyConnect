@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
@@ -12,6 +13,12 @@ import '../domain/kds_models.dart';
 
 /// Kitchen Display System screen — dark Kanban-style order board with
 /// stage progression. Uses kdsApiProvider for authenticated API access.
+///
+/// Audio/Visual alarm: when a new order arrives in the "Incoming" column,
+/// a loud chime repeats every 3 seconds until the merchant physically taps
+/// "Accept Order" (advances the order to "Preparing"). The incoming card
+/// also flashes with a highlight border. If the audio asset is missing,
+/// falls back to [SystemSound.play] with [SystemSoundType.alert].
 class KitchenDisplayScreen extends ConsumerStatefulWidget {
   const KitchenDisplayScreen({super.key});
 
@@ -19,7 +26,8 @@ class KitchenDisplayScreen extends ConsumerStatefulWidget {
   ConsumerState<KitchenDisplayScreen> createState() => _KitchenDisplayScreenState();
 }
 
-class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
+class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
+    with TickerProviderStateMixin {
   final AudioPlayer _audioPlayer = AudioPlayer();
   List<KdsOrder> _orders = [];
   bool _loading = true;
@@ -27,9 +35,25 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   Timer? _refreshTimer;
   int _previousOrderCount = 0;
 
+  /// Repeating chime timer — fires every 3 seconds while unaccepted
+  /// (incoming) orders exist. Stopped as soon as no incoming orders remain.
+  Timer? _chimeTimer;
+
+  /// Whether the bundled audio asset loaded successfully. Once a play call
+  /// fails, we switch to [SystemSound.play] as a fallback and stop trying
+  /// the asset to avoid repeated exceptions on every chime tick.
+  bool _audioAssetFailed = false;
+
+  /// Flash animation controller for highlighting incoming (new) order cards.
+  late final AnimationController _flashController;
+
   @override
   void initState() {
     super.initState();
+    _flashController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
     _loadOrders();
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadOrders());
   }
@@ -37,6 +61,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _chimeTimer?.cancel();
+    _flashController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -55,9 +81,12 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
 
         // Play chime if new orders arrived
         if (orders.length > _previousOrderCount && _previousOrderCount > 0) {
-          _playChime();
+          _startChime();
         }
         _previousOrderCount = orders.length;
+
+        // If there are no longer any incoming orders, stop the chime.
+        _syncChime();
       }
     } catch (e) {
       if (mounted) {
@@ -69,23 +98,152 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
     }
   }
 
+  /// Returns the list of orders still in the "Incoming" stage (not yet
+  /// accepted by the merchant).
+  List<KdsOrder> get _incomingOrders =>
+      _orders.where((o) => o.stage == KdsStage.incoming).toList();
+
+  /// Starts the repeating chime if there are unaccepted incoming orders and
+  /// no chime timer is already running. The chime repeats every 3 seconds.
+  void _startChime() {
+    if (_incomingOrders.isEmpty) return;
+    _chimeTimer?.cancel();
+    // Play immediately, then on a 3-second interval.
+    _playChime();
+    _chimeTimer = Timer.periodic(const Duration(seconds: 3), (_) => _playChime());
+  }
+
+  /// Stops the repeating chime timer (e.g. when the last incoming order has
+  /// been accepted). Safe to call even if no timer is running.
+  void _stopChime() {
+    _chimeTimer?.cancel();
+    _chimeTimer = null;
+  }
+
+  /// Ensures the chime timer state matches the presence of incoming orders.
+  /// Called after every load and after every stage advancement.
+  void _syncChime() {
+    if (_incomingOrders.isEmpty) {
+      _stopChime();
+    } else if (_chimeTimer == null) {
+      _startChime();
+    }
+  }
+
+  /// Plays the order chime once. Uses the bundled audio asset
+  /// (`assets/sounds/order_chime.mp3`); if the asset is missing or playback
+  /// fails, falls back to the platform alert sound via [SystemSound.play].
   Future<void> _playChime() async {
+    if (_audioAssetFailed) {
+      await SystemSound.play(SystemSoundType.alert);
+      return;
+    }
     try {
-      await _audioPlayer.play(AssetSource('sounds/success.mp3'));
-    } catch (_) {}
+      await _audioPlayer.play(AssetSource('sounds/order_chime.mp3'));
+    } catch (_) {
+      // Asset missing or playback error — switch to system fallback for
+      // this and all subsequent chimes so we don't spam exceptions.
+      _audioAssetFailed = true;
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (_) {
+        // Last resort: vibration only.
+        AppHaptics.heavy();
+      }
+    }
   }
 
   Future<void> _advanceOrder(KdsOrder order) async {
     if (order.stage.next == null) return;
     AppHaptics.medium();
+    // Accepting an incoming order stops the chime for that order. The
+    // [_syncChime] call after reload will stop the timer entirely once no
+    // incoming orders remain.
+    if (order.stage == KdsStage.incoming) {
+      _stopChime();
+    }
     try {
       await ref.read(kdsApiProvider).advanceStage(order.id);
+      _loadOrders();
+    } catch (e) {
+      // Chime may still be needed if the advance failed — re-sync.
+      _syncChime();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to advance order: $e'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Partial fulfillment: marks a single item unavailable on an active order
+  /// and issues a partial refund to the customer. Triggered by long-pressing
+  /// an item pill on a KDS order card.
+  Future<void> _markItemUnavailable(KdsOrder order, KdsOrderItem item) async {
+    if (item.id.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This item cannot be refunded (missing item ID).'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+      return;
+    }
+    AppHaptics.heavy();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Mark Unavailable?', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Refund "${item.name}" (x${item.quantity}) to the customer? '
+          'The rest of the order stays active.',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Refund Item'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final result = await ref
+          .read(vendorDashboardApiProvider)
+          .partialRefund(order.id, item.id);
+      if (mounted) {
+        final refundAmount = (result['refundAmount'] as num?)?.toDouble() ??
+            (result['amount'] as num?)?.toDouble();
+        final amountStr = refundAmount != null
+            ? '\u20B9${refundAmount.toStringAsFixed(0)}'
+            : 'the item';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Refund of $amountStr issued to customer'),
+            backgroundColor: AppTheme.emerald,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
       _loadOrders();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to advance order: $e'),
+            content: Text('Refund failed: $e'),
             backgroundColor: AppTheme.danger,
           ),
         );
@@ -161,6 +319,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
     final activeOrders = _orders.where((o) => o.stage != KdsStage.completed).toList();
 
     if (activeOrders.isEmpty) {
+      // No active orders — ensure any lingering chime is stopped.
+      _stopChime();
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -257,146 +417,193 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   Widget _buildOrderCard(KdsOrder order, Color columnAccent) {
     final urgency = order.urgency;
     final urgencyColor = _urgencyColor(urgency);
+    final isIncoming = order.stage == KdsStage.incoming;
+
+    // Visual alarm: incoming (new) orders flash with a pulsing highlight
+    // border while unaccepted. Accepted/preparing/ready orders use the
+    // steady urgency-colored border as before.
+    final borderWidget = isIncoming
+        ? AnimatedBuilder(
+            animation: _flashController,
+            builder: (context, child) {
+              final t = _flashController.value;
+              final flashColor = Color.lerp(
+                AppTheme.warning.withValues(alpha: 0.3),
+                AppTheme.warning,
+                t,
+              )!;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: flashColor, width: 2 + t),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.warning.withValues(alpha: 0.3 * t),
+                      blurRadius: 12 * t,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: child,
+              );
+            },
+            child: _buildOrderCardContent(order, columnAccent, urgencyColor),
+          )
+        : Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: urgencyColor.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: _buildOrderCardContent(order, columnAccent, urgencyColor),
+          );
 
     return BounceIn(
       duration: const Duration(milliseconds: 300),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: urgencyColor.withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-        ),
-        child: InkWell(
-          onTap: () => _advanceOrder(order),
-          borderRadius: BorderRadius.circular(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: borderWidget,
+    );
+  }
+
+  /// Builds the inner content of an order card (shared by the flashing and
+  /// non-flashing variants).
+  Widget _buildOrderCardContent(KdsOrder order, Color columnAccent, Color urgencyColor) {
+    return InkWell(
+      onTap: () => _advanceOrder(order),
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Order number + elapsed time
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Order number + elapsed time
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '#${order.orderNumber}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: urgencyColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.timer, size: 12, color: urgencyColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${order.elapsedMinutes}m',
-                          style: TextStyle(
-                            color: urgencyColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
               Text(
-                order.customerName,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.5),
+                '#${order.orderNumber}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
               ),
-              const SizedBox(height: 8),
-              // Item pills
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: order.items.map((item) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${item.quantity}x ${item.name}',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                )).toList(),
-              ),
-              // Special instructions
-              if (order.items.any((i) => i.specialInstructions != null)) ...[
-                const SizedBox(height: 6),
-                ...order.items.where((i) => i.specialInstructions != null).map((item) => Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    '* ${item.specialInstructions}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.warning.withValues(alpha: 0.7),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                )),
-              ],
-              // Delivery address
-              if (order.deliveryAddress != null) ...[
-                const SizedBox(height: 8),
-                Row(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: urgencyColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.location_on, size: 12, color: Colors.white.withValues(alpha: 0.4)),
+                    Icon(Icons.timer, size: 12, color: urgencyColor),
                     const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        order.deliveryAddress!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.4),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      '${order.elapsedMinutes}m',
+                      style: TextStyle(
+                        color: urgencyColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 8),
-              // Advance button
-              if (order.stage.next != null)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.tonal(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: columnAccent.withValues(alpha: 0.15),
-                      foregroundColor: columnAccent,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      minimumSize: Size.zero,
-                    ),
-                    onPressed: () => _advanceOrder(order),
-                    child: Text('Advance to ${order.stage.next!.label}'),
-                  ),
-                ),
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            order.customerName,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Item pills — long-press to mark an item unavailable (partial refund)
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: order.items.map((item) => GestureDetector(
+              onLongPress: () => _markItemUnavailable(order, item),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${item.quantity}x ${item.name}',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            )).toList(),
+          ),
+          // Special instructions
+          if (order.items.any((i) => i.specialInstructions != null)) ...[
+            const SizedBox(height: 6),
+            ...order.items.where((i) => i.specialInstructions != null).map((item) => Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                '* ${item.specialInstructions}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.warning.withValues(alpha: 0.7),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )),
+          ],
+          // Delivery address
+          if (order.deliveryAddress != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 12, color: Colors.white.withValues(alpha: 0.4)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    order.deliveryAddress!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.4),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          // Advance button
+          if (order.stage.next != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  backgroundColor: columnAccent.withValues(alpha: 0.15),
+                  foregroundColor: columnAccent,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: Size.zero,
+                ),
+                onPressed: () => _advanceOrder(order),
+                child: Text(order.stage == KdsStage.incoming
+                    ? 'Accept Order'
+                    : 'Advance to ${order.stage.next!.label}'),
+              ),
+            ),
+        ],
       ),
     );
   }

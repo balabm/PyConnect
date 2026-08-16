@@ -87,15 +87,20 @@ class KdsOrderItem {
   KdsOrderItem({
     required this.name,
     required this.quantity,
+    this.id = '',
     this.specialInstructions,
   });
 
   factory KdsOrderItem.fromJson(Map<String, dynamic> json) => KdsOrderItem(
+        id: (json['id'] ?? json['itemId']) as String? ?? '',
         name: json['name'] as String? ?? '',
         quantity: (json['quantity'] as num?)?.toInt() ?? 1,
         specialInstructions: json['specialInstructions'] as String?,
       );
 
+  /// Backend item identifier used for partial-refund calls. May be empty
+  /// if the backend payload omits it (older deployments).
+  final String id;
   final String name;
   final int quantity;
   final String? specialInstructions;
