@@ -82,6 +82,12 @@ public sealed class TransitTripConfiguration : IEntityTypeConfiguration<TransitT
         builder.Property(t => t.Notes)
             .HasMaxLength(500);
 
+        builder.Property(t => t.DriverName)
+            .HasMaxLength(120);
+
+        builder.Property(t => t.VehiclePlate)
+            .HasMaxLength(20);
+
         builder.Property(t => t.CreatedAt)
             .HasColumnType("timestamptz");
 
