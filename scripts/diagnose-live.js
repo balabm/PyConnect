@@ -26,21 +26,8 @@ function test(name, method, url, body, token) {
 }
 
 async function run() {
-  const checkoutPayload = {
-    vendorId: '00000000-0000-0000-0000-000000000001',
-    deliveryAddress: '12 Rue Romain Rolland, White Town, Pondicherry',
-    deliveryLatitude: 11.9362,
-    deliveryLongitude: 79.8346,
-    paymentMethod: 1, // Cash
-    items: [
-      {
-        name: 'Woodfired Margherita',
-        quantity: 1,
-        unitPrice: 450.00
-      }
-    ]
-  };
-  test('Food Checkout', 'POST', '/api/orders/checkout', checkoutPayload, consumerToken);
+  test('Venues with Consumer Token', 'GET', '/api/venues', null, consumerToken);
+  test('Waiver Accept with Consumer Token', 'POST', '/api/auth/waiver/accept', null, consumerToken);
 }
 
 run();
