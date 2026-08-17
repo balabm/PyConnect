@@ -49,6 +49,17 @@ public interface IPaymentGateway
     Task<ProviderOrderStatusResult> FetchOrderStatusAsync(
         string providerOrderId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a payout to a linked bank account or UPI via RazorpayX.
+    /// Returns a placeholder if the payout service is not configured.
+    /// </summary>
+    Task<PayoutResult> PayoutAsync(
+        decimal amount,
+        string? bankAccountNumber,
+        string? upiId,
+        string? purpose,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record PaymentOrderResult(
@@ -81,4 +92,10 @@ public sealed record ProviderOrderStatusResult(
     string? ProviderPaymentId = null,
     PaymentStatus Status = PaymentStatus.Unpaid,
     decimal AmountPaid = 0m,
+    string? ErrorMessage = null);
+
+public sealed record PayoutResult(
+    bool Success,
+    string? PayoutId = null,
+    string? Utr = null,
     string? ErrorMessage = null);

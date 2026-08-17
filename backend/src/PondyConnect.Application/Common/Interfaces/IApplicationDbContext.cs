@@ -69,6 +69,8 @@ public interface IApplicationDbContext
 
     DbSet<DriverWalletTransaction> DriverWalletTransactions { get; }
 
+    DbSet<DriverWithdrawal> DriverWithdrawals { get; }
+
     DbSet<DispatchTask> DispatchTasks { get; }
 
     DbSet<Homestay> Homestays { get; }

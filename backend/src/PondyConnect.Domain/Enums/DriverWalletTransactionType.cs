@@ -11,5 +11,6 @@ public enum DriverWalletTransactionType
     Commission = 1,
     TopUp = 2,
     Settlement = 3,
-    Adjustment = 4
+    Adjustment = 4,
+    Withdrawal = 5
 }

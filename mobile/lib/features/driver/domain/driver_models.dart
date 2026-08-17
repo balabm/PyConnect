@@ -274,6 +274,8 @@ class DriverProfileModel {
     required this.hasSignedAgreement,
     required this.isOnline,
     this.vehiclePlate,
+    this.upiId,
+    this.bankAccountNumber,
   });
 
   final String id;
@@ -281,6 +283,8 @@ class DriverProfileModel {
   final String phone;
   final String vehicleType;
   final String? vehiclePlate;
+  final String? upiId;
+  final String? bankAccountNumber;
   final bool isApproved;
   final bool isKycUploaded;
   final bool hasCompletedTutorial;
@@ -299,6 +303,8 @@ class DriverProfileModel {
       hasCompletedTutorial: json['hasCompletedTutorial'] as bool? ?? false,
       hasSignedAgreement: json['hasSignedAgreement'] as bool? ?? false,
       isOnline: json['isOnline'] as bool? ?? false,
+      upiId: json['upiId'] as String?,
+      bankAccountNumber: json['bankAccountNumber'] as String?,
     );
   }
 }
@@ -338,6 +344,38 @@ class KycDocumentSlot {
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
       cameraOnly: cameraOnly,
+    );
+  }
+}
+
+class DriverWithdrawalModel {
+  DriverWithdrawalModel({
+    required this.id,
+    required this.amount,
+    required this.status,
+    required this.requestedAt,
+    this.upiId,
+    this.bankAccountNumber,
+    this.processedAt,
+  });
+
+  final String id;
+  final double amount;
+  final String status;
+  final String? upiId;
+  final String? bankAccountNumber;
+  final String requestedAt;
+  final String? processedAt;
+
+  factory DriverWithdrawalModel.fromJson(Map<String, dynamic> json) {
+    return DriverWithdrawalModel(
+      id: json['id'] as String? ?? json['withdrawalId'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      status: json['status'] as String? ?? 'Pending',
+      requestedAt: json['requestedAt'] as String? ?? json['createdAt'] as String? ?? '',
+      upiId: json['upiId'] as String?,
+      bankAccountNumber: json['bankAccountNumber'] as String?,
+      processedAt: json['processedAt'] as String?,
     );
   }
 }

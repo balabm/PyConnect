@@ -82,6 +82,6 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasDefaultValue(KycVerificationStatus.Pending);
 
         builder.Property(u => u.FcmDeviceToken)
-            .HasMaxLength(256);
+            .HasMaxLength(512);
     }
 }

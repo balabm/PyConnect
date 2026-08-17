@@ -68,6 +68,10 @@ public static class DependencyInjection
         // Backed by IDistributedCache (Redis in production, in-memory in dev).
         services.AddScoped<IOtpRateLimiter, OtpRateLimiter>();
 
+        // Distributed-transaction safety net: automatic refunds and idempotency.
+        services.AddScoped<IPaymentRefundService, PaymentRefundService>();
+        services.AddScoped<IIdempotencyService, IdempotencyService>();
+
         // SMS sender: toggle via Sms:UseMock (true = Console, false = Fast2SMS)
         var smsUseMock = configuration.GetValue("Sms:UseMock", true);
 

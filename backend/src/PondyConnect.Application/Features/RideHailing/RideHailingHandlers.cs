@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Application.Services;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 using PondyConnect.Domain.ValueObjects;
@@ -23,7 +24,10 @@ public sealed record RequestRideCommand(
     double DistanceKm,
     VehicleType VehicleType,
     PaymentMethod PaymentMethod,
-    bool IsSosRequest = false) : IRequest<RideRequestResponse>;
+    bool IsSosRequest = false,
+    string? RazorpayOrderId = null,
+    string? RazorpayPaymentId = null,
+    string? RazorpaySignature = null) : IRequest<RideRequestResponse>;
 
 public sealed record RideRequestResponse(
     Guid RideId,
@@ -59,34 +63,28 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
     private readonly SurgeCalculator _surgeCalculator;
     private readonly IRoutingService? _routingService;
     private readonly IFraudDetectionService? _fraudDetection;
+    private readonly IPaymentGateway _gateway;
+    private readonly IPaymentRefundService _refundService;
+    private readonly ILogger<RequestRideHandler> _logger;
 
     public RequestRideHandler(
         IApplicationDbContext context,
         ICurrentUserService currentUser,
         ServiceAreaValidator serviceArea,
         SurgeCalculator surgeCalculator,
+        IPaymentGateway gateway,
+        IPaymentRefundService refundService,
+        ILogger<RequestRideHandler> logger,
+        IFraudDetectionService? fraudDetection = null,
         IRoutingService? routingService = null)
     {
         _context = context;
         _currentUser = currentUser;
         _serviceArea = serviceArea;
         _surgeCalculator = surgeCalculator;
-        _routingService = routingService;
-        _fraudDetection = null;
-    }
-
-    public RequestRideHandler(
-        IApplicationDbContext context,
-        ICurrentUserService currentUser,
-        ServiceAreaValidator serviceArea,
-        SurgeCalculator surgeCalculator,
-        IFraudDetectionService fraudDetection,
-        IRoutingService? routingService = null)
-    {
-        _context = context;
-        _currentUser = currentUser;
-        _serviceArea = serviceArea;
-        _surgeCalculator = surgeCalculator;
+        _gateway = gateway;
+        _refundService = refundService;
+        _logger = logger;
         _fraudDetection = fraudDetection;
         _routingService = routingService;
     }
@@ -199,15 +197,77 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
             distanceFare: pricing.DistanceFare,
             timeFare: pricing.TimeFare);
 
-        _context.RideRequests.Add(ride);
-        await _context.SaveChangesAsync(cancellationToken);
+        // Wrap the "payment verified -> persist ride" step in an explicit
+        // transaction. If the database fails to commit after Razorpay has
+        // captured the money, we refund the consumer automatically.
+        await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
 
-        var driverEarnings = isSos ? sosDriverPayout : ride.Fare;
+        string? paymentId = null;
+        var verifiedAmount = ride.TotalAmount;
 
-        return new RideRequestResponse(
-            ride.Id, ride.DistanceKm, ride.EstimatedDurationMin, ride.Fare,
-            driverEarnings, ride.PlatformBookingFee, ride.TotalAmount, ride.Status.ToString(),
-            ride.VehicleType.ToString(), ride.PaymentMethod.ToString());
+        try
+        {
+            // Online payments must have a valid Razorpay client-side signature.
+            if (request.PaymentMethod != PaymentMethod.Cash)
+            {
+                if (string.IsNullOrWhiteSpace(request.RazorpayOrderId)
+                    || string.IsNullOrWhiteSpace(request.RazorpayPaymentId)
+                    || string.IsNullOrWhiteSpace(request.RazorpaySignature))
+                {
+                    throw new InvalidOperationException("Razorpay payment details are required for online payment.");
+                }
+
+                var signatureValid = await _gateway.VerifyPaymentSignatureAsync(
+                    request.RazorpayOrderId,
+                    request.RazorpayPaymentId,
+                    request.RazorpaySignature,
+                    cancellationToken);
+
+                if (!signatureValid)
+                    throw new InvalidOperationException("Payment signature verification failed.");
+
+                paymentId = request.RazorpayPaymentId;
+            }
+
+            _context.RideRequests.Add(ride);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
+
+            var driverEarnings = isSos ? sosDriverPayout : ride.Fare;
+
+            return new RideRequestResponse(
+                ride.Id, ride.DistanceKm, ride.EstimatedDurationMin, ride.Fare,
+                driverEarnings, ride.PlatformBookingFee, ride.TotalAmount, ride.Status.ToString(),
+                ride.VehicleType.ToString(), ride.PaymentMethod.ToString());
+        }
+        catch (Exception ex)
+        {
+            if (transaction is not null)
+                await transaction.RollbackAsync(cancellationToken);
+
+            if (!string.IsNullOrEmpty(paymentId))
+            {
+                _logger.LogCritical(
+                    ex,
+                    "CRITICAL_AUTO_REFUND: Ride creation failed after payment {PaymentId}. Initiating refund.",
+                    paymentId);
+                _ = await _refundService.RefundAsync(
+                    paymentId,
+                    verifiedAmount,
+                    "Ride creation failed after payment",
+                    cancellationToken);
+            }
+            else
+            {
+                _logger.LogCritical(
+                    ex,
+                    "CRITICAL_AUTO_REFUND: Ride creation failed before payment could be verified.");
+            }
+
+            throw;
+        }
     }
 }
 

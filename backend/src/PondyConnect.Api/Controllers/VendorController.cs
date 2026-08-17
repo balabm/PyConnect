@@ -552,10 +552,10 @@ public sealed class VendorController : ControllerBase
 
     // ── Wallet / Credits ──
 
-    [HttpPost("device-token")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [HttpPut("fcm-token")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateDeviceToken(
+    public async Task<IActionResult> UpdateFcmToken(
         [FromBody] UpdateVendorDeviceTokenRequest request,
         CancellationToken cancellationToken)
     {
@@ -572,12 +572,12 @@ public sealed class VendorController : ControllerBase
         vendor.UpdateFcmDeviceToken(request.Token);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return Ok(new { Message = "Device token updated." });
+        return NoContent();
     }
 
-    [HttpDelete("device-token")]
+    [HttpDelete("fcm-token")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> ClearDeviceToken(CancellationToken cancellationToken)
+    public async Task<IActionResult> ClearFcmToken(CancellationToken cancellationToken)
     {
         var userPhone = _currentUser.Phone;
         if (string.IsNullOrWhiteSpace(userPhone))

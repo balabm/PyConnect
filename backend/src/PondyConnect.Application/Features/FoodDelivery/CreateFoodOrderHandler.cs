@@ -3,8 +3,10 @@ namespace PondyConnect.Application.Features.FoodDelivery;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Fraud;
+using PondyConnect.Application.Services;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 using PondyConnect.Domain.ValueObjects;
@@ -18,7 +20,10 @@ public sealed record CreateFoodOrderCommand(
     PaymentMethod PaymentMethod,
     Guid? VenueId = null,
     string? Notes = null,
-    IReadOnlyList<CreateFoodOrderItemRequest>? Items = null) : IRequest<CheckoutResponse>;
+    IReadOnlyList<CreateFoodOrderItemRequest>? Items = null,
+    string? RazorpayOrderId = null,
+    string? RazorpayPaymentId = null,
+    string? RazorpaySignature = null) : IRequest<CheckoutResponse>;
 
 public sealed record CreateFoodOrderItemRequest(
     string Name,
@@ -55,13 +60,26 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
     private readonly ICurrentUserService _currentUser;
     private readonly ServiceAreaValidator _serviceArea;
     private readonly IFraudDetectionService _fraudDetection;
+    private readonly IPaymentGateway _gateway;
+    private readonly IPaymentRefundService _refundService;
+    private readonly ILogger<CreateFoodOrderHandler> _logger;
 
-    public CreateFoodOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, ServiceAreaValidator serviceArea, IFraudDetectionService fraudDetection)
+    public CreateFoodOrderHandler(
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        ServiceAreaValidator serviceArea,
+        IFraudDetectionService fraudDetection,
+        IPaymentGateway gateway,
+        IPaymentRefundService refundService,
+        ILogger<CreateFoodOrderHandler> logger)
     {
         _context = context;
         _currentUser = currentUser;
         _serviceArea = serviceArea;
         _fraudDetection = fraudDetection;
+        _gateway = gateway;
+        _refundService = refundService;
+        _logger = logger;
     }
 
     public async Task<CheckoutResponse> Handle(CreateFoodOrderCommand request, CancellationToken cancellationToken)
@@ -174,17 +192,80 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
                 order.AddItem(item.Name, item.Quantity, item.UnitPrice, item.SpecialInstructions);
         }
 
-        _context.FoodOrders.Add(order);
-        await _context.SaveChangesAsync(cancellationToken);
+        // Wrap the "payment verified -> persist order" step in an explicit
+        // transaction. If the database fails to commit after Razorpay has
+        // captured the money, we refund the consumer automatically.
+        await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
 
-        return new CheckoutResponse(
-            OrderId: order.Id,
-            VendorPayout: order.VendorPayout,
-            SubTotal: order.SubTotal,
-            DeliveryFee: order.DeliveryFee,
-            LateNightDriverBonus: order.LateNightDriverBonus,
-            PlatformFee: order.PlatformFee,
-            TotalAmount: order.TotalAmount,
-            Status: order.Status.ToString());
+        string? paymentId = null;
+        var verifiedAmount = order.TotalAmount;
+
+        try
+        {
+            // Online payments must have a valid Razorpay client-side signature.
+            if (request.PaymentMethod != PaymentMethod.Cash)
+            {
+                if (string.IsNullOrWhiteSpace(request.RazorpayOrderId)
+                    || string.IsNullOrWhiteSpace(request.RazorpayPaymentId)
+                    || string.IsNullOrWhiteSpace(request.RazorpaySignature))
+                {
+                    throw new InvalidOperationException("Razorpay payment details are required for online payment.");
+                }
+
+                var signatureValid = await _gateway.VerifyPaymentSignatureAsync(
+                    request.RazorpayOrderId,
+                    request.RazorpayPaymentId,
+                    request.RazorpaySignature,
+                    cancellationToken);
+
+                if (!signatureValid)
+                    throw new InvalidOperationException("Payment signature verification failed.");
+
+                paymentId = request.RazorpayPaymentId;
+                order.RecordPayment(PaymentStatus.Captured);
+            }
+
+            _context.FoodOrders.Add(order);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
+
+            return new CheckoutResponse(
+                OrderId: order.Id,
+                VendorPayout: order.VendorPayout,
+                SubTotal: order.SubTotal,
+                DeliveryFee: order.DeliveryFee,
+                LateNightDriverBonus: order.LateNightDriverBonus,
+                PlatformFee: order.PlatformFee,
+                TotalAmount: order.TotalAmount,
+                Status: order.Status.ToString());
+        }
+        catch (Exception ex)
+        {
+            if (transaction is not null)
+                await transaction.RollbackAsync(cancellationToken);
+
+            if (!string.IsNullOrEmpty(paymentId))
+            {
+                _logger.LogCritical(
+                    ex,
+                    "CRITICAL_AUTO_REFUND: Food order creation failed after payment {PaymentId}. Initiating refund.",
+                    paymentId);
+                _ = await _refundService.RefundAsync(
+                    paymentId,
+                    verifiedAmount,
+                    "Food order creation failed after payment",
+                    cancellationToken);
+            }
+            else
+            {
+                _logger.LogCritical(
+                    ex,
+                    "CRITICAL_AUTO_REFUND: Food order creation failed before payment could be verified.");
+            }
+
+            throw;
+        }
     }
 }

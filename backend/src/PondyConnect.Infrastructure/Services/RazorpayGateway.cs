@@ -217,6 +217,22 @@ public sealed class RazorpayGateway : IPaymentGateway
             AmountPaid: amountPaidPaise / 100m);
     }
 
+    public Task<PayoutResult> PayoutAsync(
+        decimal amount,
+        string? bankAccountNumber,
+        string? upiId,
+        string? purpose,
+        CancellationToken cancellationToken = default)
+    {
+        var notConfigured = string.IsNullOrWhiteSpace(_options.KeyId) || string.IsNullOrWhiteSpace(_options.KeySecret);
+
+        return Task.FromResult(new PayoutResult(
+            Success: !notConfigured,
+            PayoutId: $"payout_stub_{Guid.NewGuid():N}",
+            Utr: notConfigured ? null : $"UTR{Guid.NewGuid():N}",
+            ErrorMessage: notConfigured ? "RazorpayX is not configured; returning placeholder payout." : "RazorpayX integration is a stub."));
+    }
+
     private static string ComputeHmacSha256(string data, string key)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key));

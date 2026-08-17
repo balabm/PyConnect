@@ -188,6 +188,75 @@ public sealed class WalletService
     }
 
     /// <summary>
+    /// Creates a new withdrawal request for the driver. Validates that the wallet
+    /// has sufficient positive balance, the amount meets the minimum, and that the
+    /// wallet is not suspended. Deducts the amount immediately and records a
+    /// pending withdrawal record for admin review.
+    /// </summary>
+    public async Task<WithdrawalResult> RequestWithdrawalAsync(
+        Guid driverId,
+        decimal amount,
+        CancellationToken ct = default)
+    {
+        if (amount < 100m)
+            throw new InvalidOperationException("Minimum withdrawal amount is ₹100.");
+
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+
+        var wallet = await GetOrCreateWalletAsync(driverId, ct);
+
+        if (wallet.Suspended)
+            throw new InvalidOperationException("Wallet is suspended. Please settle outstanding dues first.");
+
+        if (wallet.Balance < amount)
+            throw new InvalidOperationException("Insufficient wallet balance for this withdrawal.");
+
+        var driver = await _context.Drivers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == driverId, ct)
+            ?? throw new InvalidOperationException("Driver profile not found.");
+
+        if (_context.IsPostgreSQL && transaction is not null)
+            await _context.AcquireRowLockAsync("driver_wallets", wallet.Id, ct);
+
+        wallet.Debit(amount);
+
+        var txn = DriverWalletTransaction.Create(
+            wallet.Id,
+            DriverWalletTransactionType.Withdrawal,
+            -amount,
+            $"Withdrawal request by driver ({driver.Name})",
+            null);
+
+        _context.DriverWalletTransactions.Add(txn);
+
+        var withdrawal = DriverWithdrawal.Create(
+            driverId,
+            wallet.Id,
+            amount,
+            null,
+            driver.UpiId);
+
+        _context.DriverWithdrawals.Add(withdrawal);
+
+        await _context.SaveChangesAsync(ct);
+
+        if (transaction is not null)
+            await transaction.CommitAsync(ct);
+
+        _logger.WithdrawalRequested(driverId, amount, withdrawal.Id);
+
+        return new WithdrawalResult(
+            withdrawal.Id,
+            wallet.Id,
+            driverId,
+            amount,
+            withdrawal.Status.ToString(),
+            driver.UpiId,
+            wallet.Balance);
+    }
+
+    /// <summary>
     /// Returns the driver's wallet with recent transactions.
     /// </summary>
     public async Task<DriverWalletDetail?> GetWalletAsync(Guid driverId, CancellationToken ct = default)
@@ -253,6 +322,16 @@ public sealed record WalletTransactionSummary(
     string? ReferenceId,
     DateTimeOffset CreatedAt);
 
+/// <summary>Result of a driver withdrawal request.</summary>
+public sealed record WithdrawalResult(
+    Guid Id,
+    Guid WalletId,
+    Guid DriverId,
+    decimal Amount,
+    string Status,
+    string? UpiId,
+    decimal NewBalance);
+
 internal static partial class WalletServiceLoggerExtensions
 {
     [LoggerMessage(Level = LogLevel.Information, Message = "Driver wallet created for {DriverId}")]
@@ -269,4 +348,7 @@ internal static partial class WalletServiceLoggerExtensions
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Top-up signature verification failed for driver {DriverId} (order: {OrderId})")]
     public static partial void TopUpSignatureFailed(this ILogger logger, Guid driverId, string orderId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Withdrawal request ₹{Amount} created for driver {DriverId} (withdrawal: {WithdrawalId})")]
+    public static partial void WithdrawalRequested(this ILogger logger, Guid driverId, decimal amount, Guid withdrawalId);
 }

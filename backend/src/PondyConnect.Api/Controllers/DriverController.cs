@@ -80,7 +80,8 @@ public sealed class DriverController : ControllerBase
             driver.IsKycUploaded,
             driver.HasCompletedTutorial,
             driver.HasSignedAgreement,
-            driver.IsOnline));
+            driver.IsOnline,
+            driver.UpiId));
     }
 
     [HttpPost("register")]
@@ -518,4 +519,5 @@ public sealed record DriverProfileResponse(
     bool IsKycUploaded,
     bool HasCompletedTutorial,
     bool HasSignedAgreement,
-    bool IsOnline);
+    bool IsOnline,
+    string? UpiId);

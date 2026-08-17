@@ -70,5 +70,8 @@ public sealed class VendorConfiguration : IEntityTypeConfiguration<Vendor>
             .HasPrecision(10, 2);
 
         builder.Property(v => v.PrepTimeMinutes);
+
+        builder.Property(v => v.FcmDeviceToken)
+            .HasMaxLength(512);
     }
 }

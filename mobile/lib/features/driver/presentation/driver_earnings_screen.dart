@@ -16,6 +16,11 @@ final driverEarningsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
   return await api.getDriverEarnings();
 });
 
+final driverWithdrawalsProvider = FutureProvider<List<DriverWithdrawalModel>>((ref) async {
+  final api = ref.watch(driverApiProvider);
+  return await api.getWithdrawals();
+});
+
 class DriverEarningsScreen extends ConsumerWidget {
   const DriverEarningsScreen({super.key});
 
@@ -267,6 +272,8 @@ class _EarningsBody extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          const _WithdrawalHistory(),
         ],
       ),
     );
@@ -588,6 +595,22 @@ class _WalletCardState extends ConsumerState<_WalletCard> {
                   ),
                 ),
               ],
+              // Withdraw to Bank button
+              if (!wallet.suspended && wallet.balance > 100) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showWithdrawSheet(wallet.balance),
+                    icon: const Icon(Icons.account_balance),
+                    label: const Text('Withdraw to Bank'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.emerald,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -607,6 +630,50 @@ class _WalletCardState extends ConsumerState<_WalletCard> {
           ),
         ],
       ],
+    );
+  }
+
+  /// Opens a confirmation bottom sheet where the captain can enter an amount
+  /// and confirm a wallet withdrawal to their linked UPI/bank.
+  void _showWithdrawSheet(double balance) {
+    AppHaptics.light();
+    final profileAsyncValue = ref.read(driverProfileProvider);
+    final profile = profileAsyncValue.valueOrNull;
+    final upiId = profile?.upiId;
+    final bankAccount = profile?.bankAccountNumber;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return _WithdrawalSheet(
+          balance: balance,
+          upiId: upiId,
+          bankAccount: bankAccount,
+          onConfirm: (amount) async {
+            Navigator.pop(sheetContext);
+            try {
+              final api = ref.read(driverApiProvider);
+              await api.requestWithdrawal(amount);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Withdrawal request of \u20B9${amount.toStringAsFixed(2)} submitted.')),
+                );
+                ref.invalidate(driverWalletDetailProvider);
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Withdrawal failed: $e')),
+                );
+              }
+            }
+          },
+        );
+      },
     );
   }
 
@@ -689,6 +756,141 @@ class _WalletCardState extends ConsumerState<_WalletCard> {
   }
 }
 
+/// Bottom sheet used to enter and confirm a wallet withdrawal amount.
+class _WithdrawalSheet extends StatefulWidget {
+  const _WithdrawalSheet({
+    required this.balance,
+    required this.upiId,
+    required this.bankAccount,
+    required this.onConfirm,
+  });
+
+  final double balance;
+  final String? upiId;
+  final String? bankAccount;
+  final ValueChanged<double> onConfirm;
+
+  @override
+  State<_WithdrawalSheet> createState() => _WithdrawalSheetState();
+}
+
+class _WithdrawalSheetState extends State<_WithdrawalSheet> {
+  late final TextEditingController _amountController;
+  bool _confirming = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: widget.balance.toStringAsFixed(2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final amountText = _amountController.text;
+    final amount = double.tryParse(amountText) ?? 0;
+    final remaining = widget.balance - amount;
+    final isValid = amount >= 100 && amount <= widget.balance;
+
+    final mediaQuery = MediaQuery.of(context);
+    final bottomPadding = mediaQuery.viewInsets.bottom + mediaQuery.padding.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: bottomPadding + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Center(
+            child: SizedBox(
+              width: 40,
+              child: Divider(thickness: 4, height: 24),
+            ),
+          ),
+          const Text('Withdraw to Bank', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          if (widget.bankAccount != null && widget.bankAccount!.isNotEmpty)
+            _InfoRow(label: 'Bank Account', value: widget.bankAccount!),
+          if (widget.upiId != null && widget.upiId!.isNotEmpty)
+            _InfoRow(label: 'UPI ID', value: widget.upiId!),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Amount (\u20B9)',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Remaining balance: \u20B9${remaining.toStringAsFixed(2)}',
+            style: TextStyle(color: AppTheme.slate, fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _confirming ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _confirming || !isValid
+                      ? null
+                      : () {
+                          setState(() => _confirming = true);
+                          widget.onConfirm(amount);
+                        },
+                  child: _confirming
+                      ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Confirm Withdraw'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(width: 100, child: Text(label, style: TextStyle(fontSize: 13, color: AppTheme.slate))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+        ],
+      ),
+    );
+  }
+}
+
 /// A single wallet transaction row (commission deduction, top-up, etc.).
 class _WalletTransactionTile extends StatelessWidget {
   const _WalletTransactionTile({required this.txn});
@@ -717,6 +919,82 @@ class _WalletTransactionTile extends StatelessWidget {
       trailing: Text(
         '${isCredit ? '+' : ''}\u20B9${txn.amount.abs().toStringAsFixed(2)}',
         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+      ),
+    );
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      return '${dt.day}/${dt.month} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso;
+    }
+  }
+}
+
+/// Shows the driver's withdrawal history, newest first.
+class _WithdrawalHistory extends ConsumerWidget {
+  const _WithdrawalHistory();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final withdrawalsAsync = ref.watch(driverWithdrawalsProvider);
+
+    return withdrawalsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (withdrawals) {
+        if (withdrawals.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Withdrawal History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                children: [
+                  for (final w in withdrawals.take(10))
+                    _WithdrawalHistoryTile(withdrawal: w),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _WithdrawalHistoryTile extends StatelessWidget {
+  const _WithdrawalHistoryTile({required this.withdrawal});
+  final DriverWithdrawalModel withdrawal;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = withdrawal.status == 'Rejected'
+        ? Colors.red
+        : withdrawal.status == 'Processed'
+            ? AppTheme.emerald
+            : Colors.orange;
+
+    return ListTile(
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      leading: Icon(Icons.account_balance_wallet, color: color, size: 20),
+      title: Text(
+        '\u20B9${withdrawal.amount.toStringAsFixed(2)}',
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(
+        '${withdrawal.status} · ${_formatDate(withdrawal.requestedAt)}',
+        style: TextStyle(fontSize: 11, color: AppTheme.slate),
+      ),
+      trailing: Text(
+        withdrawal.status,
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold),
       ),
     );
   }

@@ -82,6 +82,70 @@ public sealed class WalletController : ControllerBase
     }
 
     /// <summary>
+    /// Requests a withdrawal from the driver's cash-collection wallet to their
+    /// linked UPI/bank. The amount is deducted immediately and an admin-reviewed
+    /// withdrawal record is created.
+    /// </summary>
+    [HttpPost("withdraw")]
+    [ProducesResponseType(typeof(WithdrawalResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<WithdrawalResponse>> RequestWithdrawal(
+        [FromBody] WithdrawalRequestDto request,
+        CancellationToken ct)
+    {
+        if (request.Amount < 100m)
+            return BadRequest(new { Message = "Minimum withdrawal amount is ₹100." });
+
+        var driverId = await ResolveDriverIdAsync(ct);
+        if (driverId is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        try
+        {
+            var result = await _walletService.RequestWithdrawalAsync(driverId.Value, request.Amount, ct);
+            return Ok(new WithdrawalResponse(
+                result.Id,
+                result.Amount,
+                result.Status,
+                result.NewBalance));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Returns the current driver's withdrawal history, newest first.
+    /// </summary>
+    [HttpGet("withdrawals")]
+    [ProducesResponseType(typeof(IReadOnlyList<WithdrawalHistoryItem>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<WithdrawalHistoryItem>>> GetWithdrawals(CancellationToken ct)
+    {
+        var driverId = await ResolveDriverIdAsync(ct);
+        if (driverId is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var items = await _dbContext.DriverWithdrawals
+            .AsNoTracking()
+            .Where(w => w.DriverId == driverId.Value)
+            .OrderByDescending(w => w.RequestedAt)
+            .Select(w => new WithdrawalHistoryItem(
+                w.Id,
+                w.Amount,
+                w.Status.ToString(),
+                w.UpiId,
+                w.BankAccountNumber,
+                w.RequestedAt,
+                w.ProcessedAt))
+            .ToListAsync(ct);
+
+        return Ok(items);
+    }
+
+    /// <summary>
     /// Verifies a Razorpay payment and credits the wallet with the top-up
     /// amount. Clears the suspended flag when the balance returns to >= 0.
     /// </summary>
@@ -134,3 +198,20 @@ public sealed record VerifyTopUpRequest(
     string? RazorpaySignature);
 
 public sealed record VerifyTopUpResponse(bool Success, string Message);
+
+public sealed record WithdrawalRequestDto(decimal Amount);
+
+public sealed record WithdrawalResponse(
+    Guid WithdrawalId,
+    decimal Amount,
+    string Status,
+    decimal NewBalance);
+
+public sealed record WithdrawalHistoryItem(
+    Guid Id,
+    decimal Amount,
+    string Status,
+    string? UpiId,
+    string? BankAccountNumber,
+    DateTimeOffset RequestedAt,
+    DateTimeOffset? ProcessedAt);

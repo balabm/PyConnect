@@ -22,17 +22,32 @@ import '../features/vendor/presentation/taxi_rides_screen.dart';
 import '../features/vendor/presentation/cloak_capacity_screen.dart';
 import '../features/vendor/presentation/vendor_registration_screen.dart';
 import '../features/vendor/presentation/printer_settings_screen.dart';
+import '../core/config/app_flavor.dart';
+import '../core/providers/force_update_provider.dart';
+import '../features/splash/presentation/force_update_screen.dart';
+import '../features/splash/presentation/splash_screen.dart';
 import '../shell/partner_shell.dart';
 
 final partnerRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/splash',
     refreshListenable: _PartnerAuthRefreshListenable(ref),
     redirect: (context, state) {
       final session = ref.read(vendorAuthControllerProvider).valueOrNull;
       final authenticated = session?.isAuthenticated ?? false;
       final isApproved = session?.isApproved ?? false;
       final path = state.matchedLocation;
+
+      // Force-update barrier takes precedence over all other routing.
+      if (path == '/splash' || path == '/force-update') {
+        return null;
+      }
+
+      if (ref.read(forceUpdateProvider).forceUpdate &&
+          path != '/force-update' &&
+          path != '/splash') {
+        return '/force-update';
+      }
 
       // Allow /register for unauthenticated users (self-onboarding)
       if (!authenticated && path == '/register') {
@@ -58,6 +73,14 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (_, _) => const SplashScreen(flavor: AppFlavor.partner),
+      ),
+      GoRoute(
+        path: '/force-update',
+        builder: (_, _) => const ForceUpdateScreen(),
+      ),
       GoRoute(
         path: '/register',
         builder: (_, _) => const VendorRegistrationScreen(),

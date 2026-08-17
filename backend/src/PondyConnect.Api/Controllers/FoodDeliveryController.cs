@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PondyConnect.Application.Features.FoodDelivery;
 using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Application.Services;
 using PondyConnect.Api.Services;
 using PondyConnect.Domain.Enums;
 
@@ -17,15 +18,18 @@ public sealed class FoodDeliveryController : ControllerBase
     private readonly IMediator _mediator;
     private readonly FoodDeliveryDispatchService _foodDispatch;
     private readonly INotificationService _notifications;
+    private readonly IIdempotencyService _idempotency;
 
     public FoodDeliveryController(
         IMediator mediator,
         FoodDeliveryDispatchService foodDispatch,
-        INotificationService notifications)
+        INotificationService notifications,
+        IIdempotencyService idempotency)
     {
         _mediator = mediator;
         _foodDispatch = foodDispatch;
         _notifications = notifications;
+        _idempotency = idempotency;
     }
 
     [HttpPost("orders/checkout")]
@@ -39,6 +43,16 @@ public sealed class FoodDeliveryController : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<CheckoutResponse>> Checkout([FromBody] CreateFoodOrderRequest request, CancellationToken ct)
     {
+        var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
+        var cacheKey = $"food:{Request.Path}:{idempotencyKey}";
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cached = await _idempotency.GetAsync<CheckoutResponse>(cacheKey, ct);
+            if (cached is not null)
+                return Ok(cached);
+        }
+
         var items = request.Items?.Select(i => new CreateFoodOrderItemRequest(
             i.Name,
             i.Quantity,
@@ -54,8 +68,16 @@ public sealed class FoodDeliveryController : ControllerBase
             request.PaymentMethod,
             request.VenueId,
             request.Notes,
-            items);
+            items,
+            request.RazorpayOrderId,
+            request.RazorpayPaymentId,
+            request.RazorpaySignature);
         var result = await _mediator.Send(cmd, ct);
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            await _idempotency.SetAsync(cacheKey, result, TimeSpan.FromHours(24), ct);
+        }
 
         // Send FCM push to the vendor so they get alerted even if the app is backgrounded
         _ = _notifications.SendPushToVendorAsync(
@@ -262,7 +284,10 @@ public sealed record CreateFoodOrderRequest(
     PaymentMethod PaymentMethod,
     Guid? VenueId = null,
     string? Notes = null,
-    IReadOnlyList<CreateFoodOrderItemDto>? Items = null);
+    IReadOnlyList<CreateFoodOrderItemDto>? Items = null,
+    string? RazorpayOrderId = null,
+    string? RazorpayPaymentId = null,
+    string? RazorpaySignature = null);
 
 public sealed record CreateFoodOrderItemDto(
     string Name,

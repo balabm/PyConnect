@@ -77,6 +77,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<DriverWalletTransaction> DriverWalletTransactions => Set<DriverWalletTransaction>();
 
+    public DbSet<DriverWithdrawal> DriverWithdrawals => Set<DriverWithdrawal>();
+
     public DbSet<DispatchTask> DispatchTasks => Set<DispatchTask>();
 
     public DbSet<Homestay> Homestays => Set<Homestay>();

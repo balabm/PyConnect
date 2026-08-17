@@ -9,6 +9,7 @@ using PondyConnect.Api.Filters;
 using PondyConnect.Api.Services;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.RideHailing;
+using PondyConnect.Application.Services;
 using PondyConnect.Domain.Enums;
 
 [ApiController]
@@ -20,19 +21,22 @@ public sealed class RideHailingController : ControllerBase
     private readonly DispatchEngine _dispatchEngine;
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
+    private readonly IIdempotencyService _idempotency;
 
     public RideHailingController(
         IMediator mediator,
         RideDispatchService dispatchService,
         DispatchEngine dispatchEngine,
         IApplicationDbContext dbContext,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IIdempotencyService idempotency)
     {
         _mediator = mediator;
         _dispatchService = dispatchService;
         _dispatchEngine = dispatchEngine;
         _dbContext = dbContext;
         _currentUser = currentUser;
+        _idempotency = idempotency;
     }
 
     [HttpPost("rides")]
@@ -56,6 +60,16 @@ public sealed class RideHailingController : ControllerBase
             return BadRequest(new { Message = "Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180." });
         }
 
+        var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
+        var cacheKey = $"ride:{Request.Path}:{idempotencyKey}";
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cached = await _idempotency.GetAsync<RideRequestResponse>(cacheKey, ct);
+            if (cached is not null)
+                return Ok(cached);
+        }
+
         var cmd = new RequestRideCommand(
             request.PickupLatitude,
             request.PickupLongitude,
@@ -66,8 +80,17 @@ public sealed class RideHailingController : ControllerBase
             request.DistanceKm,
             request.VehicleType,
             request.PaymentMethod,
-            request.IsSosRequest);
+            request.IsSosRequest,
+            request.RazorpayOrderId,
+            request.RazorpayPaymentId,
+            request.RazorpaySignature);
         var result = await _mediator.Send(cmd, ct);
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            await _idempotency.SetAsync(cacheKey, result, TimeSpan.FromHours(24), ct);
+        }
+
         await _dispatchService.BroadcastRideRequestAsync(result.RideId, ct);
         return Ok(result);
     }
@@ -442,6 +465,9 @@ public sealed record RequestRideRequest(
     double DistanceKm,
     VehicleType VehicleType,
     PaymentMethod PaymentMethod,
-    bool IsSosRequest = false);
+    bool IsSosRequest = false,
+    string? RazorpayOrderId = null,
+    string? RazorpayPaymentId = null,
+    string? RazorpaySignature = null);
 
 public sealed record CancelRideRequest(string? Reason);

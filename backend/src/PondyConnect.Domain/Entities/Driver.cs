@@ -68,6 +68,9 @@ public sealed class Driver : BaseEntity
     /// <summary>Storage key for the driver selfie photo.</summary>
     public string? SelfieUrl { get; private set; }
 
+    /// <summary>FCM device token for ride offer push notifications.</summary>
+    public string? FcmDeviceToken { get; private set; }
+
     /// <summary>OCR verification: whether the KYC was automatically approved.</summary>
     public bool? KycAutoApproved { get; private set; }
 
@@ -298,6 +301,19 @@ public sealed class Driver : BaseEntity
     public void SignAgreement()
     {
         HasSignedAgreement = true;
+        MarkUpdated();
+    }
+
+    public void UpdateFcmDeviceToken(string token)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        FcmDeviceToken = token;
+        MarkUpdated();
+    }
+
+    public void ClearFcmDeviceToken()
+    {
+        FcmDeviceToken = null;
         MarkUpdated();
     }
 }

@@ -74,6 +74,11 @@ public sealed class FirebaseNotificationService : INotificationService
             await messaging.SendAsync(message, cancellationToken);
             return true;
         }
+        catch (FirebaseMessagingException ex) when (IsInvalidTokenError(ex))
+        {
+            await ClearUserTokenAsync(userId, cancellationToken);
+            return false;
+        }
         catch (Exception ex)
         {
 #pragma warning disable CA1848
@@ -132,6 +137,11 @@ public sealed class FirebaseNotificationService : INotificationService
             var messaging = FirebaseMessaging.DefaultInstance;
             await messaging.SendAsync(message, cancellationToken);
             return true;
+        }
+        catch (FirebaseMessagingException ex) when (IsInvalidTokenError(ex))
+        {
+            await ClearUserTokenAsync(userId, cancellationToken);
+            return false;
         }
         catch (Exception ex)
         {
@@ -192,12 +202,42 @@ public sealed class FirebaseNotificationService : INotificationService
             await messaging.SendAsync(message, cancellationToken);
             return true;
         }
+        catch (FirebaseMessagingException ex) when (IsInvalidTokenError(ex))
+        {
+            await ClearVendorTokenAsync(vendorId, cancellationToken);
+            return false;
+        }
         catch (Exception ex)
         {
 #pragma warning disable CA1848
             _logger.LogError(ex, "Failed to send FCM push to vendor {VendorId}", vendorId);
 #pragma warning restore CA1848
             return false;
+        }
+    }
+
+    private static bool IsInvalidTokenError(FirebaseMessagingException ex)
+        => ex.MessagingErrorCode is MessagingErrorCode.Unregistered
+            or MessagingErrorCode.SenderIdMismatch
+            or MessagingErrorCode.InvalidArgument;
+
+    private async Task ClearUserTokenAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is not null)
+        {
+            user.ClearFcmDeviceToken();
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private async Task ClearVendorTokenAsync(Guid vendorId, CancellationToken cancellationToken)
+    {
+        var vendor = await _context.Vendors.FirstOrDefaultAsync(v => v.Id == vendorId, cancellationToken);
+        if (vendor is not null)
+        {
+            vendor.ClearFcmDeviceToken();
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

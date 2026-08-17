@@ -48,6 +48,7 @@ public sealed class DriverConfiguration : IEntityTypeConfiguration<Driver>
         builder.Property(d => d.KycParsedName).HasMaxLength(120);
         builder.Property(d => d.KycLicenseNumber).HasMaxLength(50);
         builder.Property(d => d.KycExpiryDate).HasColumnType("timestamptz");
+        builder.Property(d => d.FcmDeviceToken).HasMaxLength(512);
 
         builder.HasIndex(d => d.UserId);
         builder.HasIndex(d => d.IsOnline);

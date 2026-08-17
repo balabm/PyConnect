@@ -77,6 +77,23 @@ class DriverApi {
     return WalletTopUpOrderModel.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Requests a wallet withdrawal to the driver's linked UPI/bank.
+  Future<DriverWithdrawalModel> requestWithdrawal(double amount) async {
+    final data = await _api.post('api/driver/wallet/withdraw', data: {
+      'amount': amount,
+    });
+    return DriverWithdrawalModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Returns the driver's withdrawal history.
+  Future<List<DriverWithdrawalModel>> getWithdrawals() async {
+    final data = await _api.get('api/driver/wallet/withdrawals');
+    final list = data as List;
+    return list
+        .map((e) => DriverWithdrawalModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// Verifies a Razorpay payment and credits the wallet via
   /// POST /api/driver/wallet/topup/verify. Returns true on success.
   Future<bool> verifyTopUp({

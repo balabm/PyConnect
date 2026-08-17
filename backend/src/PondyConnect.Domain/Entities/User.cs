@@ -174,6 +174,12 @@ public sealed class User : BaseEntity
         MarkUpdated();
     }
 
+    public void ClearFcmDeviceToken()
+    {
+        FcmDeviceToken = null;
+        MarkUpdated();
+    }
+
     public void LinkGoogle(string googleId, string email, bool isEmailVerified, string? pictureUrl)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(googleId);

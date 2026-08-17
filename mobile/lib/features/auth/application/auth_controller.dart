@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -49,11 +50,10 @@ class AuthController extends AsyncNotifier<AuthSession?> {
       ref.read(authTokenProvider.notifier).state = result.accessToken;
 
       // Register FCM device token with the backend now that we have a JWT.
-      // This ensures the user (consumer or driver) receives push notifications
-      // for ride offers, order updates, etc. even when the app is backgrounded.
       try {
-        final fcmToken = ref.read(fcmTokenProvider);
+        final fcmToken = await FirebaseMessaging.instance.getToken();
         if (fcmToken != null) {
+          ref.read(fcmTokenProvider.notifier).state = fcmToken;
           await ref.read(deviceTokenApiProvider).updateToken(fcmToken);
         }
       } catch (_) {
@@ -108,8 +108,9 @@ class AuthController extends AsyncNotifier<AuthSession?> {
 
       // Register FCM token after Google sign-in
       try {
-        final fcmToken = ref.read(fcmTokenProvider);
+        final fcmToken = await FirebaseMessaging.instance.getToken();
         if (fcmToken != null) {
+          ref.read(fcmTokenProvider.notifier).state = fcmToken;
           await ref.read(deviceTokenApiProvider).updateToken(fcmToken);
         }
       } catch (_) {
@@ -172,6 +173,18 @@ class AuthController extends AsyncNotifier<AuthSession?> {
   }
 
   Future<void> signOut() async {
+    // Remove the backend FCM token before deleting the device token so the
+    // user (or driver) stops receiving push notifications after logout.
+    try {
+      await ref.read(apiClientProvider).deleteFcmToken();
+    } catch (_) {
+    }
+
+    try {
+      await FirebaseMessaging.instance.deleteToken();
+    } catch (_) {
+    }
+
     await ref.read(tokenStorageProvider).clear();
     ref.read(authTokenProvider.notifier).state = null;
     state = const AsyncData(null);

@@ -56,6 +56,20 @@ public sealed class NoopPaymentGateway : IPaymentGateway
             RefundId: $"refund_noop_{Guid.NewGuid():N}"));
     }
 
+    public Task<PayoutResult> PayoutAsync(
+        decimal amount,
+        string? bankAccountNumber,
+        string? upiId,
+        string? purpose,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new PayoutResult(
+            Success: true,
+            PayoutId: $"payout_noop_{Guid.NewGuid():N}",
+            Utr: $"UTR{Guid.NewGuid():N}",
+            ErrorMessage: "No-op payout simulated."));
+    }
+
     public Task<ProviderOrderStatusResult> FetchOrderStatusAsync(
         string providerOrderId,
         CancellationToken cancellationToken = default)

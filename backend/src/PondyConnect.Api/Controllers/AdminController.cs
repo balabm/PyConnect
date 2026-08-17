@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using PondyConnect.Api.Hubs;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Admin;
+using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 
 [ApiController]
@@ -408,6 +409,106 @@ public sealed class AdminController : ControllerBase
         return Ok(result.Items);
     }
 
+    // === Phase 2: Driver Withdrawals ===
+
+    [HttpGet("withdrawals")]
+    [ProducesResponseType(typeof(IReadOnlyList<DriverWithdrawalResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<DriverWithdrawalResponse>>> ListWithdrawals(
+        [FromQuery] DriverWithdrawalStatus? status = null,
+        CancellationToken ct = default)
+    {
+        var query = _dbContext.DriverWithdrawals.AsNoTracking();
+
+        if (status is not null)
+            query = query.Where(w => w.Status == status);
+
+        var items = await query
+            .OrderByDescending(w => w.RequestedAt)
+            .Select(w => new DriverWithdrawalResponse(
+                w.Id,
+                w.DriverId,
+                w.WalletId,
+                w.Amount,
+                w.Status.ToString(),
+                w.BankAccountNumber,
+                w.UpiId,
+                w.RequestedAt,
+                w.ProcessedAt,
+                w.AdminNote))
+            .ToListAsync(ct);
+
+        return Ok(items);
+    }
+
+    [HttpPost("withdrawals/{id:guid}/approve")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ApproveWithdrawal(Guid id, CancellationToken ct)
+    {
+        var withdrawal = await _dbContext.DriverWithdrawals
+            .FirstOrDefaultAsync(w => w.Id == id, ct);
+
+        if (withdrawal is null)
+            return NotFound(new { Message = "Withdrawal not found." });
+
+        try
+        {
+            withdrawal.Approve();
+            await _dbContext.SaveChangesAsync(ct);
+            return Ok(new { Message = "Withdrawal approved and marked for processing." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPost("withdrawals/{id:guid}/reject")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RejectWithdrawal(
+        Guid id,
+        [FromBody] RejectWithdrawalRequest? request,
+        CancellationToken ct)
+    {
+        var withdrawal = await _dbContext.DriverWithdrawals
+            .FirstOrDefaultAsync(w => w.Id == id, ct);
+
+        if (withdrawal is null)
+            return NotFound(new { Message = "Withdrawal not found." });
+
+        try
+        {
+            withdrawal.Reject(request?.AdminNote);
+
+            // Refund the withheld wallet balance by re-crediting it.
+            var wallet = await _dbContext.DriverWallets
+                .FirstOrDefaultAsync(w => w.Id == withdrawal.WalletId, ct);
+
+            if (wallet is not null)
+            {
+                wallet.Credit(withdrawal.Amount);
+                _dbContext.DriverWalletTransactions.Add(DriverWalletTransaction.Create(
+                    wallet.Id,
+                    DriverWalletTransactionType.Adjustment,
+                    withdrawal.Amount,
+                    $"Reversal of rejected withdrawal {id}",
+                    id.ToString()));
+            }
+
+            await _dbContext.SaveChangesAsync(ct);
+            return Ok(new { Message = "Withdrawal rejected and amount refunded to wallet." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
     // === Phase 2: Admin Action Logs ===
 
     [HttpGet("action-logs")]
@@ -443,3 +544,17 @@ public sealed record RejectKycRequest(string? Reason = null);
 
 public sealed record ResolveSosRequest(string? Notes = null);
 public sealed record RejectVendorRequest(string? Reason = null);
+
+public sealed record DriverWithdrawalResponse(
+    Guid Id,
+    Guid DriverId,
+    Guid WalletId,
+    decimal Amount,
+    string Status,
+    string? BankAccountNumber,
+    string? UpiId,
+    DateTimeOffset RequestedAt,
+    DateTimeOffset? ProcessedAt,
+    string? AdminNote);
+
+public sealed record RejectWithdrawalRequest(string? AdminNote = null);

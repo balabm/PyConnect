@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -75,11 +76,10 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
       await _persistSession(result);
 
       // Register FCM device token with the backend now that we have a JWT.
-      // This ensures the vendor receives push notifications for new orders
-      // even when the app is backgrounded.
       try {
-        final fcmToken = ref.read(fcmTokenProvider);
+        final fcmToken = await FirebaseMessaging.instance.getToken();
         if (fcmToken != null) {
+          ref.read(fcmTokenProvider.notifier).state = fcmToken;
           await ref.read(deviceTokenApiProvider).updateToken(fcmToken);
         }
       } catch (_) {
@@ -95,6 +95,11 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
     // notifications after logging out.
     try {
       await ref.read(deviceTokenApiProvider).clearToken();
+    } catch (_) {
+    }
+
+    try {
+      await FirebaseMessaging.instance.deleteToken();
     } catch (_) {
     }
 

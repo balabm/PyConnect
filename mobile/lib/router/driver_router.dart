@@ -13,16 +13,31 @@ import '../features/driver/presentation/driver_pending_verification_screen.dart'
 import '../features/driver/presentation/driver_registration_screen.dart';
 import '../features/driver/presentation/driver_ride_screen.dart';
 import '../features/driver/presentation/driver_tutorial_screen.dart';
+import '../core/config/app_flavor.dart';
+import '../core/providers/force_update_provider.dart';
+import '../features/splash/presentation/force_update_screen.dart';
+import '../features/splash/presentation/splash_screen.dart';
 import '../shell/driver_shell.dart';
 
 final driverRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/splash',
     refreshListenable: _DriverAuthRefreshListenable(ref),
     redirect: (context, state) {
       final authenticated =
           ref.read(authControllerProvider).valueOrNull?.isAuthenticated ?? false;
       final path = state.matchedLocation;
+
+      // Force-update barrier takes precedence over all other routing.
+      if (path == '/splash' || path == '/force-update') {
+        return null;
+      }
+
+      if (ref.read(forceUpdateProvider).forceUpdate &&
+          path != '/force-update' &&
+          path != '/splash') {
+        return '/force-update';
+      }
 
       // Allow /register for unauthenticated users (self-onboarding)
       if (!authenticated && path == '/register') {
@@ -57,6 +72,14 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (_, _) => const SplashScreen(flavor: AppFlavor.driver),
+      ),
+      GoRoute(
+        path: '/force-update',
+        builder: (_, _) => const ForceUpdateScreen(),
+      ),
       GoRoute(
         path: '/register',
         builder: (_, _) => const DriverRegistrationScreen(),

@@ -239,6 +239,72 @@ public sealed class AuthController : ControllerBase
         return Ok(new AuthResponse(token, user.Id, user.Phone, user.Name, user.Role.ToString()));
     }
 
+    // ── FCM device token hygiene ──
+
+    [HttpPut("fcm-token")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateFcmToken(
+        [FromBody] UpdateFcmTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId
+            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (user is null)
+            return NotFound(new { Message = "User not found." });
+
+        user.UpdateFcmDeviceToken(request.Token);
+
+        var driver = await _dbContext.Drivers
+            .FirstOrDefaultAsync(d => d.UserId == userId, cancellationToken);
+        driver?.UpdateFcmDeviceToken(request.Token);
+
+        var vendor = await _dbContext.Vendors
+            .FirstOrDefaultAsync(v => v.ContactPhone == user.Phone, cancellationToken);
+        vendor?.UpdateFcmDeviceToken(request.Token);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpDelete("fcm-token")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteFcmToken(CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId
+            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (user is null)
+            return NotFound(new { Message = "User not found." });
+
+        user.ClearFcmDeviceToken();
+
+        var driver = await _dbContext.Drivers
+            .FirstOrDefaultAsync(d => d.UserId == userId, cancellationToken);
+        driver?.ClearFcmDeviceToken();
+
+        var vendor = await _dbContext.Vendors
+            .FirstOrDefaultAsync(v => v.ContactPhone == user.Phone, cancellationToken);
+        vendor?.ClearFcmDeviceToken();
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpGet("otp/peek")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -381,3 +447,4 @@ public sealed class AuthController : ControllerBase
 public sealed record UpdateProfileRequest(string? Name);
 public sealed record RequestPhoneChangeRequest(string? NewPhone);
 public sealed record VerifyPhoneChangeRequest(string? NewPhone, string? OtpCode);
+public sealed record UpdateFcmTokenRequest(string Token);

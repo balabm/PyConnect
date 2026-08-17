@@ -39,12 +39,16 @@ import '../features/venues/data/venue_api.dart';
 import '../features/venues/presentation/venue_detail_screen.dart';
 import '../features/venues/presentation/venue_list_screen.dart';
 import '../shell/home_shell.dart';
+import '../core/config/app_flavor.dart';
 import '../core/providers.dart';
+import '../core/providers/force_update_provider.dart';
 import '../core/widgets/empty_state_view.dart';
+import '../features/splash/presentation/force_update_screen.dart';
+import '../features/splash/presentation/splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/splash',
     errorBuilder: (context, state) => EmptyStateView(
       icon: Icons.error_outline,
       title: 'Page not found',
@@ -58,6 +62,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final authenticated = ref.read(authControllerProvider).valueOrNull?.isAuthenticated ?? false;
       final hasSeenAuth = ref.read(hasSeenAuthScreenProvider);
       final path = state.matchedLocation;
+
+      // Force-update barrier takes precedence over all other routing.
+      if (path == '/splash' || path == '/force-update') {
+        return null;
+      }
+
+      if (ref.read(forceUpdateProvider).forceUpdate &&
+          path != '/force-update' &&
+          path != '/splash') {
+        return '/force-update';
+      }
 
       // Handle FCM deep link: if a pending deep link exists and the user is
       // authenticated, navigate to that route.
@@ -97,6 +112,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (_, _) => const SplashScreen(flavor: AppFlavor.consumer),
+      ),
+      GoRoute(
+        path: '/force-update',
+        builder: (_, _) => const ForceUpdateScreen(),
+      ),
       GoRoute(
         path: '/auth',
         builder: (_, _) => const PhoneEntryScreen(),

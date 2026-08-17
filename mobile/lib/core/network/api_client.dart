@@ -73,6 +73,12 @@ class ApiClient {
   }) =>
       _requestWithRetry(() => _dio.delete(path, data: data));
 
+  Future<dynamic> updateFcmToken(String token) =>
+      put('/api/auth/fcm-token', data: {'token': token});
+
+  Future<dynamic> deleteFcmToken() =>
+      delete('/api/auth/fcm-token');
+
   Future<dynamic> _requestWithRetry(Future<Response<dynamic>> Function() request) async {
     int attempt = 0;
     while (true) {
