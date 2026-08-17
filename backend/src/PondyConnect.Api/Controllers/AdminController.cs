@@ -277,6 +277,25 @@ public sealed class AdminController : ControllerBase
         }
     }
 
+    // === Flow 6: KYC Review & Approval ===
+
+    [HttpPost("kyc/{driverId:guid}/approve")]
+    [ProducesResponseType(typeof(ApproveKycResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApproveKycResponse>> ApproveKyc(Guid driverId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ApproveKycCommand(driverId), ct);
+        if (!result.Success && string.IsNullOrEmpty(result.DriverName))
+            return NotFound(new { Message = result.Message });
+
+        if (!result.Success)
+            return BadRequest(new { Message = result.Message });
+
+        await _hubContext.Clients.Group("admins").SendAsync("DriverApproved", new { DriverId = driverId }, ct);
+        return Ok(result);
+    }
+
     // === Phase 2: Live Operations - Real SOS ===
 
     [HttpGet("sos-alerts")]
@@ -407,6 +426,29 @@ public sealed class AdminController : ControllerBase
     {
         var result = await _mediator.Send(new GetSupportTicketsQuery(SupportTicketStatus.Escalated, 1, 50), ct);
         return Ok(result.Items);
+    }
+
+    // === Flow 6: Dispute Refunds ===
+
+    [HttpPost("tickets/{ticketId:guid}/refund")]
+    [ProducesResponseType(typeof(RefundTicketResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<RefundTicketResponse>> RefundTicket(
+        Guid ticketId,
+        [FromBody] RefundTicketRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await _mediator.Send(new RefundTicketCommand(ticketId, request.Amount, request.FullRefund), ct);
+            await _hubContext.Clients.Group("admins").SendAsync("TicketRefunded", new { TicketId = ticketId, result.RefundAmount }, ct);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
     }
 
     // === Phase 2: Driver Withdrawals ===
@@ -558,3 +600,4 @@ public sealed record DriverWithdrawalResponse(
     string? AdminNote);
 
 public sealed record RejectWithdrawalRequest(string? AdminNote = null);
+public sealed record RefundTicketRequest(decimal Amount, bool FullRefund);

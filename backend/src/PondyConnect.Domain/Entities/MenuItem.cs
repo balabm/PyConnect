@@ -68,13 +68,15 @@ public sealed class MenuItem : BaseEntity
         MarkUpdated();
     }
 
-    public void UpdateDetails(string name, string? description, string category)
+    public void UpdateDetails(string name, string? description, string category, string? imageUrl = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(category);
         Name = name;
         Description = description;
         Category = category;
+        if (imageUrl != null)
+            ImageUrl = imageUrl;
         MarkUpdated();
     }
 

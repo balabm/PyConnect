@@ -34,10 +34,22 @@ class ScannerApi {
   final ApiClient _api;
 
   Future<TicketValidationResult> validateTicket(String qrPayload) async {
-    final body = await _api.post(
-      '/api/vendor/validate-ticket',
-      data: {'qrPayload': qrPayload},
-    );
-    return TicketValidationResult.fromJson(body as Map<String, dynamic>);
+    try {
+      final body = await _api.post(
+        '/api/vendor/validate-ticket',
+        data: {'qrPayload': qrPayload},
+      );
+      return TicketValidationResult.fromJson(body as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      final msg = e.message.toLowerCase();
+      final isDuplicate = msg.contains('already');
+      return TicketValidationResult(
+        isValid: false,
+        isDuplicate: isDuplicate,
+        serviceType: '',
+        userName: '',
+        message: e.message,
+      );
+    }
   }
 }

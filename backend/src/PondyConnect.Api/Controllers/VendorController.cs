@@ -512,13 +512,133 @@ public sealed class VendorController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Validates a QR ticket pass for a booking owned by the authenticated
+    /// vendor. Returns success for valid, confirmed, paid passes and marks
+    /// the booking as scanned. Returns 400 if the pass was already used.
+    /// </summary>
     [HttpPost("validate-ticket")]
     [ProducesResponseType(typeof(TicketValidationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<TicketValidationResponse>> ValidateTicket([FromBody] ValidateTicketRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<TicketValidationResponse>> ValidateTicket(
+        [FromBody] ValidateTicketRequest request,
+        CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new ValidateTicketCommand(request.QrPayload), cancellationToken);
-        return Ok(result);
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Authenticated phone not found." });
+
+        var vendor = await _context.Vendors.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        if (string.IsNullOrWhiteSpace(request.QrPayload))
+            return BadRequest(new { Message = "QR payload is required." });
+
+        var booking = await _context.ServiceBookings
+            .FirstOrDefaultAsync(b => b.PassToken == request.QrPayload, cancellationToken);
+
+        if (booking is not null)
+        {
+            if (booking.VendorId != vendor.Id)
+                return Forbid();
+
+            if (booking.Status == BookingStatus.CheckedIn || booking.Status == BookingStatus.Completed)
+                return BadRequest(new { Message = "Already scanned" });
+
+            if (booking.PaymentStatus != PaymentStatus.Captured)
+                return BadRequest(new { Message = "Payment not captured." });
+
+            if (booking.Status != BookingStatus.Confirmed)
+                return BadRequest(new { Message = "Booking not confirmed." });
+
+            booking.CheckIn();
+
+            if (booking.VenueId is { } venueId && booking.SeatCount > 0)
+            {
+                var venue = await _context.Venues
+                    .FirstOrDefaultAsync(v => v.Id == venueId, cancellationToken);
+                if (venue is not null)
+                    venue.IncrementCheckedIn(booking.SeatCount);
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var user = await _context.Users.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == booking.UserId, cancellationToken);
+
+            return Ok(new TicketValidationResponse(
+                true,
+                booking.ServiceType.ToString(),
+                user?.Name ?? "Unknown",
+                "Valid ticket."));
+        }
+
+        var bundle = await _context.BundleBookings
+            .FirstOrDefaultAsync(b => b.PassToken == request.QrPayload, cancellationToken);
+
+        if (bundle is not null)
+        {
+            if (bundle.Status == BundleStatus.FullyRedeemed)
+                return BadRequest(new { Message = "Already scanned" });
+
+            if (bundle.Status == BundleStatus.Cancelled)
+                return BadRequest(new { Message = "Pass cancelled." });
+
+            bundle.MarkPartiallyRedeemed();
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var user = await _context.Users.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == bundle.UserId, cancellationToken);
+
+            return Ok(new TicketValidationResponse(
+                true,
+                "Long Weekend Pass",
+                user?.Name ?? "Unknown",
+                "Valid pass."));
+        }
+
+        return BadRequest(new { Message = "Unknown ticket." });
+    }
+
+    /// <summary>
+    /// Uploads a vendor image (menu item, promotion, etc.). The image is
+    /// validated and compressed on the client then stored via the configured
+    /// storage provider and a public URL is returned.
+    /// </summary>
+    [HttpPost("upload-image")]
+    [ProducesResponseType(typeof(UploadImageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UploadImageResponse>> UploadImage(
+        IFormFile image,
+        CancellationToken cancellationToken = default)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Authenticated phone not found." });
+
+        var vendor = await _context.Vendors.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        if (image is null || image.Length == 0)
+            return BadRequest(new { Message = "Image file is required." });
+
+        var validation = ValidateImageFile(image, "Image");
+        if (validation is not null)
+            return BadRequest(new { Message = validation });
+
+        using var stream = image.OpenReadStream();
+        var imageUrl = await _storage.UploadFileAsync(
+            stream, image.FileName, image.ContentType, isPrivate: false, cancellationToken);
+
+        return Ok(new UploadImageResponse(imageUrl));
     }
 
     [HttpPost("activate-priority")]
@@ -1002,3 +1122,5 @@ public sealed record FoodOrderDetailResponse(
     string DeliveryAddress,
     DateTimeOffset PlacedAt,
     DateTimeOffset? DeliveredAt);
+
+public sealed record UploadImageResponse(string ImageUrl);

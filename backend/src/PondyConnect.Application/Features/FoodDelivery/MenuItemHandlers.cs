@@ -103,7 +103,8 @@ public sealed record UpdateMenuItemCommand(
     string Name,
     string? Description,
     string Category,
-    decimal? NewPrice) : IRequest<Unit>;
+    decimal? NewPrice,
+    string? ImageUrl = null) : IRequest<Unit>;
 
 public sealed class UpdateMenuItemHandler : IRequestHandler<UpdateMenuItemCommand, Unit>
 {
@@ -118,7 +119,7 @@ public sealed class UpdateMenuItemHandler : IRequestHandler<UpdateMenuItemComman
 
         if (request.NewPrice.HasValue)
             item.UpdatePrice(request.NewPrice.Value);
-        item.UpdateDetails(request.Name, request.Description, request.Category);
+        item.UpdateDetails(request.Name, request.Description, request.Category, request.ImageUrl);
 
         await _context.SaveChangesAsync(cancellationToken);
         return Unit.Value;

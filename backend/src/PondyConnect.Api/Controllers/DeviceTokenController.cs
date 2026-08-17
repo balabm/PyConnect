@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Users;
+using PondyConnect.Domain.Entities;
+using PondyConnect.Domain.ValueObjects;
 
 [ApiController]
 [Route("api/user")]
@@ -91,6 +94,59 @@ public sealed class DeviceTokenController : ControllerBase
         await _context.SaveChangesAsync(cancellationToken);
 
         return Ok(new { Message = "Onboarding complete." });
+    }
+
+    /// <summary>
+    /// Saves a new user address (Home, Work, Other).
+    /// </summary>
+    [HttpPost("addresses")]
+    [Authorize]
+    [ProducesResponseType(typeof(UserAddressResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserAddressResponse>> SaveAddress(
+        [FromBody] SaveUserAddressCommand command,
+        CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId
+            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+
+        var userExists = await _context.Users.AnyAsync(u => u.Id == userId, cancellationToken);
+        if (!userExists)
+            return NotFound(new { Message = "User not found." });
+
+        try
+        {
+            var location = GeoLocation.Create(command.Latitude, command.Longitude);
+            var address = UserAddress.Create(
+                userId,
+                command.DoorFlat,
+                command.Landmark,
+                command.Tag,
+                command.FormattedAddress,
+                location);
+
+            _context.UserAddresses.Add(address);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return Ok(new UserAddressResponse(
+                address.Id,
+                address.DoorFlat,
+                address.Landmark,
+                address.Tag,
+                address.Location.Latitude,
+                address.Location.Longitude,
+                address.FormattedAddress));
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return BadRequest(new { Message = "Invalid latitude or longitude." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 }
 

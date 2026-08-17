@@ -3,6 +3,7 @@ namespace PondyConnect.Application.Features.Admin;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Services;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 
@@ -194,7 +195,8 @@ public sealed record DriverSummaryResponse(
     string? KycVerificationReason,
     string? KycParsedName,
     string? KycLicenseNumber,
-    DateTime? KycExpiryDate);
+    DateTime? KycExpiryDate,
+    string? UpiId);
 
 public sealed class ListDriversHandler : IRequestHandler<ListDriversQuery, PagedResult<DriverSummaryResponse>>
 {
@@ -256,7 +258,8 @@ public sealed class ListDriversHandler : IRequestHandler<ListDriversQuery, Paged
                 d.KycVerificationReason,
                 d.KycParsedName,
                 d.KycLicenseNumber,
-                d.KycExpiryDate))
+                d.KycExpiryDate,
+                d.UpiId))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<DriverSummaryResponse>(items, totalCount, page, pageSize);
@@ -782,5 +785,109 @@ public sealed class GetAdminActionLogsHandler : IRequestHandler<GetAdminActionLo
             .ToListAsync(cancellationToken);
 
         return new PagedResult<AdminActionLogResponse>(items, totalCount, page, pageSize);
+    }
+}
+
+public sealed record RefundTicketCommand(
+    Guid TicketId,
+    decimal Amount,
+    bool FullRefund) : IRequest<RefundTicketResponse>;
+
+public sealed record RefundTicketResponse(
+    bool Success,
+    decimal RefundAmount,
+    string Message);
+
+public sealed class RefundTicketHandler : IRequestHandler<RefundTicketCommand, RefundTicketResponse>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly IPaymentRefundService _refundService;
+
+    public RefundTicketHandler(IApplicationDbContext context, IPaymentRefundService refundService)
+    {
+        _context = context;
+        _refundService = refundService;
+    }
+
+    public async Task<RefundTicketResponse> Handle(RefundTicketCommand request, CancellationToken cancellationToken)
+    {
+        var ticket = await _context.DisputeTickets
+            .FirstOrDefaultAsync(t => t.Id == request.TicketId, cancellationToken)
+            ?? throw new InvalidOperationException("Ticket not found.");
+
+        if (ticket.Status == SupportTicketStatus.Resolved)
+            throw new InvalidOperationException("Ticket is already resolved.");
+
+        if (ticket.OrderId is null)
+            throw new InvalidOperationException("Ticket is not associated with an order.");
+
+        var orderId = ticket.OrderId.Value;
+
+        var payment = await _context.Payments
+            .FirstOrDefaultAsync(p =>
+                p.FoodOrderId == orderId ||
+                p.ServiceBookingId == orderId ||
+                p.TransitTripId == orderId ||
+                p.LuggageDropOffId == orderId ||
+                p.ScooterRentalId == orderId,
+                cancellationToken)
+            ?? throw new InvalidOperationException("Payment not found for the associated order.");
+
+        if (payment.Status != PaymentStatus.Captured)
+            throw new InvalidOperationException("Only captured payments can be refunded.");
+
+        var refundAmount = request.FullRefund ? payment.Amount : request.Amount;
+        if (refundAmount <= 0 || refundAmount > payment.Amount)
+            throw new InvalidOperationException("Invalid refund amount.");
+
+        var refunded = await _refundService.RefundAsync(
+            payment.ProviderPaymentId!,
+            refundAmount,
+            "Admin dispute refund",
+            cancellationToken);
+
+        if (!refunded)
+            throw new InvalidOperationException("Refund could not be processed.");
+
+        payment.MarkRefunded();
+
+        if (!string.IsNullOrWhiteSpace(ticket.OrderType))
+        {
+            await MarkOrderPaymentStatusAsync(orderId, ticket.OrderType, payment.ProviderPaymentId!, cancellationToken);
+        }
+
+        ticket.ApplyResolution(SupportTicketStatus.Resolved, refundAmount, "Refund issued.");
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new RefundTicketResponse(true, refundAmount, "Refund issued and ticket resolved.");
+    }
+
+    private async Task MarkOrderPaymentStatusAsync(Guid orderId, string orderType, string providerPaymentId, CancellationToken ct)
+    {
+        if (string.Equals(orderType, "FoodOrder", StringComparison.OrdinalIgnoreCase))
+        {
+            var order = await _context.FoodOrders.FirstOrDefaultAsync(o => o.Id == orderId, ct);
+            order?.RecordPayment(PaymentStatus.Refunded);
+        }
+        else if (string.Equals(orderType, "ServiceBooking", StringComparison.OrdinalIgnoreCase))
+        {
+            var order = await _context.ServiceBookings.FirstOrDefaultAsync(o => o.Id == orderId, ct);
+            order?.RecordPayment(PaymentStatus.Refunded, providerPaymentId);
+        }
+        else if (string.Equals(orderType, "ScooterRental", StringComparison.OrdinalIgnoreCase))
+        {
+            var order = await _context.ScooterRentals.FirstOrDefaultAsync(o => o.Id == orderId, ct);
+            order?.RecordPayment(PaymentStatus.Refunded, providerPaymentId);
+        }
+        else if (string.Equals(orderType, "LuggageDropOff", StringComparison.OrdinalIgnoreCase))
+        {
+            var order = await _context.LuggageDropOffs.FirstOrDefaultAsync(o => o.Id == orderId, ct);
+            order?.RecordPayment(PaymentStatus.Refunded, providerPaymentId);
+        }
+        else if (string.Equals(orderType, "TransitTrip", StringComparison.OrdinalIgnoreCase))
+        {
+            var order = await _context.TransitTrips.FirstOrDefaultAsync(o => o.Id == orderId, ct);
+            order?.RecordPayment(PaymentStatus.Refunded, providerPaymentId);
+        }
     }
 }

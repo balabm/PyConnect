@@ -17,6 +17,10 @@ import '../features/admin/presentation/admin_sos_screen.dart';
 import '../features/admin/presentation/admin_tickets_screen.dart';
 import '../features/admin/presentation/admin_logs_screen.dart';
 import '../features/admin/presentation/admin_finance_screen.dart';
+import '../features/admin/data/admin_api.dart';
+import '../features/support/data/support_api.dart';
+import '../features/kyc/presentation/kyc_review_screen.dart';
+import '../features/disputes/presentation/ticket_detail_screen.dart';
 
 final adminRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -65,8 +69,20 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
             builder: (_, _) => const KycApprovalScreen(),
           ),
           GoRoute(
+            path: '/kyc/:id',
+            builder: (_, state) => KycReviewScreen(
+              driver: state.extra as AdminDriver,
+            ),
+          ),
+          GoRoute(
             path: '/disputes',
             builder: (_, _) => const AdminTicketsScreen(),
+          ),
+          GoRoute(
+            path: '/disputes/:id',
+            builder: (_, state) => TicketDetailScreen(
+              ticket: state.extra as DisputeTicketDetail,
+            ),
           ),
           GoRoute(
             path: '/users',

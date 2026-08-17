@@ -109,6 +109,26 @@ class AdminApi {
     return ApproveDriverResult.fromJson(result as Map<String, dynamic>);
   }
 
+  Future<ApproveDriverResult> approveKyc(String driverId) async {
+    final result = await _api.post('/api/admin/kyc/$driverId/approve');
+    return ApproveDriverResult.fromJson(result as Map<String, dynamic>);
+  }
+
+  Future<RefundTicketResult> refundTicket(
+    String ticketId, {
+    required bool fullRefund,
+    double? amount,
+  }) async {
+    final result = await _api.post(
+      '/api/admin/tickets/$ticketId/refund',
+      data: {
+        'fullRefund': fullRefund,
+        if (amount != null) 'amount': amount,
+      },
+    );
+    return RefundTicketResult.fromJson(result as Map<String, dynamic>);
+  }
+
   Future<void> rejectDriverKyc(String driverId, {String? reason}) async {
     await _api.post('/api/admin/drivers/$driverId/reject-kyc',
         data: {'reason': reason});
@@ -456,6 +476,7 @@ class AdminDriver {
     this.kycParsedName,
     this.kycLicenseNumber,
     this.kycExpiryDate,
+    this.upiId,
   });
 
   factory AdminDriver.fromJson(Map<String, dynamic> json) => AdminDriver(
@@ -490,6 +511,7 @@ class AdminDriver {
         kycExpiryDate: json['kycExpiryDate'] == null
             ? null
             : DateTime.tryParse(json['kycExpiryDate'] as String),
+        upiId: json['upiId'] as String?,
       );
 
   final String id;
@@ -518,6 +540,7 @@ class AdminDriver {
   final String? kycParsedName;
   final String? kycLicenseNumber;
   final DateTime? kycExpiryDate;
+  final String? upiId;
 }
 
 class ApproveDriverResult {
@@ -803,6 +826,25 @@ class AdminSignalREvent {
   bool get affectsStats =>
       affectsSos || affectsTickets || affectsUsers || affectsDrivers ||
       affectsVendors || affectsRides;
+}
+
+class RefundTicketResult {
+  RefundTicketResult({
+    required this.success,
+    required this.refundAmount,
+    this.message,
+  });
+
+  factory RefundTicketResult.fromJson(Map<String, dynamic> json) =>
+      RefundTicketResult(
+        success: json['success'] as bool? ?? false,
+        refundAmount: (json['refundAmount'] as num?)?.toDouble() ?? 0,
+        message: json['message'] as String?,
+      );
+
+  final bool success;
+  final double refundAmount;
+  final String? message;
 }
 
 // === Finance ===

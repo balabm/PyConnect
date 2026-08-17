@@ -103,6 +103,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<SavedLocation> SavedLocations => Set<SavedLocation>();
 
+    public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
+
     public DbSet<ScheduledRide> ScheduledRides => Set<ScheduledRide>();
 
     public DbSet<Review> Reviews => Set<Review>();

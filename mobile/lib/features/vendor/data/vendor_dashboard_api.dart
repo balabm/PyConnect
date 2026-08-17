@@ -384,6 +384,7 @@ class UpdateMenuItemPayload {
     this.newPrice,
     this.isVeg,
     this.prepTimeMinutes,
+    this.imageUrl,
   });
 
   final String? name;
@@ -392,6 +393,7 @@ class UpdateMenuItemPayload {
   final double? newPrice;
   final bool? isVeg;
   final int? prepTimeMinutes;
+  final String? imageUrl;
 
   Map<String, dynamic> toJson() => {
         if (name != null) 'name': name,
@@ -400,6 +402,7 @@ class UpdateMenuItemPayload {
         if (newPrice != null) 'newPrice': newPrice,
         if (isVeg != null) 'isVeg': isVeg,
         if (prepTimeMinutes != null) 'prepTimeMinutes': prepTimeMinutes,
+        if (imageUrl != null) 'imageUrl': imageUrl,
       };
 }
 

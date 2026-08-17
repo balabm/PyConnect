@@ -95,6 +95,8 @@ public interface IApplicationDbContext
 
     DbSet<SavedLocation> SavedLocations { get; }
 
+    DbSet<UserAddress> UserAddresses { get; }
+
     DbSet<ScheduledRide> ScheduledRides { get; }
 
     DbSet<Review> Reviews { get; }

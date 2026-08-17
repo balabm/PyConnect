@@ -89,6 +89,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     _lastScanned = code;
     _lastScanAt = now;
     setState(() => _state = ScannerState.scanning);
+    _cameraController.stop();
     unawaited(_validateTicket(code));
   }
 
@@ -124,15 +125,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         AppHaptics.error();
         _playErrorSound();
       }
-
-      _resetAfterDelay();
     } catch (e) {
       _retryCount++;
       if (_retryCount >= _maxRetries) {
         setState(() => _state = ScannerState.networkError);
         AppHaptics.error();
         _playErrorSound();
-        _resetAfterDelay();
       } else {
         await Future.delayed(Duration(seconds: 1 * _retryCount));
         await _validateTicket(payload);
@@ -160,22 +158,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     }
   }
 
-  void _resetAfterDelay() {
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _state = ScannerState.idle;
-          _result = null;
-        });
-        _animationController.reset();
-      }
-    });
-  }
-
-  void _manualRetry() {
+  void _resumeScanner() {
     AppHaptics.light();
+    _cameraController.start();
     setState(() {
       _state = ScannerState.idle;
+      _result = null;
       _retryCount = 0;
     });
   }
@@ -398,6 +386,17 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     textAlign: TextAlign.center,
                   ),
                 ],
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppTheme.emerald,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  ),
+                  onPressed: _resumeScanner,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('[ Tap to Scan Next ]'),
+                ),
               ],
             ),
           ),
@@ -487,16 +486,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF8B0000),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   ),
-                  onPressed: () {
-                    AppHaptics.light();
-                    setState(() {
-                      _state = ScannerState.idle;
-                      _result = null;
-                    });
-                  },
+                  onPressed: _resumeScanner,
                   icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scan Again'),
+                  label: const Text('[ Tap to Scan Next ]'),
                 ),
               ],
             ),
@@ -544,6 +538,17 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   ),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppTheme.warning,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  ),
+                  onPressed: _resumeScanner,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('[ Tap to Scan Next ]'),
+                ),
               ],
             ),
           ),
@@ -574,7 +579,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _manualRetry,
+                onPressed: _resumeScanner,
                 child: const Text('Retry Now'),
               ),
             ],
