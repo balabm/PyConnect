@@ -87,27 +87,25 @@ public sealed class FraudDetectionService : IFraudDetectionService
 
     public async Task<bool> IsCodRestrictedAsync(string consumerId)
     {
-        return await HasActiveFlagAsync(consumerId, f => f.CodRestricted);
+        var now = DateTimeOffset.UtcNow;
+        return await _context.ConsumerFlags
+            .AsNoTracking()
+            .AnyAsync(f => f.ConsumerId == consumerId
+                && f.CodRestricted
+                && (f.ExpiresAt == null || f.ExpiresAt > now));
     }
 
     public async Task<bool> IsShadowBannedAsync(string consumerId)
     {
-        return await HasActiveFlagAsync(consumerId, f => f.ShadowBanned);
-    }
-
-    // ── Helpers ──
-
-    private async Task<bool> HasActiveFlagAsync(string consumerId, Func<ConsumerFlag, bool> predicate)
-    {
         var now = DateTimeOffset.UtcNow;
-
-        // A flag is active if it has no expiry or the expiry is in the future.
         return await _context.ConsumerFlags
             .AsNoTracking()
             .AnyAsync(f => f.ConsumerId == consumerId
-                && predicate(f)
+                && f.ShadowBanned
                 && (f.ExpiresAt == null || f.ExpiresAt > now));
     }
+
+    // ── Helpers ──
 
     private async Task ApplyCodRestrictionAsync(string consumerId, int cancellationCount)
     {
