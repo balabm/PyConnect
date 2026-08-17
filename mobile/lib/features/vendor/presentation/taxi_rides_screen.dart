@@ -60,11 +60,7 @@ class _TaxiRidesScreenState extends ConsumerState<TaxiRidesScreen> {
         r.status.toLowerCase() == 'completed').toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
-        elevation: 0,
         title: const Text('Rides', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -84,14 +80,14 @@ class _TaxiRidesScreenState extends ConsumerState<TaxiRidesScreen> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       if (active.isNotEmpty) ...[
-                        const Text('Active Rides',
-                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text('Active Rides',
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         ...active.map((r) => _RideCard(ride: r, isActive: true)),
                         const SizedBox(height: 24),
                       ],
-                      const Text('Completed',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Completed',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       if (completed.isEmpty)
                         _buildEmpty()
@@ -109,10 +105,10 @@ class _TaxiRidesScreenState extends ConsumerState<TaxiRidesScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.directions_car, size: 48, color: Colors.white.withValues(alpha: 0.2)),
+            Icon(Icons.directions_car, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
             Text('No rides yet',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 14)),
           ],
         ),
       ),
@@ -126,10 +122,10 @@ class _TaxiRidesScreenState extends ConsumerState<TaxiRidesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text('Could not load rides',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
@@ -156,7 +152,7 @@ class _RideCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
@@ -176,10 +172,10 @@ class _RideCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(ride.customerName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
                 const SizedBox(height: 4),
                 Text(ride.serviceType,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12)),
               ],
             ),
           ),
@@ -187,7 +183,7 @@ class _RideCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('\u20B9${ride.amount.toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

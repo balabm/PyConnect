@@ -7,18 +7,16 @@ class ActiveOrdersPanel extends StatelessWidget {
   const ActiveOrdersPanel({
     super.key,
     required this.bookings,
-    required this.onNewBooking,
   });
 
   final List<BookingSummary> bookings;
-  final VoidCallback onNewBooking;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -37,12 +35,12 @@ class ActiveOrdersPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Active Orders',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -64,26 +62,22 @@ class ActiveOrdersPanel extends StatelessWidget {
                     ),
                 ],
               ),
-              IconButton(
-                icon: const Icon(Icons.notifications_active, color: AppTheme.emerald, size: 20),
-                onPressed: onNewBooking,
-                tooltip: 'Test alert sound',
-              ),
+
             ],
           ),
-          Divider(color: Colors.white.withValues(alpha: 0.1), height: 24),
+          Divider(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1), height: 24),
           if (bookings.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.receipt_outlined, size: 48, color: Colors.white.withValues(alpha: 0.2)),
+                    Icon(Icons.receipt_outlined, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2)),
                     const SizedBox(height: 12),
                     Text(
                       'No active orders',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                         fontSize: 14,
                       ),
                     ),
@@ -91,7 +85,7 @@ class ActiveOrdersPanel extends StatelessWidget {
                     Text(
                       'New orders will appear here',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.25),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
                         fontSize: 12,
                       ),
                     ),
@@ -158,8 +152,8 @@ class _OrderTile extends StatelessWidget {
                 children: [
                   Text(
                     booking.serviceType,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
@@ -167,7 +161,7 @@ class _OrderTile extends StatelessWidget {
                   Text(
                     booking.customerName,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                   ),
@@ -179,8 +173,8 @@ class _OrderTile extends StatelessWidget {
               children: [
                 Text(
                   '\u20B9${booking.amount.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),

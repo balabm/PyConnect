@@ -64,11 +64,7 @@ class _ActiveRentalsScreenState extends ConsumerState<ActiveRentalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
-        elevation: 0,
         title: const Text('Active Rentals', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -100,13 +96,13 @@ class _ActiveRentalsScreenState extends ConsumerState<ActiveRentalsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.pedal_bike, size: 64, color: Colors.white.withValues(alpha: 0.2)),
+          Icon(Icons.pedal_bike, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
           Text('No active rentals',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 18)),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 18)),
           const SizedBox(height: 8),
           Text('Active scooter rentals will appear here',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3), fontSize: 13)),
         ],
       ),
     );
@@ -119,10 +115,10 @@ class _ActiveRentalsScreenState extends ConsumerState<ActiveRentalsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text('Could not load rentals',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
@@ -203,7 +199,7 @@ class _RentalCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
@@ -226,9 +222,9 @@ class _RentalCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(booking.customerName,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
                     Text(booking.serviceType,
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12)),
                   ],
                 ),
               ),

@@ -351,75 +351,8 @@ abstract final class AppTheme {
     );
   }
 
-  /// Partner app theme — high-contrast POS interface with dark slate header.
-  static ThemeData get partnerTheme {
-    const header = Color(0xFF0B0F19);
-    const surface = Color(0xFF121212);
-    const card = Color(0xFF1E1E1E);
-    final scheme = ColorScheme.fromSeed(
-      seedColor: emerald,
-      primary: emerald,
-      secondary: emeraldLight,
-      surface: surface,
-      onSurface: white,
-      error: const Color(0xFFEF4444),
-      brightness: Brightness.dark,
-    );
-    return light.copyWith(
-      colorScheme: scheme,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: header,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: header,
-        foregroundColor: white,
-        elevation: 0,
-        centerTitle: false,
-        surfaceTintColor: Colors.transparent,
-      ),
-      cardTheme: CardThemeData(
-        color: card,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: const BorderSide(color: darkBorder),
-        ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: surface,
-        indicatorColor: emerald.withValues(alpha: 0.15),
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-        ),
-      ),
-      textTheme: const TextTheme(
-        bodyLarge: TextStyle(color: white),
-        bodyMedium: TextStyle(color: white),
-        bodySmall: TextStyle(color: darkTextSecondary, fontSize: 12),
-        titleLarge: TextStyle(color: white, fontWeight: FontWeight.bold),
-        titleMedium: TextStyle(color: white, fontWeight: FontWeight.w600),
-        titleSmall: TextStyle(color: white, fontWeight: FontWeight.w500),
-        labelLarge: TextStyle(color: white),
-        labelMedium: TextStyle(color: darkTextSecondary),
-        labelSmall: TextStyle(color: darkTextSecondary),
-      ),
-      dividerTheme: const DividerThemeData(
-        color: darkBorder,
-        thickness: 1,
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: emerald,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-        ),
-      ),
-      iconTheme: const IconThemeData(color: darkTextSecondary),
-    );
-  }
+  /// Partner app theme — delegates to the global dark theme.
+  static ThemeData get partnerTheme => AppTheme.dark;
 
   /// Admin web theme — enterprise dark SaaS palette (Stripe/Uber Fleet standard).
   /// Unified across all admin screens: Dashboard, Users, Drivers, Vendors, etc.

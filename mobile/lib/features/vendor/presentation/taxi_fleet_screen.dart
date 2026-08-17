@@ -56,11 +56,7 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
-        elevation: 0,
         title: const Text('Fleet', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -81,8 +77,8 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
                     children: [
                       _buildStatRow(),
                       const SizedBox(height: 16),
-                      const Text('Active Vehicles',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Active Vehicles',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       if (_activeRides.isEmpty)
                         _buildEmpty()
@@ -104,7 +100,7 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
           icon: Icons.local_taxi, label: 'On Duty', value: onDuty, color: AppTheme.warning)),
         const SizedBox(width: 8),
         Expanded(child: _StatTile(
-          icon: Icons.local_parking, label: 'Off Duty', value: 0, color: Colors.white.withValues(alpha: 0.5))),
+          icon: Icons.local_parking, label: 'Off Duty', value: 0, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
       ],
     );
   }
@@ -115,10 +111,10 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.local_taxi, size: 48, color: Colors.white.withValues(alpha: 0.2)),
+            Icon(Icons.local_taxi, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
             Text('No active vehicles',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 14)),
           ],
         ),
       ),
@@ -132,10 +128,10 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text('Could not load fleet',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
@@ -159,7 +155,7 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
@@ -170,8 +166,8 @@ class _StatTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$value', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-              Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+              Text('$value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.bold)),
+              Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12)),
             ],
           ),
         ],
@@ -191,7 +187,7 @@ class _TaxiCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.warning.withValues(alpha: 0.2)),
       ),
@@ -214,10 +210,10 @@ class _TaxiCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(booking.customerName,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
                     const SizedBox(height: 4),
                     Text(booking.serviceType,
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12)),
                   ],
                 ),
               ),
@@ -225,7 +221,7 @@ class _TaxiCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text('\u20B9${booking.amount.toStringAsFixed(0)}',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -251,7 +247,7 @@ class _TaxiCard extends ConsumerWidget {
             child: Row(
               children: [
                 Icon(hasDriver ? Icons.badge : Icons.person_add_outlined,
-                    size: 16, color: hasDriver ? AppTheme.emerald : Colors.white.withValues(alpha: 0.4)),
+                    size: 16, color: hasDriver ? AppTheme.emerald : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -259,7 +255,7 @@ class _TaxiCard extends ConsumerWidget {
                         ? 'Driver: ${booking.driverName}${booking.vehiclePlate != null && booking.vehiclePlate!.isNotEmpty ? " • ${booking.vehiclePlate}" : ""}'
                         : 'No driver assigned',
                     style: TextStyle(
-                      color: hasDriver ? Colors.white : Colors.white.withValues(alpha: 0.4),
+                      color: hasDriver ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       fontSize: 12,
                     ),
                   ),
@@ -285,29 +281,29 @@ class _TaxiCard extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Assign Driver', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Assign Driver', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: driverController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              decoration: InputDecoration(
                 labelText: 'Driver Name',
-                labelStyle: TextStyle(color: Colors.white54),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24))),
                 focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.emerald)),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: plateController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              decoration: InputDecoration(
                 labelText: 'Vehicle Plate',
-                labelStyle: TextStyle(color: Colors.white54),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24))),
                 focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.emerald)),
               ),
             ),
@@ -316,7 +312,7 @@ class _TaxiCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54))),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),

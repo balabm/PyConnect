@@ -7,6 +7,48 @@ import '../../../core/theme/app_theme.dart';
 import '../application/vendor_providers.dart';
 import '../data/vendor_dashboard_api.dart';
 
+Widget _buildMenuField(
+  BuildContext context,
+  TextEditingController controller,
+  String label, {
+  String? hintText,
+  IconData? prefixIcon,
+  TextInputType? keyboardType,
+  int maxLines = 1,
+  required ValueChanged<String> onChanged,
+}) {
+  return TextField(
+    controller: controller,
+    keyboardType: keyboardType,
+    maxLines: maxLines,
+    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+    onChanged: onChanged,
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+      hintText: hintText,
+      hintStyle: TextStyle(color: Colors.grey.shade600),
+      filled: true,
+      fillColor: Theme.of(context).colorScheme.surface,
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))
+          : null,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
+      ),
+    ),
+  );
+}
+
 class VendorMenuScreen extends ConsumerWidget {
   const VendorMenuScreen({super.key});
 
@@ -71,6 +113,10 @@ class VendorMenuScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => const _AddMenuItemSheet(),
     );
   }
@@ -161,8 +207,8 @@ class _MenuItemCard extends ConsumerWidget {
           Column(
             children: [
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, color: Colors.white.withValues(alpha: 0.5)),
-                color: const Color(0xFF1E293B),
+                icon: Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+                color: Theme.of(context).colorScheme.surface,
                 onSelected: (value) {
                   AppHaptics.light();
                   if (value == 'edit') {
@@ -220,6 +266,10 @@ class _MenuItemCard extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => _EditMenuItemSheet(item: item),
     );
   }
@@ -228,7 +278,7 @@ class _MenuItemCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: Theme.of(ctx).colorScheme.surface,
         title: const Text('Remove Item?', style: TextStyle(color: Colors.white)),
         content: Text(
           'Mark "${item.name}" as unavailable? It will be hidden from customers.',
@@ -343,51 +393,46 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Edit Menu Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('Edit Menu Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Dish Name *',
-              border: OutlineInputBorder(),
-            ),
+          _buildMenuField(
+            context,
+            _nameController,
+            'Dish Name *',
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _priceController,
+          _buildMenuField(
+            context,
+            _priceController,
+            'Price (\u20B9) *',
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Price (\u20B9) *',
-              border: OutlineInputBorder(),
-            ),
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _categoryController,
-            decoration: const InputDecoration(
-              labelText: 'Category',
-              border: OutlineInputBorder(),
-            ),
+          _buildMenuField(
+            context,
+            _categoryController,
+            'Category',
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _descriptionController,
+          _buildMenuField(
+            context,
+            _descriptionController,
+            'Description (optional)',
             maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Description (optional)',
-              border: OutlineInputBorder(),
-            ),
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _prepTimeController,
+          _buildMenuField(
+            context,
+            _prepTimeController,
+            'Prep Time (minutes)',
+            hintText: 'e.g. 15',
+            prefixIcon: Icons.timer_outlined,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Prep Time (minutes)',
-              hintText: 'e.g. 15',
-              prefixIcon: Icon(Icons.timer_outlined),
-              border: OutlineInputBorder(),
-            ),
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
@@ -413,19 +458,25 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _submitting ? null : () {
-                AppHaptics.medium();
-                _submit();
-              },
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: _submitting
-                    ? const SizedBox(
-                        height: 20, width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Save Changes', style: TextStyle(fontSize: 16, color: Colors.white)),
+              onPressed: _submitting ||
+                      _nameController.text.isEmpty ||
+                      _priceController.text.isEmpty
+                  ? null
+                  : () {
+                      AppHaptics.medium();
+                      _submit();
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.emerald,
+                disabledBackgroundColor: AppTheme.emerald.withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
+              child: _submitting
+                  ? const SizedBox(
+                      height: 20, width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Save Changes', style: TextStyle(fontSize: 16, color: Colors.white)),
             ),
           ),
         ],
@@ -537,63 +588,57 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Add Menu Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('Add Menu Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Dish Name *',
-              border: OutlineInputBorder(),
-            ),
+          _buildMenuField(
+            context,
+            _nameController,
+            'Dish Name *',
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _priceController,
+          _buildMenuField(
+            context,
+            _priceController,
+            'Price (\u20B9) *',
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Price (\u20B9) *',
-              border: OutlineInputBorder(),
-            ),
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _categoryController,
-            decoration: const InputDecoration(
-              labelText: 'Category',
-              hintText: 'e.g. Starters, Main Course, Beverages',
-              border: OutlineInputBorder(),
-            ),
+          _buildMenuField(
+            context,
+            _categoryController,
+            'Category',
+            hintText: 'e.g. Starters, Main Course, Beverages',
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _descriptionController,
+          _buildMenuField(
+            context,
+            _descriptionController,
+            'Description (optional)',
             maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Description (optional)',
-              border: OutlineInputBorder(),
-            ),
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _imageUrlController,
+          _buildMenuField(
+            context,
+            _imageUrlController,
+            'Image URL (optional)',
+            hintText: 'https://...',
+            prefixIcon: Icons.image_outlined,
             keyboardType: TextInputType.url,
-            decoration: const InputDecoration(
-              labelText: 'Image URL (optional)',
-              hintText: 'https://...',
-              prefixIcon: Icon(Icons.image_outlined),
-              border: OutlineInputBorder(),
-            ),
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _prepTimeController,
+          _buildMenuField(
+            context,
+            _prepTimeController,
+            'Prep Time (minutes)',
+            hintText: 'e.g. 15',
+            prefixIcon: Icons.timer_outlined,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Prep Time (minutes)',
-              hintText: 'e.g. 15',
-              prefixIcon: Icon(Icons.timer_outlined),
-              border: OutlineInputBorder(),
-            ),
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
           // Veg / Non-Veg toggle
@@ -618,8 +663,8 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
           ),
           const SizedBox(height: 12),
           SwitchListTile(
-            title: const Text('Late Night Item'),
-            subtitle: const Text('Show in late-night menu (after 11 PM)'),
+            title: Text('Late Night Item', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            subtitle: Text('Show in late-night menu (after 11 PM)', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
             value: _isLateNight,
             activeThumbColor: AppTheme.emerald,
             onChanged: (v) {
@@ -631,21 +676,28 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _submitting ? null : () {
-                AppHaptics.medium();
-                _submit();
-              },
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: _submitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Add Item', style: TextStyle(fontSize: 16, color: Colors.white)),
+              onPressed: _submitting ||
+                      _nameController.text.isEmpty ||
+                      _priceController.text.isEmpty ||
+                      double.tryParse(_priceController.text.trim()) == null
+                  ? null
+                  : () {
+                      AppHaptics.medium();
+                      _submit();
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.emerald,
+                disabledBackgroundColor: AppTheme.emerald.withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
+              child: _submitting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Add Item', style: TextStyle(fontSize: 16, color: Colors.white)),
             ),
           ),
         ],

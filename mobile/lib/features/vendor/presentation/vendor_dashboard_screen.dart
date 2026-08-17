@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
@@ -25,10 +24,10 @@ class VendorDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
-  final AudioPlayer _audioPlayer = AudioPlayer();
   DashboardData? _dashboard;
   List<BookingSummary> _bookings = [];
   bool _priorityActive = false;
+  bool _showMoreStats = false;
   bool _loading = true;
   String? _error;
   Timer? _refreshTimer;
@@ -43,7 +42,6 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -70,24 +68,6 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
     }
   }
 
-  Future<void> _playNewOrderSound() async {
-    try {
-      await _audioPlayer.play(AssetSource('sounds/new_order.mp3'));
-    } catch (_) {}
-  }
-
-  void _onNewBooking() {
-    _playNewOrderSound();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('New order received!'),
-        backgroundColor: AppTheme.emerald,
-        duration: Duration(seconds: 2),
-      ),
-    );
-    _loadData();
-  }
-
   void _onPriorityActivated(ActivatePriorityResult result) {
     if (result.success) {
       setState(() => _priorityActive = true);
@@ -97,7 +77,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _loading
           ? _buildShimmerLoading()
           : _error != null
@@ -115,7 +95,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
           const SizedBox(height: 16),
           Text(
             'Loading dashboard...',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
           ),
         ],
       ),
@@ -129,12 +109,12 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text(
               'Could not load dashboard',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -142,7 +122,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
             const SizedBox(height: 8),
             Text(
               _error!,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -165,7 +145,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
   Widget _buildContent() {
     return RefreshIndicator(
       color: AppTheme.emerald,
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       onRefresh: _loadData,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -181,15 +161,14 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
             // Active orders
             ActiveOrdersPanel(
               bookings: _bookings,
-              onNewBooking: _onNewBooking,
             ),
             const SizedBox(height: 16),
             // Detailed stats
             if (_dashboard != null)
               VenueStatsPanel(dashboard: _dashboard!)
             else
-              _buildDarkCard(child: const Text('Stats unavailable',
-                  style: TextStyle(color: Colors.white54))),
+              _buildDarkCard(child: Text('Stats unavailable',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)))),
             const SizedBox(height: 16),
             // Priority ping
             PriorityPingToggle(
@@ -206,46 +185,88 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
   }
 
   Widget _buildStatCards(DashboardData d) {
+    final crossAxisCount = MediaQuery.of(context).size.width < 360 ? 2 : 3;
+    final bookings = _StatCard(
+      icon: Icons.receipt_long,
+      label: 'Bookings',
+      value: d.totalBookingsToday,
+      color: AppTheme.emerald,
+    );
+    final revenue = _StatCard(
+      icon: Icons.payments,
+      label: 'Revenue',
+      value: d.revenueToday.toInt(),
+      prefix: '\u20B9',
+      color: AppTheme.emerald,
+    );
+    final pending = _StatCard(
+      icon: Icons.pending,
+      label: 'Pending',
+      value: d.pendingBookings,
+      color: AppTheme.warning,
+    );
+    final done = _StatCard(
+      icon: Icons.check_circle,
+      label: 'Done',
+      value: d.completedBookings,
+      color: AppTheme.success,
+    );
+    final confirmed = _StatCard(
+      icon: Icons.event_available,
+      label: 'Confirmed',
+      value: d.confirmedBookings,
+      color: AppTheme.info,
+    );
+
+    final visible = [bookings, revenue];
+    if (d.pendingBookings > 0) visible.add(pending);
+    if (d.completedBookings > 0) visible.add(done);
+    if (d.confirmedBookings > 0) visible.add(confirmed);
+
+    final hidden = <_StatCard>[];
+    if (d.pendingBookings == 0) hidden.add(pending);
+    if (d.completedBookings == 0) hidden.add(done);
+    if (d.confirmedBookings == 0) hidden.add(confirmed);
+
     return FadeSlideIn(
       duration: const Duration(milliseconds: 400),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: _StatCard(
-              icon: Icons.receipt_long,
-              label: 'Bookings',
-              value: d.totalBookingsToday,
-              color: AppTheme.emerald,
-            ),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 1.6,
+            children: visible,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.pending,
-              label: 'Pending',
-              value: d.pendingBookings,
-              color: AppTheme.warning,
+          if (hidden.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => setState(() => _showMoreStats = !_showMoreStats),
+              icon: Icon(
+                _showMoreStats ? Icons.expand_less : Icons.expand_more,
+                size: 18,
+                color: AppTheme.emerald,
+              ),
+              label: Text(
+                _showMoreStats ? 'Show less' : 'Show more stats',
+                style: const TextStyle(color: AppTheme.emerald),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.check_circle,
-              label: 'Done',
-              value: d.completedBookings,
-              color: AppTheme.success,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.payments,
-              label: 'Revenue',
-              value: d.revenueToday.toInt(),
-              prefix: '\u20B9',
-              color: AppTheme.emerald,
-            ),
-          ),
+            if (_showMoreStats)
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 1.6,
+                children: hidden,
+              ),
+          ],
         ],
       ),
     );
@@ -256,7 +277,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: child,
@@ -282,47 +303,56 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+    return Card(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.2),
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 28, height: 28,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              width: 28, height: 28,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 16),
             ),
-            child: Icon(icon, color: color, size: 16),
-          ),
-          const SizedBox(height: 8),
-          CountUp(
-            target: value.toDouble(),
-            prefix: prefix,
-            duration: const Duration(milliseconds: 800),
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CountUp(
+                  target: value.toDouble(),
+                  prefix: prefix,
+                  duration: const Duration(milliseconds: 800),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.white.withValues(alpha: 0.5),
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

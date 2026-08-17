@@ -290,7 +290,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: Theme.of(ctx).colorScheme.surface,
         title: const Text('Mark Unavailable?', style: TextStyle(color: Colors.white)),
         content: Text(
           'Refund "${item.name}" (x${item.quantity}) to the customer? '

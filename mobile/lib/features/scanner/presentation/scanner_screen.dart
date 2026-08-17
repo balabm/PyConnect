@@ -30,7 +30,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   TicketValidationResult? _result;
   int _retryCount = 0;
   static const int _maxRetries = 3;
-  StreamSubscription<Object?>? _subscription;
+  String? _lastScanned;
+  DateTime _lastScanAt = DateTime(2000);
 
   @override
   void initState() {
@@ -46,7 +47,6 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
-    _subscription = _cameraController.barcodes.listen(_onDetect);
     _checkCameraPermission();
   }
 
@@ -62,14 +62,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
   @override
   void dispose() {
-    _subscription?.cancel();
     _cameraController.dispose();
     _animationController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
 
-  Future<void> _onDetect(BarcodeCapture capture) async {
+  void _onDetect(BarcodeCapture capture) {
     if (_state != ScannerState.idle) return;
 
     final barcodes = capture.barcodes;
@@ -78,8 +77,19 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     final payload = barcodes.first.rawValue;
     if (payload == null || payload.isEmpty) return;
 
+    _onQrCode(payload);
+  }
+
+  void _onQrCode(String code) {
+    final now = DateTime.now();
+    if (code == _lastScanned &&
+        now.difference(_lastScanAt) < const Duration(seconds: 3)) {
+      return;
+    }
+    _lastScanned = code;
+    _lastScanAt = now;
     setState(() => _state = ScannerState.scanning);
-    await _validateTicket(payload);
+    unawaited(_validateTicket(code));
   }
 
   Future<void> _validateTicket(String payload) async {
@@ -199,115 +209,115 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   Widget _buildScanOverlay() {
     return Positioned.fill(
       child: IgnorePointer(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            const Spacer(),
-            // Scan frame with gradient border
-            Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.emeraldLight, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.emerald.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  // Corner accents
-                  Positioned(
-                    top: -2, left: -2,
-                    child: Container(
-                      width: 24, height: 24,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(width: 4, color: AppTheme.emeraldLight),
-                          left: BorderSide(width: 4, color: AppTheme.emeraldLight),
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: -2, right: -2,
-                    child: Container(
-                      width: 24, height: 24,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(width: 4, color: AppTheme.emeraldLight),
-                          right: BorderSide(width: 4, color: AppTheme.emeraldLight),
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(20),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -2, left: -2,
-                    child: Container(
-                      width: 24, height: 24,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(width: 4, color: AppTheme.emeraldLight),
-                          left: BorderSide(width: 4, color: AppTheme.emeraldLight),
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(20),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -2, right: -2,
-                    child: Container(
-                      width: 24, height: 24,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(width: 4, color: AppTheme.emeraldLight),
-                          right: BorderSide(width: 4, color: AppTheme.emeraldLight),
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          bottomRight: Radius.circular(20),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: AppTheme.emeraldGradient,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.emerald.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Text(
-                'Scan Ticket',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+            Positioned.fill(
+              child: CustomPaint(
+                painter: const _ScannerOverlayPainter(
+                  cutoutSize: Size(250, 250),
+                  borderRadius: 20,
+                  overlayColor: Colors.black54,
                 ),
               ),
             ),
-            const Spacer(),
+            // Scan frame with corner accents
+            Center(
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.emeraldLight, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.emerald.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // Corner accents
+                    Positioned(
+                      top: -2, left: -2,
+                      child: Container(
+                        width: 24, height: 24,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                            left: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: -2, right: -2,
+                      child: Container(
+                        width: 24, height: 24,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                            right: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -2, left: -2,
+                      child: Container(
+                        width: 24, height: 24,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                            left: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -2, right: -2,
+                      child: Container(
+                        width: 24, height: 24,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                            right: BorderSide(width: 4, color: AppTheme.emeraldLight),
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            bottomRight: Radius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Positioned(
+              bottom: 48,
+              left: 0,
+              right: 0,
+              child: Text(
+                'Align QR code within the frame',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -613,4 +623,41 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       ),
     );
   }
+}
+
+class _ScannerOverlayPainter extends CustomPainter {
+  const _ScannerOverlayPainter({
+    required this.cutoutSize,
+    required this.borderRadius,
+    required this.overlayColor,
+  });
+
+  final Size cutoutSize;
+  final double borderRadius;
+  final Color overlayColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outer = Path()..addRect(Offset.zero & size);
+    final center = Offset(size.width / 2, size.height / 2);
+    final inner = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: center,
+            width: cutoutSize.width,
+            height: cutoutSize.height,
+          ),
+          Radius.circular(borderRadius),
+        ),
+      );
+    final overlay = Path.combine(PathOperation.difference, outer, inner);
+    canvas.drawPath(overlay, Paint()..color = overlayColor);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ScannerOverlayPainter oldDelegate) =>
+      oldDelegate.cutoutSize != cutoutSize ||
+      oldDelegate.borderRadius != borderRadius ||
+      oldDelegate.overlayColor != overlayColor;
 }

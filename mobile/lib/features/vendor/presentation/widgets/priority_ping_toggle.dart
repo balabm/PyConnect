@@ -30,18 +30,18 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Boost Visibility', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(ctx).colorScheme.surface,
+        title: Text('Boost Visibility', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
         content: Text(
           'Activate Priority Ping for 7 days?\n\n'
           'Cost: \u20B9499 (deducted from your credit balance).\n'
           'Your venue will appear at the top of nearby search results.',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+          style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5))),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
@@ -92,7 +92,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
                 end: Alignment.centerRight,
               )
             : null,
-        color: widget.isActive ? null : const Color(0xFF1E293B),
+        color: widget.isActive ? null : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.isActive
@@ -115,12 +115,12 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Boost Visibility',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
@@ -129,7 +129,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
                       : 'Appear at the top of nearby search results',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -145,8 +145,8 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
               value: widget.isActive,
               activeThumbColor: AppTheme.emerald,
               activeTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
-              inactiveThumbColor: Colors.white.withValues(alpha: 0.5),
-              inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
+              inactiveThumbColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              inactiveTrackColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               onChanged: _onToggle,
             ),
         ],

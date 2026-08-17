@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../../scanner/data/scanner_api.dart';
 
 class Vendor {
   Vendor({
@@ -39,5 +40,13 @@ class VendorApi {
     return (body as List)
         .map((e) => Vendor.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<TicketValidationResult> validateTicket(String code) async {
+    final body = await _api.post(
+      '/api/vendor/validate-ticket',
+      data: {'qrPayload': code},
+    );
+    return TicketValidationResult.fromJson(body as Map<String, dynamic>);
   }
 }

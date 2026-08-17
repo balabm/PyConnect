@@ -66,11 +66,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
-        elevation: 0,
         title: const Text('Capacity', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -91,8 +87,8 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
                     children: [
                       _buildCapacityBar(),
                       const SizedBox(height: 24),
-                      const Text('Stored Bags',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Stored Bags',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       if (_stored.isEmpty)
                         _buildEmpty()
@@ -119,29 +115,29 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('New Bag Drop', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(ctx).colorScheme.surface,
+        title: Text('New Bag Drop', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface),
+              decoration: InputDecoration(
                 labelText: 'Customer Name',
-                labelStyle: TextStyle(color: Colors.white54),
+                labelStyle: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.54)),
                 hintText: 'Enter customer name',
-                hintStyle: TextStyle(color: Colors.white24),
+                hintStyle: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.24)),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: bagCountController,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface),
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Bag Count',
-                labelStyle: TextStyle(color: Colors.white54),
+                labelStyle: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.54)),
               ),
             ),
           ],
@@ -250,7 +246,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
@@ -260,8 +256,8 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Current Occupancy',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+              Text('Current Occupancy',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
               Text('${_stored.length} / $_maxCapacity',
                   style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold)),
             ],
@@ -278,7 +274,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
           ),
           const SizedBox(height: 8),
           Text('${pct.toStringAsFixed(0)}% full',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 12)),
         ],
       ),
     );
@@ -290,13 +286,13 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.luggage, size: 48, color: Colors.white.withValues(alpha: 0.2)),
+            Icon(Icons.luggage, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
             Text('No bags stored',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 14)),
             const SizedBox(height: 4),
             Text('Check in bags via the Scanner tab',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 12)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25), fontSize: 12)),
           ],
         ),
       ),
@@ -310,10 +306,10 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text('Could not load capacity',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
@@ -338,7 +334,7 @@ class _BagCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.success.withValues(alpha: 0.2)),
       ),
@@ -358,10 +354,10 @@ class _BagCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(booking.customerName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
                 const SizedBox(height: 4),
                 Text(booking.serviceType,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12)),
               ],
             ),
           ),

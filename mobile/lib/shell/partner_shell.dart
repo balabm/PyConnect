@@ -97,8 +97,11 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isAccepting ? 'Now accepting orders' : 'Orders paused'),
-            backgroundColor: isAccepting ? AppTheme.emerald : AppTheme.coral,
+            content: Text(
+              isAccepting ? 'Now accepting orders' : 'Orders paused',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: isAccepting ? AppTheme.emerald : AppTheme.danger,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -149,33 +152,36 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           ],
       };
 
-  List<NavigationDestination> get _destinations {
+  List<NavigationDestination> _buildDestinations(BuildContext context) {
+    final inactiveColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+    final selectedColor = AppTheme.emerald;
+
     final secondary = switch (_category) {
       VendorCategoryType.restaurant ||
       VendorCategoryType.cafe ||
-      VendorCategoryType.pizzeria => const NavigationDestination(
-          icon: Icon(Icons.kitchen_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.kitchen, color: AppTheme.coral),
+      VendorCategoryType.pizzeria => NavigationDestination(
+          icon: Icon(Icons.kitchen_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.kitchen, color: selectedColor),
           label: 'KDS',
         ),
-      VendorCategoryType.pubClub => const NavigationDestination(
-          icon: Icon(Icons.table_restaurant_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.table_restaurant, color: AppTheme.coral),
+      VendorCategoryType.pubClub => NavigationDestination(
+          icon: Icon(Icons.table_restaurant_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.table_restaurant, color: selectedColor),
           label: 'Table & Crowd Manager',
         ),
-      VendorCategoryType.scooterRental => const NavigationDestination(
-          icon: Icon(Icons.pedal_bike_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.pedal_bike, color: AppTheme.coral),
+      VendorCategoryType.scooterRental => NavigationDestination(
+          icon: Icon(Icons.pedal_bike_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.pedal_bike, color: selectedColor),
           label: 'Active Rentals',
         ),
-      VendorCategoryType.taxiOperator => const NavigationDestination(
-          icon: Icon(Icons.directions_car_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.directions_car, color: AppTheme.coral),
+      VendorCategoryType.taxiOperator => NavigationDestination(
+          icon: Icon(Icons.directions_car_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.directions_car, color: selectedColor),
           label: 'Live Rides',
         ),
-      VendorCategoryType.luggageCloak => const NavigationDestination(
-          icon: Icon(Icons.luggage_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.luggage, color: AppTheme.coral),
+      VendorCategoryType.luggageCloak => NavigationDestination(
+          icon: Icon(Icons.luggage_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.luggage, color: selectedColor),
           label: 'Storage Intake',
         ),
     };
@@ -183,49 +189,49 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
     final tertiary = switch (_category) {
       VendorCategoryType.restaurant ||
       VendorCategoryType.cafe ||
-      VendorCategoryType.pizzeria => const NavigationDestination(
-          icon: Icon(Icons.restaurant_menu_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.restaurant_menu, color: AppTheme.coral),
+      VendorCategoryType.pizzeria => NavigationDestination(
+          icon: Icon(Icons.restaurant_menu_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.restaurant_menu, color: selectedColor),
           label: 'Food Menu',
         ),
-      VendorCategoryType.pubClub => const NavigationDestination(
-          icon: Icon(Icons.local_bar_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.local_bar, color: AppTheme.coral),
+      VendorCategoryType.pubClub => NavigationDestination(
+          icon: Icon(Icons.local_bar_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.local_bar, color: selectedColor),
           label: 'Drinks & VIP',
         ),
-      VendorCategoryType.scooterRental => const NavigationDestination(
-          icon: Icon(Icons.electric_scooter_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.electric_scooter, color: AppTheme.coral),
+      VendorCategoryType.scooterRental => NavigationDestination(
+          icon: Icon(Icons.electric_scooter_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.electric_scooter, color: selectedColor),
           label: 'Fleet',
         ),
-      VendorCategoryType.taxiOperator => const NavigationDestination(
-          icon: Icon(Icons.local_taxi_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.local_taxi, color: AppTheme.coral),
+      VendorCategoryType.taxiOperator => NavigationDestination(
+          icon: Icon(Icons.local_taxi_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.local_taxi, color: selectedColor),
           label: 'Taxi Fleet',
         ),
-      VendorCategoryType.luggageCloak => const NavigationDestination(
-          icon: Icon(Icons.event_outlined, color: Color(0x80FFFFFF)),
-          selectedIcon: Icon(Icons.event, color: AppTheme.coral),
+      VendorCategoryType.luggageCloak => NavigationDestination(
+          icon: Icon(Icons.event_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.event, color: selectedColor),
           label: 'Capacity',
         ),
     };
 
     return [
-      const NavigationDestination(
-        icon: Icon(Icons.dashboard_outlined, color: Color(0x80FFFFFF)),
-        selectedIcon: Icon(Icons.dashboard, color: AppTheme.coral),
+      NavigationDestination(
+        icon: Icon(Icons.dashboard_outlined, color: inactiveColor),
+        selectedIcon: Icon(Icons.dashboard, color: selectedColor),
         label: 'Dashboard',
       ),
       secondary,
       tertiary,
-      const NavigationDestination(
-        icon: Icon(Icons.qr_code_scanner_outlined, color: Color(0x80FFFFFF)),
-        selectedIcon: Icon(Icons.qr_code_scanner, color: AppTheme.coral),
+      NavigationDestination(
+        icon: Icon(Icons.qr_code_scanner_outlined, color: inactiveColor),
+        selectedIcon: Icon(Icons.qr_code_scanner, color: selectedColor),
         label: 'Scanner',
       ),
-      const NavigationDestination(
-        icon: Icon(Icons.tune_outlined, color: Color(0x80FFFFFF)),
-        selectedIcon: Icon(Icons.tune, color: AppTheme.coral),
+      NavigationDestination(
+        icon: Icon(Icons.tune_outlined, color: inactiveColor),
+        selectedIcon: Icon(Icons.tune, color: selectedColor),
         label: 'Manage',
       ),
     ];
@@ -234,14 +240,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.black.withValues(alpha: 0.3),
-        scrolledUnderElevation: 2,
         title: Row(
           children: [
             Container(
@@ -265,7 +264,6 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -274,7 +272,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
                     _category.displayName,
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -284,20 +282,21 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
         ),
         actions: [
           GestureDetector(
-            onTap: _toggleAcceptingOrders,
-            child: Container(
+            onTap: _toggling ? null : _toggleAcceptingOrders,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: _acceptingOrders
-                    ? AppTheme.success.withValues(alpha: 0.15)
-                    : AppTheme.danger.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: _acceptingOrders
-                      ? AppTheme.success.withValues(alpha: 0.3)
-                      : AppTheme.danger.withValues(alpha: 0.3),
-                ),
+                color: _acceptingOrders ? AppTheme.emerald : AppTheme.danger,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: (_acceptingOrders ? AppTheme.emerald : AppTheme.danger).withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -305,21 +304,21 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
                   if (_toggling)
                     const SizedBox(
                       width: 14, height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   else
-                    PulsingDot(
-                      color: _acceptingOrders ? AppTheme.success : AppTheme.danger,
+                    const PulsingDot(
+                      color: Colors.white,
                       size: 8,
-                      duration: const Duration(milliseconds: 1200),
+                      duration: Duration(milliseconds: 1200),
                     ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Text(
                     _acceptingOrders ? 'OPEN' : 'CLOSED',
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: const TextStyle(
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: _acceptingOrders ? AppTheme.success : AppTheme.danger,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -335,17 +334,12 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) {
           AppHaptics.selection();
           setState(() => _currentIndex = i);
         },
-        indicatorColor: AppTheme.coral.withValues(alpha: 0.15),
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-        ),
-        destinations: _destinations,
+        destinations: _buildDestinations(context),
       ),
     );
   }
