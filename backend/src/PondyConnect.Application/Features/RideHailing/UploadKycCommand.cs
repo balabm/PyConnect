@@ -3,6 +3,7 @@ namespace PondyConnect.Application.Features.RideHailing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Services;
 using PondyConnect.Domain.Entities;
 
@@ -22,15 +23,18 @@ public sealed class UploadKycHandler : IRequestHandler<UploadKycCommand, KycUplo
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
     private readonly IDocumentVerificationService _verificationService;
+    private readonly INotificationService _notifications;
 
     public UploadKycHandler(
         IApplicationDbContext context,
         ICurrentUserService currentUser,
-        IDocumentVerificationService verificationService)
+        IDocumentVerificationService verificationService,
+        INotificationService notifications)
     {
         _context = context;
         _currentUser = currentUser;
         _verificationService = verificationService;
+        _notifications = notifications;
     }
 
     public async Task<KycUploadResponse> Handle(UploadKycCommand request, CancellationToken cancellationToken)
@@ -63,9 +67,19 @@ public sealed class UploadKycHandler : IRequestHandler<UploadKycCommand, KycUplo
 
         await _context.SaveChangesAsync(cancellationToken);
 
+        if (verification.AutoApproved)
+        {
+            await _notifications.SendHighPriorityPushAsync(
+                userId,
+                "You are approved! Go online now.",
+                "Your KYC documents have been verified and you are approved to go online.",
+                new Dictionary<string, string> { ["type"] = "driver_approved" },
+                cancellationToken);
+        }
+
         var message = verification.AutoApproved
             ? $"KYC auto-approved via OCR with confidence {verification.Confidence:P0}."
-            : "KYC documents uploaded successfully. Awaiting admin approval.";
+            : $"KYC documents uploaded. OCR confidence {verification.Confidence:P0}. Awaiting admin approval.";
 
         return new KycUploadResponse(true, message, true);
     }

@@ -1,0 +1,51 @@
+# Docker build context exclusions (repo-root context used by backend/Dockerfile)
+
+# Build artifacts
+**/bin/
+**/obj/
+**/node_modules/
+
+# Local database files and compose data dirs
+*.db
+*.db-shm
+*.db-wal
+**/pgdata/
+**/redisdata/
+
+# IDE / editors
+**/.vs/
+**/.vscode/
+**/.idea/
+**/.windsurf/
+**/.playwright-mcp/
+**/*.user
+**/*.suo
+
+# Git
+.git/
+
+# Docker
+**/Dockerfile
+**/docker-compose*.yml
+**/.dockerignore
+
+# Tests and non-API code
+**/tests/
+e2e/
+mobile/
+deploy/
+play-store/
+
+# Documentation
+**/*.md
+.editorconfig
+
+# Secrets and credentials
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+
+# OS files
+Thumbs.db
+.DS_Store

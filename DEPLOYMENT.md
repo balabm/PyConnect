@@ -110,6 +110,8 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+> **Enterprise Nginx config files** are now maintained under `deploy/nginx/`: `pyconnect.conf` (full enterprise site config targeting `127.0.0.1:8080`) and `websocket.conf` (`$connection_upgrade` map). The legacy `deploy/nginx.conf` has been enhanced with the same rate-limiting and WebSocket additions while preserving its `pyconnect_backend` on `127.0.0.1:5000`; choose the appropriate config for your target backend port.
+
 ### 2.3 Deploy Firebase Service Account
 
 ```bash

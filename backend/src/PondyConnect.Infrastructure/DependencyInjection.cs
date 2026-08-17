@@ -2,6 +2,8 @@ namespace PondyConnect.Infrastructure;
 
 using Amazon;
 using Amazon.Extensions.NETCore.Setup;
+using Google.Apis.Auth.OAuth2;
+using Google.Cloud.Vision.V1;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
@@ -105,6 +107,32 @@ public static class DependencyInjection
 
         // OCR document verification: pluggable Google Vision / AWS Textract.
         services.AddScoped<IDocumentVerificationService, DocumentVerificationService>();
+
+        var ocrProvider = configuration.GetValue<string>("Ocr:Provider") ?? "None";
+        if (string.Equals(ocrProvider, "GoogleVision", StringComparison.OrdinalIgnoreCase))
+        {
+            var googleCredentials = configuration.GetValue<string>("Ocr:GoogleCredentials");
+            var googleCredentialsPath = configuration.GetValue<string>("Ocr:GoogleCredentialsPath");
+
+            if (!string.IsNullOrWhiteSpace(googleCredentials) ||
+                (!string.IsNullOrWhiteSpace(googleCredentialsPath) && File.Exists(googleCredentialsPath)))
+            {
+                services.AddSingleton<ImageAnnotatorClient>(_ =>
+                {
+                    GoogleCredential credential;
+                    if (!string.IsNullOrWhiteSpace(googleCredentials))
+                    {
+                        credential = GoogleCredential.FromJson(googleCredentials!);
+                    }
+                    else
+                    {
+                        credential = GoogleCredential.FromFile(googleCredentialsPath!);
+                    }
+
+                    return new ImageAnnotatorClientBuilder { Credential = credential }.Build();
+                });
+            }
+        }
 
         services.Configure<Services.JwtTokenOptions>(configuration.GetSection(Services.JwtTokenOptions.SectionName));
         services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();

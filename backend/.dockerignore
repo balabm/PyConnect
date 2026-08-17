@@ -33,6 +33,10 @@ tests/
 *.md
 .editorconfig
 
+# Secrets / local environment
+**/.env
+**/.env.*
+
 # OS files
 Thumbs.db
 .DS_Store
