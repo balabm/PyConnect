@@ -70,6 +70,9 @@ class _DriverRegistrationScreenState
         AppHaptics.success();
         AppToast.show(context, 'Registration successful! Complete KYC to start.',
             type: ToastType.success);
+        // Force the router to re-fetch the driver profile so it no longer
+        // treats the user as an unregistered driver and loops back here.
+        ref.invalidate(driverProfileProvider);
         context.go('/kyc');
       }
     } on Exception catch (e) {

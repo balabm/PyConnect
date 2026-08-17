@@ -75,6 +75,22 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     }
   }
 
+  /// Updates the user's display name and refreshes the in-memory session.
+  Future<void> updateProfile(String name) async {
+    state = await AsyncValue.guard(() async {
+      await ref.read(authApiProvider).updateMe(name);
+      final current = state.valueOrNull;
+      if (current == null) return null;
+      return AuthSession(
+        name: name,
+        phone: current.phone,
+        role: current.role,
+        token: current.token,
+        isProMember: current.isProMember,
+      );
+    });
+  }
+
   /// Attempts a Google sign-in. If the backend says the account needs a phone
   /// number, [socialAuthPendingProvider] is set and [state] becomes `null` so
   /// the UI can route to phone verification and call [linkGoogleToPhone].

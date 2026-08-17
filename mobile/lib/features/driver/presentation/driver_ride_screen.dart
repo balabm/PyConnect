@@ -292,7 +292,10 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
         // Navigate back to the task pool (Tasks/Radar screen)
         ref.read(activeTaskProvider.notifier).state = null;
         ref.read(driverSelectedTabProvider.notifier).state = 0;
-        if (mounted) Navigator.pop(context); // Pop the ride screen
+        // Refresh the wallet so the driver sees the new earnings immediately.
+        ref.invalidate(driverWalletProvider);
+        ref.invalidate(driverWalletDetailProvider);
+        if (mounted && Navigator.canPop(context)) Navigator.pop(context); // Pop the ride screen
       },
     );
   }

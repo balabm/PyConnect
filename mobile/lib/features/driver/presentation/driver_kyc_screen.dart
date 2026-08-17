@@ -135,6 +135,9 @@ class _DriverKycScreenState extends ConsumerState<DriverKycScreen> {
         AppHaptics.success();
         AppToast.show(context, result.message, type: ToastType.success);
         ref.read(kycSlotsProvider.notifier).reset();
+        // Refresh the driver profile so the pending/approval router guard
+        // immediately reflects the uploaded KYC state.
+        ref.invalidate(driverProfileProvider);
         context.go('/pending-verification');
       } else if (mounted) {
         AppHaptics.error();

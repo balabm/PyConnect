@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/providers.dart';
 import '../../notifications/application/notification_providers.dart';
+import '../../vendor/data/vendor_dashboard_api.dart';
 import 'auth_controller.dart';
 import '../data/vendor_auth_api.dart';
 
@@ -54,7 +55,36 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
 
     ref.read(apiClientProvider).setToken(token);
     ref.read(authTokenProvider.notifier).state = token;
-    return _loadSession(token);
+
+    final prefsSession = await _loadSession(token);
+    try {
+      final profile =
+          await VendorDashboardApi(ref.read(apiClientProvider)).getProfile();
+      final status = _statusFromProfile(profile);
+      final updated = VendorAuthSession(
+        accessToken: prefsSession.accessToken,
+        vendorId: prefsSession.vendorId,
+        vendorName: profile.name.isNotEmpty ? profile.name : prefsSession.vendorName,
+        category: profile.category.isNotEmpty ? profile.category : prefsSession.category,
+        phone: prefsSession.phone,
+        status: status,
+        rejectionReason: status == 'Rejected'
+            ? 'Account has been deactivated. Contact support for details.'
+            : null,
+      );
+      await _persistSession(updated);
+      return updated;
+    } catch (_) {
+      // Offline or transient error — fall back to the locally cached session
+      // so the partner can still use the app and re-check later.
+      return prefsSession;
+    }
+  }
+
+  String _statusFromProfile(VendorProfile profile) {
+    if (!profile.isApproved) return 'Pending';
+    if (!profile.isActive) return 'Rejected';
+    return 'Approved';
   }
 
   Future<void> requestOtp(String phone) async {
@@ -73,7 +103,7 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
       await ref.read(tokenStorageProvider).write(result.accessToken);
       ref.read(apiClientProvider).setToken(result.accessToken);
       ref.read(authTokenProvider.notifier).state = result.accessToken;
-      await _persistSession(result);
+      await _persistSession(_sessionFromResult(result));
 
       // Register FCM device token with the backend now that we have a JWT.
       try {
@@ -112,15 +142,15 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
 
   bool get isAuthenticated => state.valueOrNull?.isAuthenticated ?? false;
 
-  Future<void> _persistSession(VendorLoginResult result) async {
+  Future<void> _persistSession(VendorAuthSession session) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_vendorIdKey, result.vendorId);
-    await prefs.setString(_vendorNameKey, result.vendorName);
-    await prefs.setString(_categoryKey, result.category);
-    await prefs.setString(_phoneKey, result.phone);
-    await prefs.setString(_statusKey, result.status);
-    if (result.rejectionReason != null && result.rejectionReason!.isNotEmpty) {
-      await prefs.setString(_rejectionKey, result.rejectionReason!);
+    await prefs.setString(_vendorIdKey, session.vendorId);
+    await prefs.setString(_vendorNameKey, session.vendorName);
+    await prefs.setString(_categoryKey, session.category);
+    await prefs.setString(_phoneKey, session.phone);
+    await prefs.setString(_statusKey, session.status);
+    if (session.rejectionReason != null && session.rejectionReason!.isNotEmpty) {
+      await prefs.setString(_rejectionKey, session.rejectionReason!);
     } else {
       await prefs.remove(_rejectionKey);
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
@@ -588,13 +589,20 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
               child: Column(
                 children: [
                   Text(
-                    'Pass Token',
+                    'Stay Pass',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.emerald,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
+                  QrImageView(
+                    data: response.passToken,
+                    version: QrVersions.auto,
+                    size: 180.0,
+                    backgroundColor: Colors.white,
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     response.passToken,
                     style: const TextStyle(

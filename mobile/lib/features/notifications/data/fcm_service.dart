@@ -92,6 +92,10 @@ String? _resolveRoute(Map<String, dynamic> data) {
       return id != null ? '/food/orders/$id' : null;
     case 'booking_confirmed':
       return '/activity';
+    case 'driver_approved':
+      // Admin has approved the driver's KYC — route to the shell so the
+      // driver router can refresh the profile and unlock the dashboard.
+      return '/';
     default:
       return data['route'] as String?;
   }

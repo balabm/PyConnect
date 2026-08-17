@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/widgets/error_boundary.dart';
 import 'core/widgets/offline_banner.dart';
+import 'features/driver/application/driver_providers.dart';
 import 'features/notifications/application/notification_providers.dart';
 import 'router/admin_router.dart';
 import 'router/app_router.dart';
@@ -48,6 +49,20 @@ class _PondyConnectAppState extends ConsumerState<PondyConnectApp> {
   Widget build(BuildContext context) {
     final router = _resolveRouter();
 
+    // Captain app: honour notification deep-links and refresh the driver
+    // profile when an admin approval push is tapped while the app is closed.
+    if (widget.flavor == AppFlavor.driver) {
+      ref.listen(pendingDeepLinkProvider, (prev, next) {
+        if (next != null && mounted) {
+          ref.read(pendingDeepLinkProvider.notifier).state = null;
+          if (next == '/') {
+            ref.invalidate(driverProfileProvider);
+          }
+          router.go(next);
+        }
+      });
+    }
+
     if (widget.flavor.isMobile) {
       ref.listen(fcmInitializationProvider, (_, next) {
         next.whenData((service) {
@@ -61,6 +76,12 @@ class _PondyConnectAppState extends ConsumerState<PondyConnectApp> {
                     duration: const Duration(seconds: 4),
                   ),
                 );
+              }
+              // Captain app: an admin KYC approval should immediately refresh
+              // the driver profile so the shell unlocks.
+              if (widget.flavor == AppFlavor.driver &&
+                  message.data['type'] == 'driver_approved') {
+                ref.invalidate(driverProfileProvider);
               }
             });
           }

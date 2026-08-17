@@ -15,6 +15,11 @@ final driverApiProvider = Provider<DriverApi>((ref) {
 
 final driverOnlineStatusProvider = StateProvider<bool>((ref) => false);
 
+/// Single source of truth for online/offline toggle requests from any
+/// widget in the Captain app. The [DriverShell] listens to this and drives
+/// the real API calls, location pinging, and SignalR connection.
+final driverOnlineToggleRequestProvider = StateProvider<bool?>((ref) => null);
+
 /// Fetches the current driver's profile (approval/tutorial/signature status).
 /// Used by the router to guard access to the main shell.
 final driverProfileProvider =

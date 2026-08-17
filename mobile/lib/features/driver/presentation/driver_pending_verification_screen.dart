@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../application/driver_providers.dart';
 
 /// Screen shown after a driver submits KYC documents, while their
 /// profile is pending admin verification. Blocks going online until approved.
-class DriverPendingVerificationScreen extends StatelessWidget {
+class DriverPendingVerificationScreen extends ConsumerWidget {
   const DriverPendingVerificationScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -103,6 +105,7 @@ class DriverPendingVerificationScreen extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: () {
                   // Refresh the driver profile to check if approved
+                  ref.invalidate(driverProfileProvider);
                   context.go('/');
                 },
                 icon: const Icon(Icons.refresh),

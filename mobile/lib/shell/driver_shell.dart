@@ -110,7 +110,23 @@ class _DriverShellState extends ConsumerState<DriverShell> {
       for (final arg in args) {
         if (arg is Map<String, dynamic>) {
           try {
-            final offer = RideOfferModel.fromJson(arg);
+            final foodOffer = FoodDeliveryOfferModel.fromJson(arg);
+            // Bridge the v4 FoodDelivery payload into the ride-offer sheet.
+            final offer = RideOfferModel(
+              rideId: foodOffer.orderId,
+              pickupAddress: foodOffer.pickupAddress,
+              dropoffAddress: foodOffer.deliveryAddress,
+              distanceKm: 0,
+              fare: foodOffer.totalAmount,
+              driverEarnings: foodOffer.driverEarnings,
+              paymentMethod: foodOffer.paymentMethod,
+              vehicleType: 'Bike',
+              isSos: false,
+              surgeMultiplier: 1.0,
+              surgeReason: null,
+              expiresIn: foodOffer.expiresIn,
+              taskType: 'FoodDelivery',
+            );
             OverlayAlertService.instance.showRideOfferAlert(
               title: 'Food Delivery Task!',
               body: 'Pickup: ${offer.pickupAddress}\nEarnings: ₹${offer.driverEarnings.toStringAsFixed(0)} (100%)',
@@ -189,9 +205,13 @@ class _DriverShellState extends ConsumerState<DriverShell> {
     super.dispose();
   }
 
-  void _toggleOnline(WidgetRef ref) async {
-    final isOnline = ref.read(driverOnlineStatusProvider);
-    if (isOnline) {
+  /// Drives the Captain to the requested online/offline state. Called by the
+  /// shell in response to [driverOnlineToggleRequestProvider] changes so every
+  /// toggle (app bar, home screen, etc.) actually starts/stops the location
+  /// service and SignalR dispatch connection.
+  void _setOnline(bool isOnline, WidgetRef ref) async {
+    try {
+    if (!isOnline) {
       try {
         await ref.read(driverApiProvider).goOffline();
         ref.read(driverOnlineStatusProvider.notifier).state = false;
@@ -293,7 +313,14 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         }
       }
     }
+  } finally {
+    if (mounted) {
+      // Reset the toggle request so the same on/off switch can be retried
+      // after a permission denial or network error.
+      ref.read(driverOnlineToggleRequestProvider.notifier).state = null;
+    }
   }
+}
 
   /// Parses a goOnline/SignalR exception into a user-facing message.
   /// Detects auth-expired and network errors so the driver knows exactly
@@ -430,6 +457,14 @@ class _DriverShellState extends ConsumerState<DriverShell> {
     final isOnline = ref.watch(driverOnlineStatusProvider);
     final currentIndex = ref.watch(driverSelectedTabProvider);
 
+    // Listen to toggle requests from any Captain widget (home screen, app bar,
+    // etc.) and route them through the single location + SignalR flow.
+    ref.listen(driverOnlineToggleRequestProvider, (prev, next) {
+      if (next != null && next != ref.read(driverOnlineStatusProvider)) {
+        _setOnline(next, ref);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('PY Connect Captain'),
@@ -438,7 +473,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
             margin: const EdgeInsets.only(right: 16),
             alignment: Alignment.center,
             child: GestureDetector(
-              onTap: () => _toggleOnline(ref),
+              onTap: () => ref.read(driverOnlineToggleRequestProvider.notifier).state = !isOnline,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(

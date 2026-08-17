@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
@@ -382,6 +383,9 @@ class _DeliveryLifecycleScreenState
             Navigator.pop(context); // Close the bottom sheet
             ref.read(activeTaskProvider.notifier).state = null;
             ref.read(driverSelectedTabProvider.notifier).state = 0;
+            // Refresh the wallet so the driver sees the new earnings immediately.
+            ref.invalidate(driverWalletProvider);
+            ref.invalidate(driverWalletDetailProvider);
           },
         );
       }
@@ -411,6 +415,9 @@ class _DeliveryLifecycleScreenState
                 Navigator.pop(context); // Close the bottom sheet
                 ref.read(activeTaskProvider.notifier).state = null;
                 ref.read(driverSelectedTabProvider.notifier).state = 0;
+                // Refresh the wallet so the driver sees the new earnings immediately.
+                ref.invalidate(driverWalletProvider);
+                ref.invalidate(driverWalletDetailProvider);
               },
             );
             ScaffoldMessenger.of(context).showSnackBar(
@@ -875,9 +882,14 @@ class _NavigationButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: () {
+        onPressed: () async {
           AppHaptics.light();
-          // In production: open maps app with address
+          final url =
+              'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(address)}';
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
         },
         icon: const Icon(Icons.navigation),
         label: Text(label),
@@ -1053,6 +1065,9 @@ class _BatchedDeliveryScreenState extends ConsumerState<BatchedDeliveryScreen> {
               Navigator.pop(context);
               ref.read(activeTaskProvider.notifier).state = null;
               ref.read(driverSelectedTabProvider.notifier).state = 0;
+              // Refresh the wallet so the driver sees the new earnings immediately.
+              ref.invalidate(driverWalletProvider);
+              ref.invalidate(driverWalletDetailProvider);
             },
           );
         }

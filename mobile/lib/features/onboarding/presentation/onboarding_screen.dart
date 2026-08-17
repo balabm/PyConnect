@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/application/auth_controller.dart';
 
 /// First-launch onboarding screen for consumers.
 ///
@@ -26,6 +27,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _currentPage = 0;
   bool _isSubmitting = false;
 
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+
   String? _dietaryPreference;
 
   static const _dietaryOptions = [
@@ -39,6 +43,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -69,6 +75,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       final api = ref.read(apiClientProvider);
 
+      // Save the user's name before completing onboarding.
+      final name = _nameController.text.trim();
+      if (name.isNotEmpty) {
+        await ref.read(authControllerProvider.notifier).updateProfile(name);
+      }
+
       // Save dietary preference
       if (_dietaryPreference != null) {
         await api.put('/api/user/dietary-preference', data: {
@@ -81,16 +93,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
       if (mounted) {
         AppHaptics.success();
-        context.go('/');
+        _goNextAfterOnboarding();
       }
     } on Exception catch (_) {
       // Non-fatal — user can still use the app
       if (mounted) {
         AppHaptics.success();
-        context.go('/');
+        _goNextAfterOnboarding();
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  /// Returns the user to the screen they were trying to reach before
+  /// onboarding, or to the home screen if there was none.
+  void _goNextAfterOnboarding() {
+    final pending = ref.read(pendingAuthRedirectProvider);
+    ref.read(pendingAuthRedirectProvider.notifier).state = null;
+    if (pending != null && pending.isNotEmpty) {
+      context.go(pending);
+    } else {
+      context.go('/');
     }
   }
 
@@ -183,12 +207,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               color: AppTheme.emerald.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.restaurant_menu,
+            child: Icon(Icons.person,
                 size: 48, color: AppTheme.emerald),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            'What\'s your diet?',
+            'Complete your profile',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -196,11 +220,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'We\'ll personalize restaurant recommendations for you',
+            'Help us personalize PY Connect for you',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              hintText: 'Your full name',
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email (optional)',
+              hintText: 'you@example.com',
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
           ),
           const SizedBox(height: AppSpacing.xl),
           ..._dietaryOptions.map((option) {

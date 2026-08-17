@@ -5,9 +5,11 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using PondyConnect.Application.Features.FoodDelivery;
 using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Services;
+using PondyConnect.Api.Hubs;
 using PondyConnect.Api.Services;
 using PondyConnect.Domain.Enums;
 
@@ -19,17 +21,20 @@ public sealed class FoodDeliveryController : ControllerBase
     private readonly FoodDeliveryDispatchService _foodDispatch;
     private readonly INotificationService _notifications;
     private readonly IIdempotencyService _idempotency;
+    private readonly IHubContext<VendorHub> _hubContext;
 
     public FoodDeliveryController(
         IMediator mediator,
         FoodDeliveryDispatchService foodDispatch,
         INotificationService notifications,
-        IIdempotencyService idempotency)
+        IIdempotencyService idempotency,
+        IHubContext<VendorHub> hubContext)
     {
         _mediator = mediator;
         _foodDispatch = foodDispatch;
         _notifications = notifications;
         _idempotency = idempotency;
+        _hubContext = hubContext;
     }
 
     [HttpPost("orders/checkout")]
@@ -92,6 +97,17 @@ public sealed class FoodDeliveryController : ControllerBase
                 { "status", result.Status },
             },
             ct);
+
+        // SignalR broadcast so an open KDS screen immediately chimes and reloads.
+        _ = _hubContext.Clients.Group($"vendor:{request.VendorId}")
+            .SendAsync("NewOrder", new
+            {
+                orderId = result.OrderId,
+                orderNumber = $"ORD-{result.OrderId.ToString().Substring(0, 8).ToUpperInvariant()}",
+                vendorId = request.VendorId,
+                totalAmount = result.TotalAmount,
+                status = result.Status,
+            }, ct);
 
         return Ok(result);
     }

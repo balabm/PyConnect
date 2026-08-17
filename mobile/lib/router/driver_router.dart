@@ -50,13 +50,31 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
 
       if (authenticated && (path == '/auth' || path.startsWith('/auth'))) {
         // After auth, check driver compliance status before routing to '/'.
-        final profile = ref.read(driverProfileProvider).valueOrNull;
+        final profileAsync = ref.read(driverProfileProvider);
+        final profile = profileAsync.valueOrNull;
+        if (!profileAsync.isLoading && profile == null) {
+          // No driver record exists yet — finish registration first.
+          return '/register';
+        }
         if (profile == null) {
-          // Profile not loaded yet (or no profile) — allow through; the
-          // shell will handle the empty state.
+          // Profile is still loading — avoid a blank screen by landing on the
+          // shell, which will redirect once the profile resolves.
           return '/';
         }
         return _complianceRedirect(profile, path) ?? '/';
+      }
+
+      // Brand-new authenticated drivers with no profile must register first
+      // so the onboarding flow has a driver record to attach KYC documents to.
+      // We only act on a finished load to avoid flashing /register while the
+      // profile is still being fetched.
+      if (authenticated) {
+        final profileAsync = ref.read(driverProfileProvider);
+        if (!profileAsync.isLoading &&
+            profileAsync.valueOrNull == null &&
+            path != '/register') {
+          return '/register';
+        }
       }
 
       // Guard the main shell: ensure tutorial, signature and admin approval

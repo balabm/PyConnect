@@ -140,19 +140,11 @@ class _OnlineToggleState extends ConsumerState<_OnlineToggle>
           Switch(
             value: widget.isOnline,
             activeThumbColor: AppTheme.emerald,
-            onChanged: (value) async {
+            onChanged: (value) {
               AppHaptics.selection();
-              ref.read(driverOnlineStatusProvider.notifier).state = value;
-              final api = ref.read(driverApiProvider);
-              try {
-                if (value) {
-                  await api.goOnline();
-                } else {
-                  await api.goOffline();
-                }
-              } catch (_) {
-                ref.read(driverOnlineStatusProvider.notifier).state = !value;
-              }
+              // Request the shell to drive the real go-online/offline flow
+              // (permissions, location pinging, SignalR, etc.).
+              ref.read(driverOnlineToggleRequestProvider.notifier).state = value;
             },
           ),
         ],

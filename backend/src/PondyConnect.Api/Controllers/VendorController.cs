@@ -117,24 +117,20 @@ public sealed class VendorController : ControllerBase
     /// Uses multipart form data. Files are stored in private storage.
     /// </summary>
     [HttpPost("{vendorId:guid}/kyc")]
-    [Authorize(Roles = "Vendor")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(VendorKycResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<VendorKycResponse>> UploadKyc(
         Guid vendorId,
         [FromForm] VendorKycUploadRequest request,
         CancellationToken cancellationToken = default)
     {
-        var phone = _currentUser.Phone;
-        if (string.IsNullOrWhiteSpace(phone))
-            return Unauthorized(new { Message = "Authenticated phone not found." });
-
-        // Validate ownership: the vendor must belong to the authenticated user.
+        // Self-onboarding: the vendor is not yet approved and has no JWT,
+        // so we trust the vendorId returned from the anonymous registration call.
         var vendor = await _context.Vendors
-            .FirstOrDefaultAsync(v => v.Id == vendorId && v.ContactPhone == phone, cancellationToken);
+            .FirstOrDefaultAsync(v => v.Id == vendorId, cancellationToken);
         if (vendor == null)
-            return NotFound();
+            return NotFound(new { Message = "Vendor not found." });
 
         // Validate file types and sizes for any uploaded documents.
         foreach (var (file, name) in new[] { (request.FssaiDoc, "FSSAI"), (request.GstDoc, "GST"), (request.PanDoc, "PAN") })

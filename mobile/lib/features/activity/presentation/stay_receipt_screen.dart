@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
@@ -66,6 +67,7 @@ class _StayReceiptBody extends StatelessWidget {
     final checkOut = booking['checkOutDate'] as String? ?? '—';
     final guests = booking['guests'] ?? booking['guestCount'] ?? 1;
     final totalAmount = (booking['totalAmount'] as num?)?.toDouble();
+    final passToken = booking['passToken'] as String?;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -104,9 +106,47 @@ class _StayReceiptBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          // QR stay pass
+          if (passToken != null && passToken.isNotEmpty)
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 80),
+              child: AppCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Stay Pass',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    QrImageView(
+                      data: passToken,
+                      version: QrVersions.auto,
+                      size: 200.0,
+                      backgroundColor: Colors.white,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      passToken,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (passToken != null && passToken.isNotEmpty)
+            const SizedBox(height: 16),
           // Booking details card
           FadeSlideIn(
-            delay: const Duration(milliseconds: 80),
+            delay: const Duration(milliseconds: 160),
             child: AppCard(
               padding: const EdgeInsets.all(16),
               child: Column(

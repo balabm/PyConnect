@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/modern_animations.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/application/vendor_auth_controller.dart';
 import '../application/vendor_providers.dart';
 import '../domain/kds_models.dart';
 import '../services/thermal_printer_service.dart';
@@ -32,9 +34,11 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   final AudioPlayer _audioPlayer = AudioPlayer();
   List<KdsOrder> _orders = [];
   bool _loading = true;
+  bool _firstLoad = true;
   String? _error;
   Timer? _refreshTimer;
   int _previousOrderCount = 0;
+  StreamSubscription<List<Object?>>? _newOrderSub;
 
   /// Repeating chime timer — fires every 3 seconds while unaccepted
   /// (incoming) orders exist. Stopped as soon as no incoming orders remain.
@@ -63,12 +67,32 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
     )..repeat(reverse: true);
     _loadOrders();
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadOrders());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initSignalR());
+  }
+
+  Future<void> _initSignalR() async {
+    final session = ref.read(vendorAuthControllerProvider).valueOrNull;
+    final vendorId = session?.vendorId;
+    if (vendorId == null || vendorId.isEmpty) return;
+
+    final hub = ref.read(vendorStatusHubProvider);
+    try {
+      await hub.connect();
+      await hub.invoke('JoinVendorChannel', [vendorId]);
+    } catch (_) {
+      // Connection can retry in the background.
+    }
+
+    _newOrderSub = hub.on('NewOrder').listen((_) {
+      _loadOrders();
+    });
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
     _chimeTimer?.cancel();
+    _newOrderSub?.cancel();
     _flashController.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -86,8 +110,11 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
           _error = null;
         });
 
-        // Play chime if new orders arrived
-        if (orders.length > _previousOrderCount && _previousOrderCount > 0) {
+        // On first load just record the baseline; on subsequent loads a count
+        // increase means a brand-new order has arrived (via polling or SignalR).
+        if (_firstLoad) {
+          _firstLoad = false;
+        } else if (orders.length > _previousOrderCount) {
           _startChime();
           // Auto-print newly arrived orders
           _autoPrintNewOrders(orders);
@@ -317,8 +344,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
           .read(vendorDashboardApiProvider)
           .partialRefund(order.id, item.id);
       if (mounted) {
-        final refundAmount = (result['refundAmount'] as num?)?.toDouble() ??
-            (result['amount'] as num?)?.toDouble();
+        final refundAmount = (result['RefundAmount'] as num?)?.toDouble() ??
+            (result['refundAmount'] as num?)?.toDouble();
         final amountStr = refundAmount != null
             ? '\u20B9${refundAmount.toStringAsFixed(0)}'
             : 'the item';

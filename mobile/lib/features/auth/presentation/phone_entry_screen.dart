@@ -338,7 +338,14 @@ class PhoneEntryScreen extends ConsumerWidget {
                             TextButton.icon(
                               onPressed: () {
                                 AppHaptics.light();
-                                context.go('/register');
+                                final isAuthenticated =
+                                    authState.valueOrNull?.isAuthenticated ?? false;
+                                if (isAuthenticated) {
+                                  context.go('/register');
+                                } else {
+                                  ref.read(pendingAuthRedirectProvider.notifier).state = '/register';
+                                  context.go('/auth');
+                                }
                               },
                               icon: const Icon(Icons.two_wheeler_outlined, size: 18),
                               label: const Text(

@@ -157,6 +157,8 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
         AppHaptics.success();
         AppToast.show(context, 'Tutorial completed! You can now go online.',
             type: ToastType.success);
+        // Refresh the driver profile so the router unlocks the dashboard.
+        ref.invalidate(driverProfileProvider);
         context.go('/');
       }
     } on Exception catch (e) {

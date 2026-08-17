@@ -27,6 +27,11 @@ class AuthApi {
     return AuthResult.fromJson(body as Map<String, dynamic>);
   }
 
+  /// Updates the authenticated user's profile (currently supports name).
+  Future<void> updateMe(String name) async {
+    await _api.put('/api/auth/me', data: {'name': name});
+  }
+
   /// Accepts the liability waiver. Required before booking rides or rentals.
   Future<void> acceptWaiver() async {
     await _api.post('/api/auth/waiver/accept');
