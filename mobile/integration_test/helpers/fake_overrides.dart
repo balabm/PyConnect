@@ -128,8 +128,8 @@ class FakeApiClient extends ApiClient {
         'subTotal': 280,
         'deliveryFee': 40,
         'lateNightDriverBonus': 0,
-        'platformFee': 5,
-        'totalAmount': 325,
+        'platformFee': 2,
+        'totalAmount': 322,
         'status': 'Placed',
       };
     }

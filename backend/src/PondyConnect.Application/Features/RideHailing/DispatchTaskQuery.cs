@@ -3,9 +3,12 @@ namespace PondyConnect.Application.Features.RideHailing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 
 public sealed record GetAvailableTasksQuery() : IRequest<IReadOnlyList<DispatchTaskResponse>>;
+
+public sealed record OrderItemResponse(string Name, int Quantity, string? SpecialInstructions);
 
 public sealed record DispatchTaskResponse(
     Guid Id,
@@ -16,7 +19,8 @@ public sealed record DispatchTaskResponse(
     string Status,
     Guid? DriverId,
     Guid? BatchGroupId,
-    Guid? OrderId);
+    Guid? OrderId,
+    IReadOnlyList<OrderItemResponse>? OrderItems = null);
 
 public sealed class GetAvailableTasksHandler : IRequestHandler<GetAvailableTasksQuery, IReadOnlyList<DispatchTaskResponse>>
 {
@@ -47,6 +51,18 @@ public sealed class GetAvailableTasksHandler : IRequestHandler<GetAvailableTasks
                     && t.Status != DispatchTaskStatus.Cancelled))
             .ToListAsync(cancellationToken);
 
+        var foodOrderIds = tasks
+            .Where(t => t.TaskType == DispatchTaskType.FoodDelivery && t.SourceEntityId.HasValue)
+            .Select(t => t.SourceEntityId!.Value)
+            .ToList();
+
+        var foodOrders = foodOrderIds.Count == 0
+            ? new Dictionary<Guid, FoodOrder>()
+            : await _context.FoodOrders.AsNoTracking()
+                .Where(o => foodOrderIds.Contains(o.Id))
+                .Include(o => o.Items)
+                .ToDictionaryAsync(o => o.Id, cancellationToken);
+
         return tasks
             .Select(t => new DispatchTaskResponse(
                 t.Id,
@@ -57,7 +73,8 @@ public sealed class GetAvailableTasksHandler : IRequestHandler<GetAvailableTasks
                 t.Status.ToString(),
                 t.DriverId,
                 t.BatchGroupId,
-                t.SourceEntityId))
+                t.SourceEntityId,
+                DispatchTaskResponseMapper.MapOrderItems(t, foodOrders)))
             .ToList();
     }
 }
@@ -91,6 +108,18 @@ public sealed class AcceptTaskHandler : IRequestHandler<AcceptTaskCommand, Dispa
         task.Assign(driver.Id);
         await _context.SaveChangesAsync(cancellationToken);
 
+        FoodOrder? foodOrder = null;
+        if (task.TaskType == DispatchTaskType.FoodDelivery && task.SourceEntityId.HasValue)
+        {
+            foodOrder = await _context.FoodOrders.AsNoTracking()
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == task.SourceEntityId.Value, cancellationToken);
+        }
+
+        var foodOrders = foodOrder is null
+            ? new Dictionary<Guid, FoodOrder>()
+            : new Dictionary<Guid, FoodOrder> { { foodOrder.Id, foodOrder } };
+
         return new DispatchTaskResponse(
             task.Id,
             task.TaskType.ToString(),
@@ -100,7 +129,8 @@ public sealed class AcceptTaskHandler : IRequestHandler<AcceptTaskCommand, Dispa
             task.Status.ToString(),
             task.DriverId,
             task.BatchGroupId,
-            task.SourceEntityId);
+            task.SourceEntityId,
+            DispatchTaskResponseMapper.MapOrderItems(task, foodOrders));
     }
 }
 
@@ -153,6 +183,18 @@ public sealed class GetBatchedTasksHandler : IRequestHandler<GetBatchedTasksQuer
             .OrderBy(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
 
+        var foodOrderIds = tasks
+            .Where(t => t.TaskType == DispatchTaskType.FoodDelivery && t.SourceEntityId.HasValue)
+            .Select(t => t.SourceEntityId!.Value)
+            .ToList();
+
+        var foodOrders = foodOrderIds.Count == 0
+            ? new Dictionary<Guid, FoodOrder>()
+            : await _context.FoodOrders.AsNoTracking()
+                .Where(o => foodOrderIds.Contains(o.Id))
+                .Include(o => o.Items)
+                .ToDictionaryAsync(o => o.Id, cancellationToken);
+
         return tasks
             .Select(t => new DispatchTaskResponse(
                 t.Id,
@@ -163,7 +205,24 @@ public sealed class GetBatchedTasksHandler : IRequestHandler<GetBatchedTasksQuer
                 t.Status.ToString(),
                 t.DriverId,
                 t.BatchGroupId,
-                t.SourceEntityId))
+                t.SourceEntityId,
+                DispatchTaskResponseMapper.MapOrderItems(t, foodOrders)))
+            .ToList();
+    }
+}
+
+internal static class DispatchTaskResponseMapper
+{
+    public static IReadOnlyList<OrderItemResponse>? MapOrderItems(DispatchTask task, Dictionary<Guid, FoodOrder> foodOrders)
+    {
+        if (task.TaskType != DispatchTaskType.FoodDelivery || !task.SourceEntityId.HasValue)
+            return null;
+
+        if (!foodOrders.TryGetValue(task.SourceEntityId.Value, out var order))
+            return null;
+
+        return order.Items
+            .Select(i => new OrderItemResponse(i.Name, i.Quantity, i.SpecialInstructions))
             .ToList();
     }
 }

@@ -28,6 +28,12 @@ class DriverApi {
         .toList();
   }
 
+  /// Verifies the 4-digit OTP and starts the ride for a dispatch task.
+  /// Called when the driver taps [Start Trip] after arriving at the pickup.
+  Future<void> startTask(String taskId, String otp) async {
+    await _api.post('api/driver/tasks/$taskId/start', data: {'otp': otp});
+  }
+
   Future<DispatchTaskModel> acceptTask(String taskId) async {
     final data = await _api.post('api/driver/tasks/$taskId/accept');
     return DispatchTaskModel.fromJson(data as Map<String, dynamic>);

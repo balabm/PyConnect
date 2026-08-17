@@ -502,6 +502,13 @@ public sealed class VendorController : ControllerBase
     public async Task<ActionResult<KdsOrderResponse>> AdvanceKdsOrder(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new AdvanceKdsOrderCommand(id), cancellationToken);
+
+        _ = _hubContext.Clients.All.SendAsync("OrderUpdated", new
+        {
+            orderId = result.Id,
+            status = result.Stage,
+        }, cancellationToken);
+
         return Ok(result);
     }
 
@@ -887,6 +894,15 @@ public sealed class VendorController : ControllerBase
                         return BadRequest(new { Message = $"Refund failed: {refundResult.ErrorMessage}" });
                 }
             }
+
+            // Notify the consumer in real-time that the order has been updated.
+            _ = _hubContext.Clients.All.SendAsync("OrderUpdated", new
+            {
+                orderId = order.Id,
+                status = order.Status.ToString(),
+                refundAmount,
+                newTotal = order.TotalAmount,
+            }, cancellationToken);
 
             return Ok(new
             {

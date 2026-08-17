@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -47,7 +48,10 @@ class _TaskView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return switch (task.taskType) {
-      'Ride' => DriverRideScreen(rideId: task.id, driverId: task.driverId ?? ''),
+      'Ride' => DriverRideScreen(
+          rideId: task.orderId ?? task.id,
+          taskId: task.id,
+          driverId: task.driverId ?? ''),
       'FoodDelivery' || 'EssentialsDrop' => task.batchGroupId != null
           ? BatchedDeliveryScreen(task: task)
           : DeliveryLifecycleScreen(task: task),
@@ -78,9 +82,17 @@ class _DeliveryLifecycleScreenState
   _DeliveryPhase _phase = _DeliveryPhase.headingToStore;
   bool _completing = false;
   bool _advancing = false;
+  final Set<int> _checkedItems = {};
 
   String get _storeLabel =>
       widget.task.taskType == 'EssentialsDrop' ? 'Store' : 'Restaurant';
+
+  int get _checklistItemCount =>
+      (widget.task.orderItems != null && widget.task.orderItems!.isNotEmpty)
+          ? widget.task.orderItems!.length
+          : 3;
+
+  bool get _allItemsChecked => _checkedItems.length == _checklistItemCount;
 
   @override
   void initState() {
@@ -171,7 +183,19 @@ class _DeliveryLifecycleScreenState
             iconColor: AppTheme.emerald,
           ),
           const SizedBox(height: 16),
-          _OrderSummaryCard(task: widget.task, showChecklist: true),
+          _OrderSummaryCard(
+            task: widget.task,
+            showChecklist: true,
+            checkedIndexes: _checkedItems,
+            onToggle: (index, checked) => setState(() {
+              if (checked) {
+                _checkedItems.add(index);
+              } else {
+                _checkedItems.remove(index);
+              }
+            }),
+            onReportMissing: _showReportMissingDialog,
+          ),
           const SizedBox(height: 16),
           Text(
             'Verify all items are packed before confirming pickup.',
@@ -229,10 +253,13 @@ class _DeliveryLifecycleScreenState
       _DeliveryPhase.delivered => '',
     };
 
+    final canAdvance = !_advancing &&
+        (_phase != _DeliveryPhase.atStore || _allItemsChecked);
+
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(
-        onPressed: _advancing ? null : () => _advancePhase(context),
+        onPressed: canAdvance ? () => _advancePhase(context) : null,
         icon: _advancing
             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(Icons.arrow_forward),
@@ -351,8 +378,54 @@ class _DeliveryLifecycleScreenState
     return result ?? false;
   }
 
+  /// Allows the driver to report missing items at the store/restaurant.
+  /// In a production flow this would create a support ticket; here it
+  /// surfaces a confirmation to the driver and support.
+  Future<void> _showReportMissingDialog() async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Report Missing Item'),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Which item is missing?',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Report'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (confirmed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Missing item reported. Support will follow up.'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+    }
+  }
+
   /// Checks if an exception is a network error (vs a server error).
   bool _isNetworkError(Exception e) {
+    if (e is DioException) return isNetworkError(e);
     // DioException network types are queued; other errors are surfaced.
     if (e.toString().contains('connection') ||
         e.toString().contains('timeout') ||
@@ -667,15 +740,39 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _OrderSummaryCard extends StatelessWidget {
-  const _OrderSummaryCard({required this.task, this.showChecklist = false});
+  const _OrderSummaryCard({
+    required this.task,
+    this.showChecklist = false,
+    this.checkedIndexes,
+    this.onToggle,
+    this.onReportMissing,
+  });
 
   final DispatchTaskModel task;
   final bool showChecklist;
+  final Set<int>? checkedIndexes;
+  final void Function(int index, bool checked)? onToggle;
+  final void Function()? onReportMissing;
 
   @override
   Widget build(BuildContext context) {
-    // Parse items from the task if available, otherwise show a generic summary
     final earnings = task.driverEarnings;
+    final hasOrderItems = task.orderItems != null && task.orderItems!.isNotEmpty;
+
+    final checklistItems = hasOrderItems
+        ? task.orderItems!
+            .map((item) => _ChecklistItem(
+                  label: '${item.quantity}x ${item.name}',
+                  note: item.specialInstructions,
+                ))
+            .toList()
+        : const [
+            _ChecklistItem(label: 'Order items verified'),
+            _ChecklistItem(label: 'Payment confirmation checked'),
+            _ChecklistItem(label: 'Packaging intact'),
+          ];
+
+    final allChecked = (checkedIndexes?.length ?? 0) == checklistItems.length;
 
     return AppCard(
       child: Column(
@@ -695,23 +792,40 @@ class _OrderSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (showChecklist) ...[
-            if (task.orderItems != null && task.orderItems!.isNotEmpty) ...[
-              // Real itemized checklist from backend order data
-              if (task.orderId != null)
-                _DetailRow(label: 'Order ID', value: task.orderId!),
+            if (task.orderId != null) _DetailRow(label: 'Order ID', value: task.orderId!),
+            const SizedBox(height: 8),
+            ...checklistItems.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final isChecked = checkedIndexes?.contains(index) ?? false;
+              return CheckboxListTile(
+                value: isChecked,
+                onChanged: onToggle == null
+                    ? null
+                    : (v) => onToggle!(index, v ?? false),
+                title: Text(item.label, style: const TextStyle(fontSize: 14)),
+                subtitle: item.note != null && item.note!.isNotEmpty
+                    ? Text(
+                        'Note: ${item.note}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    : null,
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+              );
+            }).toList(),
+            if (!allChecked && onReportMissing != null) ...[
               const SizedBox(height: 8),
-              ...task.orderItems!.map((item) => _ChecklistItem(
-                    label: '${item.quantity}x ${item.name}',
-                    note: item.specialInstructions,
-                  )),
-              const SizedBox(height: 8),
-              _ChecklistItem(label: 'Payment confirmation checked'),
-              _ChecklistItem(label: 'Packaging intact'),
-            ] else ...[
-              // Generic checklist fallback
-              _ChecklistItem(label: '1x Order items verified'),
-              _ChecklistItem(label: '1x Payment confirmation checked'),
-              _ChecklistItem(label: '1x Packaging intact'),
+              TextButton.icon(
+                onPressed: onReportMissing,
+                icon: const Icon(Icons.warning_amber_rounded, color: AppTheme.danger),
+                label: const Text('Report Missing Item', style: TextStyle(color: AppTheme.danger)),
+              ),
             ],
           ] else ...[
             _DetailRow(label: 'Task type', value: task.taskType),

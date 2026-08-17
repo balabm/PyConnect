@@ -17,7 +17,7 @@ using PondyConnect.Domain.ValueObjects;
 public sealed class OrderPricingServiceTests
 {
     [Fact]
-    public void CalculatePricing_NormalOrder_HasDeliveryFeeAndZeroPlatformFee()
+    public void CalculatePricing_NormalOrder_HasDeliveryFeeAndPlatformFee()
     {
         var pricing = OrderPricingService.CalculatePricing(
             subTotal: 300m, isProMember: false,
@@ -26,8 +26,8 @@ public sealed class OrderPricingServiceTests
         pricing.SubTotal.Should().Be(300m);
         pricing.DeliveryFee.Should().Be(40m);
         pricing.LateNightDriverBonus.Should().Be(0m);
-        pricing.PlatformFee.Should().Be(0m);
-        pricing.TotalAmount.Should().Be(340m);
+        pricing.PlatformFee.Should().Be(2m);
+        pricing.TotalAmount.Should().Be(342m);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class OrderPricingServiceTests
             orderTime: new DateTimeOffset(2026, 1, 15, 10, 0, 0, TimeSpan.Zero));
 
         pricing.DeliveryFee.Should().Be(0m);
-        pricing.TotalAmount.Should().Be(300m);
+        pricing.TotalAmount.Should().Be(302m);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class OrderPricingServiceTests
             orderTime: new DateTimeOffset(2026, 1, 15, 17, 30, 0, TimeSpan.Zero));
 
         pricing.LateNightDriverBonus.Should().Be(30m);
-        pricing.TotalAmount.Should().Be(370m);
+        pricing.TotalAmount.Should().Be(372m);
     }
 
     [Fact]

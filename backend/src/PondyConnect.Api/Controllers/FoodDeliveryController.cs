@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.FoodDelivery;
 using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Services;
@@ -22,19 +24,22 @@ public sealed class FoodDeliveryController : ControllerBase
     private readonly INotificationService _notifications;
     private readonly IIdempotencyService _idempotency;
     private readonly IHubContext<VendorHub> _hubContext;
+    private readonly IApplicationDbContext _context;
 
     public FoodDeliveryController(
         IMediator mediator,
         FoodDeliveryDispatchService foodDispatch,
         INotificationService notifications,
         IIdempotencyService idempotency,
-        IHubContext<VendorHub> hubContext)
+        IHubContext<VendorHub> hubContext,
+        IApplicationDbContext context)
     {
         _mediator = mediator;
         _foodDispatch = foodDispatch;
         _notifications = notifications;
         _idempotency = idempotency;
         _hubContext = hubContext;
+        _context = context;
     }
 
     [HttpPost("orders/checkout")]
@@ -282,10 +287,50 @@ public sealed class FoodDeliveryController : ControllerBase
     {
         await _mediator.Send(new UpdateFoodOrderStatusCommand(id, request.NewStatus), ct);
 
-        // Dispatch to nearby drivers when the order is marked OutForDelivery
-        if (request.NewStatus.Equals("OutForDelivery", StringComparison.OrdinalIgnoreCase))
+        // When the order is marked Ready (OutForDelivery), dispatch it to nearby
+        // drivers and also send a high-priority FCM nudge so the assigned Captain
+        // knows the food is ready for pickup.
+        if (request.NewStatus.Equals("OutForDelivery", StringComparison.OrdinalIgnoreCase)
+            || request.NewStatus.Equals("Ready", StringComparison.OrdinalIgnoreCase))
         {
-            await _foodDispatch.DispatchFoodOrderAsync(id, ct);
+            var driverIds = await _foodDispatch.DispatchFoodOrderAsync(id, ct);
+
+            if (driverIds.Count > 0)
+            {
+                var driverUserIds = await _context.Drivers.AsNoTracking()
+                    .Where(d => driverIds.Contains(d.Id))
+                    .Select(d => d.UserId)
+                    .ToListAsync(ct);
+
+                var data = new Dictionary<string, string>
+                {
+                    { "type", "food_ready" },
+                    { "order_id", id.ToString() },
+                };
+
+                foreach (var userId in driverUserIds)
+                {
+                    _ = _notifications.SendHighPriorityPushAsync(
+                        userId,
+                        "Food is ready",
+                        "Food is ready, proceed to pickup.",
+                        data,
+                        ct);
+                }
+            }
+        }
+
+        var updatedOrder = await _context.FoodOrders.AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id, ct);
+
+        if (updatedOrder is not null)
+        {
+            _ = _hubContext.Clients.All.SendAsync("OrderUpdated", new
+            {
+                orderId = updatedOrder.Id,
+                status = updatedOrder.Status.ToString(),
+                vendorId = updatedOrder.VendorId,
+            }, ct);
         }
 
         return NoContent();

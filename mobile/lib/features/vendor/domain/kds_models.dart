@@ -89,12 +89,14 @@ class KdsOrderItem {
     required this.quantity,
     this.id = '',
     this.specialInstructions,
+    this.price = 0.0,
   });
 
   factory KdsOrderItem.fromJson(Map<String, dynamic> json) => KdsOrderItem(
         id: (json['id'] ?? json['itemId']) as String? ?? '',
         name: json['name'] as String? ?? '',
         quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+        price: ((json['unitPrice'] ?? json['price']) as num?)?.toDouble() ?? 0.0,
         specialInstructions: json['specialInstructions'] as String?,
       );
 
@@ -103,6 +105,9 @@ class KdsOrderItem {
   final String id;
   final String name;
   final int quantity;
+
+  /// Unit price of the item (used for refund confirmation).
+  final double price;
   final String? specialInstructions;
 }
 

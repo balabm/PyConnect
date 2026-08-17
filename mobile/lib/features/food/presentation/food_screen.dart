@@ -14,6 +14,7 @@ import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
+import '../../checkout/cart_conflict_exception.dart';
 import '../../checkout/cart_controller.dart';
 import '../data/food_api.dart';
 import 'widgets/item_customization_sheet.dart';
@@ -98,16 +99,15 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
 
   /// Attempts to add [item] to the global cart. If the cart already holds
   /// items from a different vendor or service category, shows a confirmation
-  /// dialog: "Clear existing cart to add this item?".
-  /// On confirm, clears the cart and adds the new item. On cancel, no-op.
+  /// dialog and — on confirm — clears the cart and adds the new item.
   /// [unitPrice] overrides the base price for customized items.
-  void _addToCart(
+  Future<void> _addToCart(
     Map<String, dynamic> item,
     int quantity, {
     double? unitPrice,
     List<String>? selectedModifierIds,
     List<String>? selectedModifierNames,
-  }) {
+  }) async {
     final cartController = ref.read(cartProvider.notifier);
     final cartItem = _toCartItem(
       item,
@@ -117,37 +117,35 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       selectedModifierNames: selectedModifierNames,
     );
 
-    final result = cartController.addItem(
-      item: cartItem,
-      vendorId: widget.vendorId,
-      vendorName: widget.vendorName ?? 'Menu',
-      category: _cartCategory,
-    );
-
-    switch (result) {
-      case AddItemSuccess():
-        // Item added — no action needed.
-        break;
-      case AddItemConflict(:final item, :final vendorId, :final vendorName, :final category):
-        _showClearCartDialog(item, vendorId, vendorName, category);
-        break;
+    try {
+      cartController.addItem(
+        item: cartItem,
+        vendorId: widget.vendorId,
+        vendorName: widget.vendorName ?? 'Menu',
+        category: _cartCategory,
+      );
+    } on CartConflictException catch (e) {
+      final confirmed = await _showCartConflictDialog(e.vendorName, e.newVendorName);
+      if (confirmed == true) {
+        cartController.clear();
+        cartController.addItem(
+          item: cartItem,
+          vendorId: widget.vendorId,
+          vendorName: widget.vendorName ?? 'Menu',
+          category: _cartCategory,
+        );
+      }
     }
   }
 
   /// Shows the cross-vendor / cross-category confirmation dialog.
-  Future<void> _showClearCartDialog(
-    CartItem item,
-    String vendorId,
-    String vendorName,
-    String category,
-  ) async {
+  Future<bool> _showCartConflictDialog(String vendorName, String newVendorName) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear existing cart?'),
+        title: const Text('Replace cart?'),
         content: const Text(
-          'Your cart already has items from a different store. '
-          'Clear existing cart to add this item?',
+          'You have items from another vendor. Clear cart and add this item?',
         ),
         actions: [
           TextButton(
@@ -161,14 +159,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         ],
       ),
     );
-    if (confirmed == true) {
-      ref.read(cartProvider.notifier).clearAndAdd(
-            item: item,
-            vendorId: vendorId,
-            vendorName: vendorName,
-            category: category,
-          );
-    }
+    return confirmed == true;
   }
 
   @override
@@ -506,7 +497,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         initialQuantity: 1,
       );
       if (result != null && mounted) {
-        _addToCart(
+        await _addToCart(
           item,
           result.quantity,
           unitPrice: result.unitPrice,
@@ -528,7 +519,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       AppHaptics.light();
       final qty = result['quantity'] as int? ?? 1;
       final unitPrice = (result['unitPrice'] as num?)?.toDouble();
-      _addToCart(item, qty, unitPrice: unitPrice);
+      await _addToCart(item, qty, unitPrice: unitPrice);
     }
   }
 
@@ -757,11 +748,10 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
           if (verified && mounted) {
             // Backend confirmed the payment — now it's safe to clear the cart.
             ref.read(cartProvider.notifier).clear();
-            showModalBottomSheet(
-              context: context,
-              isDismissible: false,
-              builder: (_) => _CheckoutResultSheet(result: orderResult),
-            );
+            final foodOrderId = orderResult['orderId'] as String?;
+            if (foodOrderId != null && foodOrderId.isNotEmpty) {
+              context.push('/activity/food/$foodOrderId');
+            }
           } else if (mounted) {
             _showPaymentCancelledSnackBar();
             if (_lastMenuItems != null) {
@@ -846,7 +836,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   void _showPaymentCancelledSnackBar() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Payment cancelled. Your cart is saved.'),
+        content: Text('Payment failed or cancelled. Please try again.'),
         duration: Duration(seconds: 4),
       ),
     );
@@ -1404,7 +1394,10 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                       'paymentMethod': _paymentMethod,
                       'deliveryAddress': _deliveryAddress,
                     }),
-                    child: const Text('Confirm Order', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    child: Text(
+                      _paymentMethod == 0 ? 'Pay Now' : 'Confirm Order',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
               ],

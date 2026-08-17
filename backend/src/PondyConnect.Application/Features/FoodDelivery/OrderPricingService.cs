@@ -1,15 +1,15 @@
 namespace PondyConnect.Application.Features.FoodDelivery;
 
 /// <summary>
-/// Transparent zero-commission pricing engine for food delivery.
-/// VendorPayout = SubTotal (100%). PlatformFee = 0. DeliveryFee = flat ₹40.
+/// Transparent pricing engine for food delivery.
+/// VendorPayout = SubTotal (100%). PlatformFee = ₹2. DeliveryFee = flat ₹40.
 /// LateNightDriverBonus = ₹30 for orders between 11 PM and 3 AM IST.
 /// </summary>
 public static class OrderPricingService
 {
     public const decimal DeliveryFeeFlat = 40m;
     public const decimal LateNightDriverBonus = 30m;
-    public const decimal PlatformFee = 0m;
+    public const decimal PlatformFee = 2m;
 
     public static OrderPricing CalculatePricing(decimal subTotal, bool isProMember, DateTimeOffset orderTime)
     {
@@ -36,3 +36,4 @@ public sealed record OrderPricing(
     decimal LateNightDriverBonus,
     decimal PlatformFee,
     decimal TotalAmount);
+ 

@@ -5,8 +5,8 @@ using PondyConnect.Domain.Enums;
 using PondyConnect.Domain.ValueObjects;
 
 /// <summary>
-/// A food delivery order with transparent zero-commission pricing.
-/// VendorPayout = SubTotal (100% to vendor), PlatformFee = 0.
+/// A food delivery order with transparent pricing.
+/// VendorPayout = SubTotal (100% to vendor), PlatformFee = ₹2.
 /// </summary>
 public sealed class FoodOrder : BaseEntity
 {
@@ -85,8 +85,8 @@ public sealed class FoodOrder : BaseEntity
             VendorPayout = subTotal,
             DeliveryFee = deliveryFee,
             LateNightDriverBonus = lateNightDriverBonus,
-            PlatformFee = 0m,
-            TotalAmount = subTotal + deliveryFee + lateNightDriverBonus,
+            PlatformFee = 2m,
+            TotalAmount = subTotal + deliveryFee + lateNightDriverBonus + 2m,
             PaymentMethod = paymentMethod,
             PlacedAt = DateTimeOffset.UtcNow,
             Notes = notes

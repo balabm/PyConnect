@@ -22,7 +22,7 @@ public sealed record KdsOrderResponse(
     DateTimeOffset PlacedAt,
     IReadOnlyList<KdsOrderItemResponse> Items);
 
-public sealed record KdsOrderItemResponse(Guid Id, string Name, int Quantity, string? SpecialInstructions);
+public sealed record KdsOrderItemResponse(Guid Id, string Name, int Quantity, decimal UnitPrice, string? SpecialInstructions);
 
 public sealed class GetKdsOrdersHandler : IRequestHandler<GetKdsOrdersQuery, IReadOnlyList<KdsOrderResponse>>
 {
@@ -80,7 +80,7 @@ public sealed class GetKdsOrdersHandler : IRequestHandler<GetKdsOrdersQuery, IRe
                 DeliveryAddress: o.DeliveryAddress,
                 Notes: o.Notes,
                 PlacedAt: o.PlacedAt,
-                Items: o.Items.Select(i => new KdsOrderItemResponse(i.Id, i.Name, i.Quantity, i.SpecialInstructions)).ToList()))
+                Items: o.Items.Select(i => new KdsOrderItemResponse(i.Id, i.Name, i.Quantity, i.UnitPrice, i.SpecialInstructions)).ToList()))
             .ToList();
     }
 
@@ -244,7 +244,7 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
             DeliveryAddress: order.DeliveryAddress,
             Notes: order.Notes,
             PlacedAt: order.PlacedAt,
-            Items: order.Items.Select(i => new KdsOrderItemResponse(i.Id, i.Name, i.Quantity, i.SpecialInstructions)).ToList());
+            Items: order.Items.Select(i => new KdsOrderItemResponse(i.Id, i.Name, i.Quantity, i.UnitPrice, i.SpecialInstructions)).ToList());
     }
 
     /// <summary>

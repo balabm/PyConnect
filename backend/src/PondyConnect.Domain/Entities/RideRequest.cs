@@ -233,8 +233,11 @@ public sealed class RideRequest : BaseEntity
         if (Status is not (RideStatus.DriverAssigned or RideStatus.Accepted or RideStatus.ArrivedAtPickup))
             throw new InvalidOperationException("Ride must have a driver assigned before starting.");
 
-        if (OtpCode is not null && !string.Equals(OtpCode, otp, StringComparison.Ordinal))
-            throw new InvalidOperationException("Invalid OTP. Please verify with the rider.");
+        if (OtpCode is null)
+            throw new InvalidOperationException("OTP has not been generated for this ride.");
+
+        if (!string.Equals(OtpCode, otp, StringComparison.Ordinal))
+            throw new InvalidOperationException("Invalid OTP. Please ask customer for the correct code.");
 
         OtpVerifiedAt = DateTimeOffset.UtcNow;
         Status = RideStatus.EnRoute;

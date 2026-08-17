@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
@@ -13,8 +16,14 @@ import '../../rides/presentation/widgets/ride_map.dart';
 import 'post_trip_summary_sheet.dart';
 
 class DriverRideScreen extends ConsumerStatefulWidget {
-  const DriverRideScreen({super.key, required this.rideId, required this.driverId});
+  const DriverRideScreen({
+    super.key,
+    required this.rideId,
+    required this.taskId,
+    required this.driverId,
+  });
   final String rideId;
+  final String taskId;
   final String driverId;
 
   @override
@@ -28,6 +37,8 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
   String? _error;
   List<LatLng>? _routePoints;
   bool _fareSheetShown = false;
+  Timer? _tripTimer;
+  int _tripSeconds = 0;
 
   @override
   void initState() {
@@ -38,6 +49,7 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
   @override
   void dispose() {
     _otpController.dispose();
+    _tripTimer?.cancel();
     super.dispose();
   }
 
@@ -48,8 +60,8 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       if (mounted) {
         setState(() => _ride = ride);
         if (_routePoints == null) _fetchRoute(ride);
-        // Auto-fill ride OTP for testing when ride is accepted/arrived
-        _autofillRideOtp(ride);
+        // Start the live trip timer when the ride is already en-route.
+        _syncTripTimer(ride);
         // Show fare collection sheet when ride is completed
         final status = (ride['status'] as String?).toString().toLowerCase();
         if (status == 'completed' && !_fareSheetShown) {
@@ -61,35 +73,6 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
-    }
-  }
-
-  /// Testing helper: peeks the ride-start OTP from the backend and
-  /// auto-fills the OTP input. Retries up to 5 times with 500ms delay.
-  /// Silent no-op in production.
-  Future<void> _autofillRideOtp(Map<String, dynamic> ride) async {
-    final status = (ride['status'] as String?).toString().toLowerCase();
-    if (status != 'accepted' && status != 'arrivedatpickup') return;
-    if (_otpController.text.isNotEmpty) return;
-
-    try {
-      for (var attempt = 0; attempt < 5; attempt++) {
-        if (!mounted || _otpController.text.isNotEmpty) return;
-
-        final api = ref.read(ridesApiProvider);
-        final otp = await api.peekRideOtp(widget.rideId);
-        if (otp != null && otp.isNotEmpty && mounted) {
-          _otpController.text = otp;
-          setState(() {});
-          return;
-        }
-
-        if (attempt < 4) {
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-      }
-    } catch (_) {
-      // Silent — autofill is a testing convenience
     }
   }
 
@@ -122,6 +105,35 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       );
       if (mounted && route != null) setState(() => _routePoints = route.points);
     } catch (_) {}
+  }
+
+  /// Syncs the live trip timer with the server-side [startedAt] timestamp.
+  /// Called on load and after the ride status becomes en-route.
+  void _syncTripTimer(Map<String, dynamic> ride) {
+    final status = (ride['status'] as String?).toString().toLowerCase();
+    if (status != 'enroute') {
+      _tripTimer?.cancel();
+      return;
+    }
+
+    final startedAt = DateTime.tryParse(ride['startedAt']?.toString() ?? '');
+    if (startedAt != null) {
+      _tripSeconds = DateTime.now().difference(startedAt.toLocal()).inSeconds;
+    } else {
+      _tripSeconds = 0;
+    }
+
+    _tripTimer?.cancel();
+    _tripTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _tripSeconds++);
+    });
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   Future<void> _arriveAtPickup() async {
@@ -175,24 +187,33 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
     }
     setState(() => _loading = true);
     try {
-      final api = ref.read(ridesApiProvider);
-      await api.verifyOtpAndStart(widget.rideId, _otpController.text);
+      final api = ref.read(driverApiProvider);
+      await api.startTask(widget.taskId, _otpController.text);
+      _startLiveTripTimer();
       _loadRide();
-    } catch (e) {
-      if (e is Exception && _isNetworkError(e)) {
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status != null && (status == 400 || status == 401 || status == 403)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid OTP. Please ask customer for the correct code.')),
+          );
+        }
+      } else if (isNetworkError(e)) {
         try {
           await ref.read(offlineMutationQueueProvider).enqueue(
                 QueuedMutation(
-                  id: '${widget.rideId}_start',
+                  id: '${widget.taskId}_start',
                   method: 'POST',
-                  path: 'api/rides/${widget.rideId}/verify-otp',
+                  path: 'api/driver/tasks/${widget.taskId}/start',
                   body: {'otp': _otpController.text},
                   createdAt: DateTime.now(),
                 ),
               );
           if (mounted) {
-            // Optimistically update status so the UI reflects en-route.
-            setState(() => _ride?['status'] = 'EnRoute');
+            _ride?['status'] = 'EnRoute';
+            _startLiveTripTimer();
+            setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Saved offline. Will sync when connection returns.'),
@@ -202,49 +223,58 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
           }
         } catch (_) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('OTP verification failed: $e')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('OTP verification failed. Please try again.')),
+            );
           }
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('OTP verification failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('OTP verification failed: ${e.message ?? e.toString()}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('OTP verification failed: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  /// Starts (or restarts) the live trip timer at 0 seconds.
+  void _startLiveTripTimer() {
+    _tripSeconds = 0;
+    _tripTimer?.cancel();
+    _tripTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _tripSeconds++);
+    });
+  }
+
   Future<void> _completeRide() async {
     AppHaptics.success();
     setState(() => _loading = true);
     try {
-      final api = ref.read(ridesApiProvider);
-      // Use actual distance/duration from ride data (or estimated as fallback)
-      final distance = (_ride?['distanceKm'] as num?)?.toDouble() ?? 1.0;
-      final duration = (_ride?['estimatedDurationMin'] as num?)?.toInt() ?? 10;
-      await api.completeWithMetrics(widget.rideId, distance, duration);
-      // Reload the ride to get the completed status, which triggers the
-      // fare collection sheet.
+      final api = ref.read(driverApiProvider);
+      await api.completeTask(widget.taskId);
       _loadRide();
-    } catch (e) {
-      if (e is Exception && _isNetworkError(e)) {
-        final distance = (_ride?['distanceKm'] as num?)?.toDouble() ?? 1.0;
-        final duration = (_ride?['estimatedDurationMin'] as num?)?.toInt() ?? 10;
+    } on DioException catch (e) {
+      if (isNetworkError(e)) {
         try {
           await ref.read(offlineMutationQueueProvider).enqueue(
                 QueuedMutation(
-                  id: '${widget.rideId}_complete',
+                  id: '${widget.taskId}_complete',
                   method: 'POST',
-                  path: 'api/rides/${widget.rideId}/complete-with-metrics',
-                  body: {
-                    'actualDistanceKm': distance,
-                    'actualDurationMin': duration,
-                  },
+                  path: 'api/driver/tasks/${widget.taskId}/complete',
                   createdAt: DateTime.now(),
                 ),
               );
           if (mounted) {
-            // Optimistically mark completed and trigger fare sheet.
-            setState(() => _ride?['status'] = 'Completed');
+            _ride?['status'] = 'Completed';
+            _tripTimer?.cancel();
             if (!_fareSheetShown) {
               _fareSheetShown = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -264,6 +294,10 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
           }
         }
       } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${e.message ?? e.toString()}')));
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
@@ -416,6 +450,7 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
   /// Checks if an exception is a network error (vs a server error).
   /// Network errors are queued for retry; server errors are surfaced.
   bool _isNetworkError(Exception e) {
+    if (e is DioException) return isNetworkError(e);
     final text = e.toString().toLowerCase();
     return text.contains('connection') ||
         text.contains('timeout') ||
@@ -520,8 +555,10 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
                         controller: _otpController,
                         keyboardType: TextInputType.number,
                         maxLength: 4,
+                        onChanged: (_) => setState(() {}),
+                        buildCounter: (_, {required currentLength, required isFocused, required maxLength}) => null,
                         decoration: const InputDecoration(
-                          labelText: 'Enter OTP from rider',
+                          labelText: 'Enter 4-digit OTP from rider',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.password),
                         ),
@@ -530,9 +567,11 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: _loading ? null : _verifyOtpAndStart,
+                          onPressed: _loading || _otpController.text.length != 4
+                              ? null
+                              : _verifyOtpAndStart,
                           icon: const Icon(Icons.play_arrow),
-                          label: const Text('Verify OTP & Start Ride'),
+                          label: const Text('Start Trip'),
                         ),
                       ),
                     ],
@@ -547,12 +586,23 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
                     ),
                   ],
                   if (isEnRoute) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.timer, color: AppTheme.emerald),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Trip time: ${_formatDuration(_tripSeconds)}',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
                         onPressed: _loading ? null : _completeRide,
                         icon: const Icon(Icons.check_circle),
-                        label: const Text('Complete Ride'),
+                        label: const Text('Complete Trip'),
                       ),
                     ),
                     const SizedBox(height: 12),

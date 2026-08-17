@@ -204,6 +204,7 @@ public sealed class UpdateFoodOrderStatusHandler : IRequestHandler<UpdateFoodOrd
         {
             case "accepted": order.Accept(); break;
             case "preparing": order.StartPreparing(); break;
+            case "ready":
             case "outfordelivery": order.Dispatch(); break;
             case "delivered": order.Deliver(); break;
             case "cancelled": order.Cancel(); break;

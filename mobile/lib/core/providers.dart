@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'network/api_client.dart';
 import 'network/offline_mutation_queue.dart';
 import 'network/osm_geocoding_service.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'network/osrm_routing_service.dart';
 import 'network/signalr_client.dart';
 import 'network/location_service.dart';
@@ -192,6 +193,14 @@ final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async 
   return SharedPreferences.getInstance();
 });
 
+/// Internet connection status stream for the Captain (driver) app.
+/// Emits [InternetConnectionStatus.connected] whenever the device regains
+/// internet access so the offline queue can be flushed.
+final internetConnectionCheckerProvider =
+    StreamProvider<InternetConnectionStatus>((ref) {
+  return InternetConnectionChecker().onStatusChange;
+});
+
 /// Offline mutation queue for the Captain (driver) app. When a driver taps
 /// "Complete Trip" or "Arrived" and the network is down, the mutation is
 /// queued and replayed when connectivity is restored.
@@ -211,6 +220,16 @@ final offlineMutationQueueProvider = Provider<OfflineMutationQueue>((ref) {
       } catch (e) {
         if (e is Exception) rethrow;
         return false;
+      }
+    },
+  );
+
+  // Flush the queue when the connection comes back online.
+  ref.listen<AsyncValue<InternetConnectionStatus>>(
+    internetConnectionCheckerProvider,
+    (previous, next) {
+      if (next.value == InternetConnectionStatus.connected) {
+        queue.flush();
       }
     },
   );

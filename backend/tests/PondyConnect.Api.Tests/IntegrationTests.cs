@@ -183,7 +183,7 @@ public class FoodDeliveryEndpointsTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<CheckoutResponseDto>();
         result!.SubTotal.Should().Be(560m);
         result.VendorPayout.Should().Be(560m);
-        result.PlatformFee.Should().Be(0m);
+        result.PlatformFee.Should().Be(2m);
         result.Status.Should().NotBeNullOrEmpty();
     }
 

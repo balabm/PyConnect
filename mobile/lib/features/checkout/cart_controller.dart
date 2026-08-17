@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'cart_conflict_exception.dart';
+
 /// A single line item in the universal cart.
 ///
 /// Each [CartItem] is scoped to a specific vendor and category so the
@@ -97,8 +99,8 @@ class CartState {
   /// GST at 5% on the item subtotal.
   double get taxes => subtotal * 0.05;
 
-  /// Flat platform fee.
-  static const double platformFee = 5.0;
+  /// Flat platform tech fee.
+  static const double platformFee = 2.0;
 
   /// Grand total = Item Total + Taxes + Platform Fee + Delivery Fee.
   ///
@@ -109,43 +111,12 @@ class CartState {
       subtotal + taxes + platformFee + deliveryFee;
 }
 
-/// Result of an attempt to add an item to the cart.
-///
-/// The controller returns this instead of mutating state directly so the
-/// UI layer can decide how to present the cross-vendor / cross-category
-/// conflict to the user (dialog, snackbar, silent replace, etc.).
-sealed class AddItemResult {
-  const AddItemResult();
-}
-
-/// The item was added successfully with no conflict.
-class AddItemSuccess extends AddItemResult {
-  const AddItemSuccess();
-}
-
-/// The cart already contains items from a different vendor or category.
-/// The UI should prompt the user; if they confirm, call
-/// [CartController.clearAndAdd]; otherwise do nothing.
-class AddItemConflict extends AddItemResult {
-  const AddItemConflict({
-    required this.item,
-    required this.vendorId,
-    required this.vendorName,
-    required this.category,
-  });
-
-  final CartItem item;
-  final String vendorId;
-  final String vendorName;
-  final String category;
-}
-
 /// Riverpod [StateNotifier] that manages the universal, cross-category cart.
 ///
 /// Design decisions:
 /// * The cart can only hold items from a **single vendor and category** at a
 ///   time. Attempting to add an item from a different vendor or category
-///   produces an [AddItemConflict] that the UI resolves with a confirmation
+///   throws a [CartConflictException] that the UI resolves with a confirmation
 ///   dialog.
 /// * State is immutable — every mutation produces a new [CartState].
 /// * The cart does **not** store the delivery fee because that is a vendor
@@ -156,12 +127,10 @@ class CartController extends StateNotifier<CartState> {
 
   /// Attempts to add [item] to the cart.
   ///
-  /// Returns [AddItemSuccess] if the item was added (either because the cart
-  /// was empty, or the item belongs to the same vendor and category).
-  /// Returns [AddItemConflict] if the cart already holds items from a
-  /// different vendor or category — the caller should show a confirmation
-  /// dialog and, on confirm, call [clearAndAdd] with the same arguments.
-  AddItemResult addItem({
+  /// If the cart is empty or the item belongs to the same vendor and category,
+  /// the item is merged in. Otherwise a [CartConflictException] is thrown so
+  /// the caller can prompt the user, clear the cart, and re-call [addItem].
+  void addItem({
     required CartItem item,
     required String vendorId,
     required String vendorName,
@@ -175,7 +144,7 @@ class CartController extends StateNotifier<CartState> {
         vendorName: vendorName,
         category: category,
       );
-      return AddItemSuccess();
+      return;
     }
 
     // Same vendor AND same category — merge into existing items.
@@ -195,30 +164,13 @@ class CartController extends StateNotifier<CartState> {
         vendorName: vendorName,
         category: category,
       );
-      return AddItemSuccess();
+      return;
     }
 
     // Different vendor or category — conflict.
-    return AddItemConflict(
-      item: item,
-      vendorId: vendorId,
-      vendorName: vendorName,
-      category: category,
-    );
-  }
-
-  /// Clears the cart and adds [item] as the sole entry.
-  /// Called by the UI after the user confirms an [AddItemConflict].
-  void clearAndAdd({
-    required CartItem item,
-    required String vendorId,
-    required String vendorName,
-    required String category,
-  }) {
-    state = CartState(
-      items: [item],
-      vendorId: vendorId,
-      vendorName: vendorName,
+    throw CartConflictException(
+      vendorName: state.vendorName ?? '',
+      newVendorName: vendorName,
       category: category,
     );
   }

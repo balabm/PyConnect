@@ -40,9 +40,10 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   int _previousOrderCount = 0;
   StreamSubscription<List<Object?>>? _newOrderSub;
 
-  /// Repeating chime timer — fires every 3 seconds while unaccepted
-  /// (incoming) orders exist. Stopped as soon as no incoming orders remain.
-  Timer? _chimeTimer;
+  /// Whether the looping KDS alarm is currently playing. The audio player is
+  /// configured in [initState] with [ReleaseMode.loop], so a single play
+  /// call will keep the chime going until it is stopped.
+  bool _isChimePlaying = false;
 
   /// Whether the bundled audio asset loaded successfully. Once a play call
   /// fails, we switch to [SystemSound.play] as a fallback and stop trying
@@ -65,6 +66,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
+    _audioPlayer.setReleaseMode(ReleaseMode.loop);
+    _audioPlayer.setVolume(1.0);
     _loadOrders();
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadOrders());
     WidgetsBinding.instance.addPostFrameCallback((_) => _initSignalR());
@@ -91,7 +94,6 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _chimeTimer?.cancel();
     _newOrderSub?.cancel();
     _flashController.dispose();
     _audioPlayer.dispose();
@@ -139,51 +141,49 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   List<KdsOrder> get _incomingOrders =>
       _orders.where((o) => o.stage == KdsStage.incoming).toList();
 
-  /// Starts the repeating chime if there are unaccepted incoming orders and
-  /// no chime timer is already running. The chime repeats every 3 seconds.
+  /// Starts the looping alarm when there are unaccepted incoming orders.
+  /// [AudioPlayer] is already configured to [ReleaseMode.loop] in [initState],
+  /// so one play call keeps ringing continuously.
   void _startChime() {
-    if (_incomingOrders.isEmpty) return;
-    _chimeTimer?.cancel();
-    // Play immediately, then on a 3-second interval.
+    if (_incomingOrders.isEmpty || _isChimePlaying) return;
     _playChime();
-    _chimeTimer = Timer.periodic(const Duration(seconds: 3), (_) => _playChime());
   }
 
-  /// Stops the repeating chime timer (e.g. when the last incoming order has
-  /// been accepted). Safe to call even if no timer is running.
+  /// Stops the looping alarm. Safe to call even if it is not playing.
   void _stopChime() {
-    _chimeTimer?.cancel();
-    _chimeTimer = null;
+    if (!_isChimePlaying) return;
+    _isChimePlaying = false;
+    unawaited(_audioPlayer.stop());
   }
 
-  /// Ensures the chime timer state matches the presence of incoming orders.
-  /// Called after every load and after every stage advancement.
+  /// Ensures the alarm state matches the presence of incoming orders.
   void _syncChime() {
     if (_incomingOrders.isEmpty) {
       _stopChime();
-    } else if (_chimeTimer == null) {
+    } else if (!_isChimePlaying) {
       _startChime();
     }
   }
 
-  /// Plays the order chime once. Uses the bundled audio asset
-  /// (`assets/sounds/order_chime.mp3`); if the asset is missing or playback
-  /// fails, falls back to the platform alert sound via [SystemSound.play].
+  /// Plays the order chime in a loop. [AudioPlayer] is already set to
+  /// [ReleaseMode.loop], so it will repeat until [_stopChime] is called.
+  /// Uses the bundled audio asset (`assets/sounds/order_chime.mp3`); if the
+  /// asset is missing or playback fails, falls back to [SystemSound.play].
   Future<void> _playChime() async {
+    _isChimePlaying = true;
     if (_audioAssetFailed) {
+      _isChimePlaying = false;
       await SystemSound.play(SystemSoundType.alert);
       return;
     }
     try {
       await _audioPlayer.play(AssetSource('sounds/order_chime.mp3'));
     } catch (_) {
-      // Asset missing or playback error — switch to system fallback for
-      // this and all subsequent chimes so we don't spam exceptions.
       _audioAssetFailed = true;
+      _isChimePlaying = false;
       try {
         await SystemSound.play(SystemSoundType.alert);
       } catch (_) {
-        // Last resort: vibration only.
         AppHaptics.heavy();
       }
     }
@@ -275,8 +275,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   Future<void> _advanceOrder(KdsOrder order) async {
     if (order.stage.next == null) return;
     AppHaptics.medium();
-    // Accepting an incoming order stops the chime for that order. The
-    // [_syncChime] call after reload will stop the timer entirely once no
+    // Accepting an incoming order stops the alarm for that order. The
+    // [_syncChime] call after reload will stop the loop entirely once no
     // incoming orders remain.
     if (order.stage == KdsStage.incoming) {
       _stopChime();
@@ -285,7 +285,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
       await ref.read(kdsApiProvider).advanceStage(order.id);
       _loadOrders();
     } catch (e) {
-      // Chime may still be needed if the advance failed — re-sync.
+      // Alarm may still be needed if the advance failed — re-sync.
       _syncChime();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -298,9 +298,30 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
     }
   }
 
+  /// Reject an incoming order by cancelling it. This also stops the alarm.
+  Future<void> _rejectOrder(KdsOrder order) async {
+    if (order.stage != KdsStage.incoming) return;
+    AppHaptics.heavy();
+    _stopChime();
+    try {
+      await ref.read(vendorDashboardApiProvider).updateOrderStatus(order.id, 'Cancelled');
+      _loadOrders();
+    } catch (e) {
+      _syncChime();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reject order: $e'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    }
+  }
+
   /// Partial fulfillment: marks a single item unavailable on an active order
-  /// and issues a partial refund to the customer. Triggered by long-pressing
-  /// an item pill on a KDS order card.
+  /// and issues a partial refund to the customer. Triggered by tapping an
+  /// item pill on a KDS order card.
   Future<void> _markItemUnavailable(KdsOrder order, KdsOrderItem item) async {
     if (item.id.isEmpty) {
       if (mounted) {
@@ -314,29 +335,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
       return;
     }
     AppHaptics.heavy();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Theme.of(ctx).colorScheme.surface,
-        title: const Text('Mark Unavailable?', style: TextStyle(color: Colors.white)),
-        content: Text(
-          'Refund "${item.name}" (x${item.quantity}) to the customer? '
-          'The rest of the order stays active.',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Refund Item'),
-          ),
-        ],
-      ),
-    );
+    final refundAmount = item.price * item.quantity;
+    final confirmed = await _showRefundBottomSheet(item, refundAmount);
     if (confirmed != true) return;
 
     try {
@@ -344,14 +344,13 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
           .read(vendorDashboardApiProvider)
           .partialRefund(order.id, item.id);
       if (mounted) {
-        final refundAmount = (result['RefundAmount'] as num?)?.toDouble() ??
-            (result['refundAmount'] as num?)?.toDouble();
-        final amountStr = refundAmount != null
-            ? '\u20B9${refundAmount.toStringAsFixed(0)}'
-            : 'the item';
+        final returnedAmount = (result['RefundAmount'] as num?)?.toDouble() ??
+            (result['refundAmount'] as num?)?.toDouble() ??
+            refundAmount;
+        final amountStr = '\u20B9${returnedAmount.toStringAsFixed(0)}';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Refund of $amountStr issued to customer'),
+            content: Text('Refund of $amountStr issued.'),
             backgroundColor: AppTheme.emerald,
             duration: const Duration(seconds: 3),
           ),
@@ -368,6 +367,64 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
         );
       }
     }
+  }
+
+  /// Shows a red-themed bottom sheet to confirm marking an item unavailable.
+  Future<bool?> _showRefundBottomSheet(KdsOrderItem item, double refundAmount) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Mark Unavailable & Refund?',
+                style: TextStyle(
+                  color: AppTheme.danger,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'This will refund \u20B9${refundAmount.toStringAsFixed(0)} to the customer for ${item.name} and remove it from the order.',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Confirm Refund'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Color _urgencyColor(KdsUrgency urgency) => switch (urgency) {
@@ -434,6 +491,25 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
     );
   }
 
+  /// Marks a "preparing" order as ready via the status endpoint and reloads
+  /// the board. Called when a card is dropped on the Ready column.
+  Future<void> _setOrderReady(KdsOrder order) async {
+    if (order.stage != KdsStage.preparing) return;
+    try {
+      await ref.read(vendorDashboardApiProvider).updateOrderStatus(order.id, 'Ready');
+      _loadOrders();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to mark ready: $e'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildBoard() {
     final activeOrders = _orders.where((o) => o.stage != KdsStage.completed).toList();
 
@@ -472,19 +548,19 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _buildColumn('Incoming', incoming, AppTheme.info)),
+            Expanded(child: _buildColumn('New', incoming, AppTheme.info)),
             const SizedBox(width: 8),
             Expanded(child: _buildColumn('Preparing', preparing, AppTheme.emerald)),
             const SizedBox(width: 8),
-            Expanded(child: _buildColumn('Ready / Dispatched', ready, AppTheme.success)),
+            Expanded(child: _buildColumn('Ready / Waiting for Driver', ready, AppTheme.success, isDropTarget: true)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildColumn(String title, List<KdsOrder> orders, Color accent) {
-    return Container(
+  Widget _buildColumn(String title, List<KdsOrder> orders, Color accent, {bool isDropTarget = false}) {
+    final column = Container(
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,6 +606,25 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
           ...orders.map((order) => _buildOrderCard(order, accent)),
         ],
       ),
+    );
+
+    if (!isDropTarget) return column;
+
+    return DragTarget<KdsOrder>(
+      onWillAccept: (order) => order != null && order.stage == KdsStage.preparing,
+      onAccept: (order) {
+        if (order != null) _setOrderReady(order);
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHighlighted = candidateData.isNotEmpty;
+        return Container(
+          decoration: BoxDecoration(
+            color: isHighlighted ? accent.withValues(alpha: 0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: column,
+        );
+      },
     );
   }
 
@@ -585,17 +680,37 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
             child: _buildOrderCardContent(order, columnAccent, urgencyColor),
           );
 
-    return BounceIn(
+    final card = BounceIn(
       duration: const Duration(milliseconds: 300),
       child: borderWidget,
     );
+
+    if (order.stage == KdsStage.preparing) {
+      return Draggable<KdsOrder>(
+        data: order,
+        feedback: Material(
+          color: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: borderWidget,
+          ),
+        ),
+        childWhenDragging: Opacity(
+          opacity: 0.4,
+          child: borderWidget,
+        ),
+        child: card,
+      );
+    }
+
+    return card;
   }
 
   /// Builds the inner content of an order card (shared by the flashing and
   /// non-flashing variants).
   Widget _buildOrderCardContent(KdsOrder order, Color columnAccent, Color urgencyColor) {
     return InkWell(
-      onTap: () => _advanceOrder(order),
+      onTap: order.stage == KdsStage.incoming ? null : () => _advanceOrder(order),
       borderRadius: BorderRadius.circular(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,12 +810,12 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
             ),
           ),
           const SizedBox(height: 8),
-          // Item pills — long-press to mark an item unavailable (partial refund)
+          // Item pills — tap to mark an item unavailable (partial refund)
           Wrap(
             spacing: 4,
             runSpacing: 4,
             children: order.items.map((item) => GestureDetector(
-              onLongPress: () => _markItemUnavailable(order, item),
+              onTap: () => _markItemUnavailable(order, item),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -755,8 +870,33 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
             ),
           ],
           const SizedBox(height: 8),
-          // Advance button + reprint button
-          if (order.stage.next != null)
+          // Action buttons
+          if (order.stage == KdsStage.incoming)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.danger,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                  ),
+                  onPressed: () => _rejectOrder(order),
+                  child: const Text('Reject'),
+                ),
+                FilledButton.tonal(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: columnAccent.withValues(alpha: 0.15),
+                    foregroundColor: columnAccent,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                  ),
+                  onPressed: () => _advanceOrder(order),
+                  child: const Text('Accept Order'),
+                ),
+              ],
+            )
+          else if (order.stage.next != null)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -783,9 +923,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                     minimumSize: Size.zero,
                   ),
                   onPressed: () => _advanceOrder(order),
-                  child: Text(order.stage == KdsStage.incoming
-                      ? 'Accept Order'
-                      : 'Advance to ${order.stage.next!.label}'),
+                  child: Text('Advance to ${order.stage.next!.label}'),
                 ),
               ],
             )

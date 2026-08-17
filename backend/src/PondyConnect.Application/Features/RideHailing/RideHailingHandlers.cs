@@ -593,8 +593,10 @@ public sealed record RideDetailResponse(
     string Status,
     DateTimeOffset RequestedAt,
     DateTimeOffset? AcceptedAt,
+    DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt,
-    Guid? DriverId);
+    Guid? DriverId,
+    string? OtpCode);
 
 public sealed class GetRideHandler : IRequestHandler<GetRideQuery, RideDetailResponse>
 {
@@ -636,7 +638,8 @@ public sealed class GetRideHandler : IRequestHandler<GetRideQuery, RideDetailRes
             ride.DistanceKm,
             ride.EstimatedDurationMin, ride.VehicleType.ToString(), ride.Fare,
             ride.Fare, ride.PlatformBookingFee, ride.TotalAmount, ride.PaymentMethod.ToString(),
-            ride.Status.ToString(), ride.RequestedAt, ride.AcceptedAt, ride.CompletedAt, ride.DriverId);
+            ride.Status.ToString(), ride.RequestedAt, ride.AcceptedAt, ride.StartedAt, ride.CompletedAt, ride.DriverId,
+            userId == ride.UserId ? ride.OtpCode : null);
     }
 }
 
@@ -857,11 +860,20 @@ public sealed class ArriveAtPickupHandler : IRequestHandler<ArriveAtPickupComman
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService? _notifications;
 
     public ArriveAtPickupHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
+        _notifications = null;
+    }
+
+    public ArriveAtPickupHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = notifications;
     }
 
     public async Task<Unit> Handle(ArriveAtPickupCommand request, CancellationToken cancellationToken)
@@ -872,7 +884,36 @@ public sealed class ArriveAtPickupHandler : IRequestHandler<ArriveAtPickupComman
         await ValidateDriverOwnershipAsync(ride, cancellationToken);
         ride.ArriveAtPickup();
         await _context.SaveChangesAsync(cancellationToken);
+
+        if (_notifications is not null)
+        {
+            _ = SendDriverArrivedPushAsync(ride, cancellationToken);
+        }
+
         return Unit.Value;
+    }
+
+    private async Task SendDriverArrivedPushAsync(RideRequest ride, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notifications!.SendTargetedPushAsync(
+                ride.UserId,
+                "Driver has arrived!",
+                $"Your driver has arrived at {ride.PickupAddress}.",
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", $"/ride/{ride.Id}" },
+                    { "type", "driver_arrived" },
+                    { "ride_id", ride.Id.ToString() },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort delivery — never crash the arrival flow.
+        }
     }
 
     private async Task ValidateDriverOwnershipAsync(Domain.Entities.RideRequest ride, CancellationToken cancellationToken)
@@ -893,11 +934,20 @@ public sealed class VerifyOtpAndStartHandler : IRequestHandler<VerifyOtpAndStart
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService? _notifications;
 
     public VerifyOtpAndStartHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
+        _notifications = null;
+    }
+
+    public VerifyOtpAndStartHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = notifications;
     }
 
     public async Task<Unit> Handle(VerifyOtpAndStartCommand request, CancellationToken cancellationToken)
@@ -917,7 +967,36 @@ public sealed class VerifyOtpAndStartHandler : IRequestHandler<VerifyOtpAndStart
 
         ride.VerifyOtpAndStart(request.Otp);
         await _context.SaveChangesAsync(cancellationToken);
+
+        if (_notifications is not null)
+        {
+            _ = SendRideStartedPushAsync(ride, cancellationToken);
+        }
+
         return Unit.Value;
+    }
+
+    private async Task SendRideStartedPushAsync(RideRequest ride, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notifications!.SendTargetedPushAsync(
+                ride.UserId,
+                "Ride started!",
+                $"Your ride to {ride.DropoffAddress} is now en route.",
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", $"/ride/{ride.Id}" },
+                    { "type", "ride_started" },
+                    { "ride_id", ride.Id.ToString() },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort delivery — never crash the start flow.
+        }
     }
 }
 

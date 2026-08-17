@@ -162,15 +162,15 @@ public sealed class FoodOrderEntityTests
     }
 
     [Fact]
-    public void Create_VendorPayoutEqualsSubTotal_PlatformFeeZero()
+    public void Create_VendorPayoutEqualsSubTotal_PlatformFeeTwo()
     {
         var order = FoodOrder.Create(
             Guid.NewGuid(), Guid.NewGuid(), "123 Main St",
             GeoLocation.Create(11.93, 79.83), 280m, 30m, 0m, PaymentMethod.Cash);
 
         order.VendorPayout.Should().Be(order.SubTotal);
-        order.PlatformFee.Should().Be(0m);
-        order.TotalAmount.Should().Be(280m + 30m + 0m);
+        order.PlatformFee.Should().Be(2m);
+        order.TotalAmount.Should().Be(280m + 30m + 2m);
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public sealed class FoodOrderEntityTests
         order.AddItem("Pizza", 2, 150m);
 
         order.SubTotal.Should().Be(300m);
-        order.TotalAmount.Should().Be(330m);
+        order.TotalAmount.Should().Be(332m);
         order.Items.Should().HaveCount(1);
     }
 

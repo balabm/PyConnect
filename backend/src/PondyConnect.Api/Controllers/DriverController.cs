@@ -293,19 +293,90 @@ public sealed class DriverController : ControllerBase
         }
     }
 
+    [HttpPost("tasks/{taskId:guid}/start")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> StartTask(Guid taskId, [FromBody] StartTaskRequest request, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        // Ownership check: only the driver assigned to this task can update it.
+        var task = await _dbContext.DispatchTasks
+            .FirstOrDefaultAsync(t => t.Id == taskId && t.DriverId == driver.Id, ct);
+        if (task is null)
+            return NotFound(new { Message = "Task not found or not assigned to you." });
+
+        if (task.TaskType != DispatchTaskType.Ride || !task.SourceEntityId.HasValue)
+            return BadRequest(new { Message = "Task is not a ride or has no source ride." });
+
+        try
+        {
+            await _mediator.Send(new VerifyOtpAndStartCommand(task.SourceEntityId.Value, request.Otp), ct);
+            return Ok(new { Message = "Ride started." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
     [HttpPost("tasks/{taskId:guid}/complete")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CompleteTask(Guid taskId, CancellationToken ct)
     {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        // Ownership check: only the driver assigned to this task can update it.
+        var task = await _dbContext.DispatchTasks
+            .FirstOrDefaultAsync(t => t.Id == taskId && t.DriverId == driver.Id, ct);
+        if (task is null)
+            return NotFound(new { Message = "Task not found or not assigned to you." });
+
+        // Idempotent: already completed.
+        if (task.Status == DispatchTaskStatus.Completed)
+            return NoContent();
+
+        // For ride tasks, complete the underlying ride first so notifications,
+        // wallet commission, and end-of-ride cleanup are performed.
+        if (task.TaskType == DispatchTaskType.Ride && task.SourceEntityId.HasValue)
+        {
+            var ride = await _dbContext.RideRequests
+                .FirstOrDefaultAsync(r => r.Id == task.SourceEntityId.Value && r.DriverId == driver.Id, ct);
+            if (ride is not null && ride.Status != RideStatus.Completed)
+            {
+                try
+                {
+                    await _mediator.Send(new CompleteRideWithMetricsCommand(ride.Id, ride.DistanceKm, ride.EstimatedDurationMin), ct);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return BadRequest(new { Message = ex.Message });
+                }
+            }
+        }
+
         try
         {
-            await _mediator.Send(new CompleteTaskCommand(taskId), ct);
+            task.Complete();
+            await _dbContext.SaveChangesAsync(ct);
             return NoContent();
         }
         catch (InvalidOperationException ex)
         {
-            return NotFound(new { Message = ex.Message });
+            return BadRequest(new { Message = ex.Message });
         }
     }
 
@@ -521,3 +592,5 @@ public sealed record DriverProfileResponse(
     bool HasSignedAgreement,
     bool IsOnline,
     string? UpiId);
+
+public sealed record StartTaskRequest(string Otp);
