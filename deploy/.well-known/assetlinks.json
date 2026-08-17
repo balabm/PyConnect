@@ -1,0 +1,32 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pondyconnect.app",
+      "sha256_cert_fingerprints": [
+        "PLACEHOLDER_SHA256_FINGERPRINT"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pondyconnect.driver",
+      "sha256_cert_fingerprints": [
+        "PLACEHOLDER_SHA256_FINGERPRINT"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pondyconnect.partner",
+      "sha256_cert_fingerprints": [
+        "PLACEHOLDER_SHA256_FINGERPRINT"
+      ]
+    }
+  }
+]

@@ -68,6 +68,24 @@ public sealed class Driver : BaseEntity
     /// <summary>Storage key for the driver selfie photo.</summary>
     public string? SelfieUrl { get; private set; }
 
+    /// <summary>OCR verification: whether the KYC was automatically approved.</summary>
+    public bool? KycAutoApproved { get; private set; }
+
+    /// <summary>OCR confidence score for the extracted fields (0.0 - 1.0).</summary>
+    public double? KycConfidence { get; private set; }
+
+    /// <summary>Reason or notes from the OCR verification step.</summary>
+    public string? KycVerificationReason { get; private set; }
+
+    /// <summary>Name extracted from the driving license by OCR.</summary>
+    public string? KycParsedName { get; private set; }
+
+    /// <summary>License number extracted from the driving license by OCR.</summary>
+    public string? KycLicenseNumber { get; private set; }
+
+    /// <summary>License expiry date extracted from the driving license by OCR.</summary>
+    public DateTime? KycExpiryDate { get; private set; }
+
     /// <summary>Whether the driver has completed the mandatory safety tutorial.</summary>
     public bool HasCompletedTutorial { get; private set; }
 
@@ -223,6 +241,23 @@ public sealed class Driver : BaseEntity
         RcUrl = rcUrl;
         UpiId = upiId;
         IsKycUploaded = true;
+        MarkUpdated();
+    }
+
+    public void RecordKycVerification(
+        bool? autoApproved,
+        double? confidence,
+        string? reason,
+        string? parsedName,
+        string? licenseNumber,
+        DateTime? expiryDate)
+    {
+        KycAutoApproved = autoApproved;
+        KycConfidence = confidence;
+        KycVerificationReason = reason;
+        KycParsedName = parsedName;
+        KycLicenseNumber = licenseNumber;
+        KycExpiryDate = expiryDate;
         MarkUpdated();
     }
 

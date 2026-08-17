@@ -42,6 +42,13 @@ public sealed class DriverConfiguration : IEntityTypeConfiguration<Driver>
         builder.Property(d => d.UpiId).HasMaxLength(50);
         builder.Property(d => d.IsKycUploaded).HasDefaultValue(false);
 
+        builder.Property(d => d.KycAutoApproved);
+        builder.Property(d => d.KycConfidence).HasPrecision(3, 2);
+        builder.Property(d => d.KycVerificationReason).HasMaxLength(500);
+        builder.Property(d => d.KycParsedName).HasMaxLength(120);
+        builder.Property(d => d.KycLicenseNumber).HasMaxLength(50);
+        builder.Property(d => d.KycExpiryDate).HasColumnType("timestamptz");
+
         builder.HasIndex(d => d.UserId);
         builder.HasIndex(d => d.IsOnline);
         builder.HasIndex(d => d.IsApproved);

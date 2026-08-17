@@ -24,6 +24,8 @@ public sealed class DispatchTask : BaseEntity
 
     public DispatchTaskStatus Status { get; private set; } = DispatchTaskStatus.Available;
 
+    public Guid? BatchGroupId { get; private set; }
+
     private DispatchTask()
     {
     }
@@ -110,6 +112,15 @@ public sealed class DispatchTask : BaseEntity
             return;
 
         Status = DispatchTaskStatus.Cancelled;
+        MarkUpdated();
+    }
+
+    public void AssignToBatch(Guid batchGroupId)
+    {
+        if (batchGroupId == Guid.Empty)
+            throw new ArgumentException("Batch group ID cannot be empty.", nameof(batchGroupId));
+
+        BatchGroupId = batchGroupId;
         MarkUpdated();
     }
 

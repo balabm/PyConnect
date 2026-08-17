@@ -63,6 +63,7 @@ dependencies:
   esc_pos_utils: ^1.1.0
   blue_thermal_printer: ^1.2.9
   shared_preferences: ^2.5.5
+  share_plus: ^10.0.0
   qr_flutter: ^4.1.0
 
 dev_dependencies:

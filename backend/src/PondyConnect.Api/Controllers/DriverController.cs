@@ -267,6 +267,15 @@ public sealed class DriverController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("tasks/batch/{batchGroupId:guid}")]
+    [ProducesResponseType(typeof(IReadOnlyList<DispatchTaskResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<DispatchTaskResponse>>> GetBatchedTasks(Guid batchGroupId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetBatchedTasksQuery(batchGroupId), ct);
+        if (result is null) return Ok(Array.Empty<DispatchTaskResponse>());
+        return Ok(result);
+    }
+
     [HttpPost("tasks/{taskId:guid}/accept")]
     [ProducesResponseType(typeof(DispatchTaskResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

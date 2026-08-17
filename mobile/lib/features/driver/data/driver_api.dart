@@ -20,6 +20,14 @@ class DriverApi {
         .toList();
   }
 
+  Future<List<DispatchTaskModel>> getBatchedTasks(String batchGroupId) async {
+    final data = await _api.get('api/driver/tasks/batch/$batchGroupId');
+    final list = data as List;
+    return list
+        .map((e) => DispatchTaskModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<DispatchTaskModel> acceptTask(String taskId) async {
     final data = await _api.post('api/driver/tasks/$taskId/accept');
     return DispatchTaskModel.fromJson(data as Map<String, dynamic>);

@@ -277,6 +277,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               rideId: state.pathParameters['id']!,
             ),
           ),
+          // Deep-link alias for shared venue URLs: https://pyconnect.run.place/venue/:id
+          GoRoute(
+            path: 'venue/:id',
+            builder: (_, state) => VenueDetailScreen(
+              venueId: state.pathParameters['id']!,
+            ),
+          ),
+          // Deep-link alias for shared restaurant URLs: https://pyconnect.run.place/restaurant/:id
+          GoRoute(
+            path: 'restaurant/:id',
+            builder: (_, state) => FoodScreen(
+              vendorId: state.pathParameters['id']!,
+              vendorName: state.uri.queryParameters['name'],
+              deliveryFee: double.tryParse(
+                      state.uri.queryParameters['deliveryFee'] ?? '') ??
+                  20.0,
+            ),
+          ),
           GoRoute(
             path: 'rentals',
             builder: (_, _) => const TransitScreen(),

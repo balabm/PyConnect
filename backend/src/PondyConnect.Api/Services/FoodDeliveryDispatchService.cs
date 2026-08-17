@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Api.Hubs;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Dispatch;
 using PondyConnect.Application.Features.RideHailing;
 using PondyConnect.Domain.ValueObjects;
 
@@ -24,17 +25,20 @@ public sealed class FoodDeliveryDispatchService : IFoodDeliveryDispatchService
     private readonly IApplicationDbContext _context;
     private readonly DriverLocationStore _locationStore;
     private readonly DispatchTaskService _dispatchTaskService;
+    private readonly BatchingService _batchingService;
 
     public FoodDeliveryDispatchService(
         IHubContext<DriverHub> driverHub,
         IApplicationDbContext context,
         DriverLocationStore locationStore,
-        DispatchTaskService dispatchTaskService)
+        DispatchTaskService dispatchTaskService,
+        BatchingService batchingService)
     {
         _driverHub = driverHub;
         _context = context;
         _locationStore = locationStore;
         _dispatchTaskService = dispatchTaskService;
+        _batchingService = batchingService;
     }
 
     /// <summary>
@@ -49,18 +53,13 @@ public sealed class FoodDeliveryDispatchService : IFoodDeliveryDispatchService
             .FirstOrDefaultAsync(o => o.Id == foodOrderId, cancellationToken);
         if (order is null) return Array.Empty<Guid>();
 
-        // Create a DispatchTask so the driver can see, accept, and progress
-        // through the delivery lifecycle via the REST API. Idempotency: only
-        // create if no task already exists for this food order.
+        // Idempotency: only process once per food order.
         var existingTask = await _context.DispatchTasks
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.SourceEntityId == order.Id && t.TaskType == Domain.Enums.DispatchTaskType.FoodDelivery, cancellationToken);
 
-        if (existingTask is null)
-        {
-            _dispatchTaskService.CreateFromFoodOrder(order);
-            await _context.SaveChangesAsync(cancellationToken);
-        }
+        if (existingTask is not null)
+            return Array.Empty<Guid>();
 
         // Resolve pickup location: vendor's linked venue, or fall back to delivery area
         GeoLocation pickupLocation;
@@ -81,7 +80,61 @@ public sealed class FoodDeliveryDispatchService : IFoodDeliveryDispatchService
             pickupAddress = order.DeliveryAddress;
         }
 
-        // Find nearby online drivers (any vehicle type — food delivery doesn't require a specific vehicle)
+        var dropoffLocation = order.DeliveryLocation;
+
+        // Try to batch with an active delivery from the same restaurant/route.
+        var batchResult = await _batchingService.TryBatchOrderAsync(
+            order.VendorId,
+            pickupLocation.Latitude,
+            pickupLocation.Longitude,
+            dropoffLocation.Latitude,
+            dropoffLocation.Longitude,
+            cancellationToken);
+
+        if (batchResult.Batched)
+        {
+            var candidate = await _context.DispatchTasks
+                .FirstOrDefaultAsync(t => t.Id == batchResult.TaskIds![0], cancellationToken);
+
+            if (candidate is not null)
+            {
+                candidate.AssignToBatch(batchResult.BatchGroupId!.Value);
+
+                var batchedTask = _dispatchTaskService.CreateFromFoodOrder(order, pickupLocation, dropoffLocation);
+                batchedTask.AssignToBatch(batchResult.BatchGroupId.Value);
+                batchedTask.Assign(batchResult.DriverId!.Value);
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // Notify only the already-assigned driver about the new batch order.
+                var vendor = await _context.Vendors
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(v => v.Id == order.VendorId, cancellationToken);
+
+                var vendorName = vendor?.Name ?? "Unknown Restaurant";
+
+                var offer = new FoodDeliveryOfferBroadcast(
+                    OrderId: order.Id,
+                    VendorName: vendorName,
+                    PickupAddress: pickupAddress,
+                    DeliveryAddress: order.DeliveryAddress,
+                    DeliveryFee: order.DeliveryFee,
+                    LateNightDriverBonus: order.LateNightDriverBonus,
+                    TotalAmount: order.TotalAmount,
+                    PaymentMethod: order.PaymentMethod.ToString(),
+                    ExpiresIn: 20);
+
+                await _driverHub.Clients.Group($"driver:{batchResult.DriverId.Value}")
+                    .SendAsync("FoodDeliveryOffer", offer, cancellationToken);
+
+                return new[] { batchResult.DriverId.Value };
+            }
+        }
+
+        // No batch match — create a normal dispatch task and broadcast to nearby drivers.
+        _dispatchTaskService.CreateFromFoodOrder(order, pickupLocation, dropoffLocation);
+        await _context.SaveChangesAsync(cancellationToken);
+
         var nearby = _locationStore.GetNearby(pickupLocation, radiusKm: 3.0, vehicleTypeFilter: null, maxCount: 5);
 
         if (nearby.Count == 0)
@@ -93,15 +146,15 @@ public sealed class FoodDeliveryDispatchService : IFoodDeliveryDispatchService
         if (nearby.Count == 0)
             return Array.Empty<Guid>();
 
-        var vendor = await _context.Vendors
+        var broadcastVendor = await _context.Vendors
             .AsNoTracking()
             .FirstOrDefaultAsync(v => v.Id == order.VendorId, cancellationToken);
 
-        var vendorName = vendor?.Name ?? "Unknown Restaurant";
+        var broadcastVendorName = broadcastVendor?.Name ?? "Unknown Restaurant";
 
-        var offer = new FoodDeliveryOfferBroadcast(
+        var broadcastOffer = new FoodDeliveryOfferBroadcast(
             OrderId: order.Id,
-            VendorName: vendorName,
+            VendorName: broadcastVendorName,
             PickupAddress: pickupAddress,
             DeliveryAddress: order.DeliveryAddress,
             DeliveryFee: order.DeliveryFee,
@@ -113,7 +166,7 @@ public sealed class FoodDeliveryDispatchService : IFoodDeliveryDispatchService
         foreach (var driver in nearby)
         {
             await _driverHub.Clients.Group($"driver:{driver.DriverId}")
-                .SendAsync("FoodDeliveryOffer", offer, cancellationToken);
+                .SendAsync("FoodDeliveryOffer", broadcastOffer, cancellationToken);
         }
 
         return nearby.Select(d => d.DriverId).ToList();

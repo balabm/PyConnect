@@ -85,6 +85,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
 
+    public DbSet<DisputeTicket> DisputeTickets => Set<DisputeTicket>();
+
     public DbSet<TicketMessage> TicketMessages => Set<TicketMessage>();
 
     public DbSet<AdminActionLog> AdminActionLogs => Set<AdminActionLog>();

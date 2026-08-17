@@ -14,7 +14,9 @@ public sealed record DispatchTaskResponse(
     string DropoffAddress,
     decimal DriverEarnings,
     string Status,
-    Guid? DriverId);
+    Guid? DriverId,
+    Guid? BatchGroupId,
+    Guid? OrderId);
 
 public sealed class GetAvailableTasksHandler : IRequestHandler<GetAvailableTasksQuery, IReadOnlyList<DispatchTaskResponse>>
 {
@@ -53,7 +55,9 @@ public sealed class GetAvailableTasksHandler : IRequestHandler<GetAvailableTasks
                 t.DropoffAddress,
                 t.DriverEarnings,
                 t.Status.ToString(),
-                t.DriverId))
+                t.DriverId,
+                t.BatchGroupId,
+                t.SourceEntityId))
             .ToList();
     }
 }
@@ -94,7 +98,9 @@ public sealed class AcceptTaskHandler : IRequestHandler<AcceptTaskCommand, Dispa
             task.DropoffAddress,
             task.DriverEarnings,
             task.Status.ToString(),
-            task.DriverId);
+            task.DriverId,
+            task.BatchGroupId,
+            task.SourceEntityId);
     }
 }
 
@@ -115,5 +121,49 @@ public sealed class CompleteTaskHandler : IRequestHandler<CompleteTaskCommand, U
         task.Complete();
         await _context.SaveChangesAsync(cancellationToken);
         return Unit.Value;
+    }
+}
+
+public sealed record GetBatchedTasksQuery(Guid BatchGroupId) : IRequest<IReadOnlyList<DispatchTaskResponse>>;
+
+public sealed class GetBatchedTasksHandler : IRequestHandler<GetBatchedTasksQuery, IReadOnlyList<DispatchTaskResponse>>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+
+    public GetBatchedTasksHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    {
+        _context = context;
+        _currentUser = currentUser;
+    }
+
+    public async Task<IReadOnlyList<DispatchTaskResponse>> Handle(GetBatchedTasksQuery request, CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId
+            ?? throw new UnauthorizedAccessException("User not authenticated.");
+
+        var driver = await _context.Drivers.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.UserId == userId, cancellationToken)
+            ?? throw new InvalidOperationException("Driver profile not found.");
+
+        var tasks = await _context.DispatchTasks
+            .AsNoTracking()
+            .Where(t => t.BatchGroupId == request.BatchGroupId
+                && t.DriverId == driver.Id)
+            .OrderBy(t => t.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return tasks
+            .Select(t => new DispatchTaskResponse(
+                t.Id,
+                t.TaskType.ToString(),
+                t.PickupAddress,
+                t.DropoffAddress,
+                t.DriverEarnings,
+                t.Status.ToString(),
+                t.DriverId,
+                t.BatchGroupId,
+                t.SourceEntityId))
+            .ToList();
     }
 }

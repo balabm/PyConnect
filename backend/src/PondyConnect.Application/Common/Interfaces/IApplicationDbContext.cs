@@ -77,6 +77,8 @@ public interface IApplicationDbContext
 
     DbSet<SupportTicket> SupportTickets { get; }
 
+    DbSet<DisputeTicket> DisputeTickets { get; }
+
     DbSet<TicketMessage> TicketMessages { get; }
 
     DbSet<AdminActionLog> AdminActionLogs { get; }

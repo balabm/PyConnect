@@ -99,6 +99,9 @@ public static class DependencyInjection
         // pre-configured HttpClient (base address set in Program.cs).
         services.AddScoped<IWhatsAppSender, WhatsAppMessageSender>();
 
+        // OCR document verification: pluggable Google Vision / AWS Textract.
+        services.AddScoped<IDocumentVerificationService, DocumentVerificationService>();
+
         services.Configure<Services.JwtTokenOptions>(configuration.GetSection(Services.JwtTokenOptions.SectionName));
         services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
 

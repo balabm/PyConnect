@@ -26,14 +26,14 @@ public sealed class DispatchTaskService
         return task;
     }
 
-    public DispatchTask CreateFromFoodOrder(FoodOrder order)
+    public DispatchTask CreateFromFoodOrder(FoodOrder order, GeoLocation pickupLocation, GeoLocation dropoffLocation)
     {
         var earnings = order.DeliveryFee + order.LateNightDriverBonus;
 
         var task = DispatchTask.Create(
             taskType: DispatchTaskType.FoodDelivery,
-            pickupLocation: GeoLocation.Zero,
-            dropoffLocation: GeoLocation.Zero,
+            pickupLocation: pickupLocation,
+            dropoffLocation: dropoffLocation,
             pickupAddress: "Vendor location",
             dropoffAddress: order.DeliveryAddress,
             driverEarnings: earnings,

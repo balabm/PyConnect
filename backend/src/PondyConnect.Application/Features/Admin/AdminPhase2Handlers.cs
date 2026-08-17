@@ -188,7 +188,13 @@ public sealed record DriverSummaryResponse(
     string? DrivingLicenseUrl,
     string? RcUrl,
     string? InsuranceUrl,
-    string? SelfieUrl);
+    string? SelfieUrl,
+    bool? KycAutoApproved,
+    double? KycConfidence,
+    string? KycVerificationReason,
+    string? KycParsedName,
+    string? KycLicenseNumber,
+    DateTime? KycExpiryDate);
 
 public sealed class ListDriversHandler : IRequestHandler<ListDriversQuery, PagedResult<DriverSummaryResponse>>
 {
@@ -244,7 +250,13 @@ public sealed class ListDriversHandler : IRequestHandler<ListDriversQuery, Paged
                 d.DrivingLicenseUrl,
                 d.RcUrl,
                 d.InsuranceUrl,
-                d.SelfieUrl))
+                d.SelfieUrl,
+                d.KycAutoApproved,
+                d.KycConfidence,
+                d.KycVerificationReason,
+                d.KycParsedName,
+                d.KycLicenseNumber,
+                d.KycExpiryDate))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<DriverSummaryResponse>(items, totalCount, page, pageSize);

@@ -164,4 +164,154 @@ class SupportApi {
         .map((e) => TicketMessageModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  Future<CreateTicketResponse> createTicket(CreateTicketRequest request) async {
+    final body = await _api.post(
+      '/api/tickets',
+      data: request.toJson(),
+    );
+    return CreateTicketResponse.fromJson(body as Map<String, dynamic>);
+  }
+
+  Future<List<DisputeTicketModel>> getMyTickets() async {
+    final body = await _api.get('/api/tickets');
+    return (body as List)
+        .map((e) => DisputeTicketModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<DisputeTicketDetail> getTicket(String id) async {
+    final body = await _api.get('/api/tickets/$id');
+    return DisputeTicketDetail.fromJson(body as Map<String, dynamic>);
+  }
+}
+
+class CreateTicketRequest {
+  CreateTicketRequest({
+    required this.category,
+    required this.subject,
+    required this.description,
+    this.orderId,
+    this.orderType,
+    this.photoUrl,
+  });
+
+  final String category;
+  final String subject;
+  final String description;
+  final String? orderId;
+  final String? orderType;
+  final String? photoUrl;
+
+  Map<String, dynamic> toJson() => {
+        'category': category,
+        'subject': subject,
+        'description': description,
+        if (orderId != null) 'orderId': orderId,
+        if (orderType != null) 'orderType': orderType,
+        if (photoUrl != null) 'photoUrl': photoUrl,
+      };
+}
+
+class CreateTicketResponse {
+  CreateTicketResponse({
+    required this.ticketId,
+    required this.autoResolved,
+    this.creditAmount,
+    this.message,
+    required this.status,
+  });
+
+  factory CreateTicketResponse.fromJson(Map<String, dynamic> json) =>
+      CreateTicketResponse(
+        ticketId: json['ticketId'] as String? ?? '',
+        autoResolved: json['autoResolved'] as bool? ?? false,
+        creditAmount: (json['creditAmount'] as num?)?.toDouble(),
+        message: json['message'] as String?,
+        status: json['status'] as String? ?? 'Open',
+      );
+
+  final String ticketId;
+  final bool autoResolved;
+  final double? creditAmount;
+  final String? message;
+  final String status;
+}
+
+class DisputeTicketModel {
+  DisputeTicketModel({
+    required this.id,
+    required this.category,
+    required this.subject,
+    required this.status,
+    this.resolutionAmount,
+    required this.createdAt,
+  });
+
+  factory DisputeTicketModel.fromJson(Map<String, dynamic> json) =>
+      DisputeTicketModel(
+        id: json['id'] as String? ?? '',
+        category: json['category'] as String? ?? '',
+        subject: json['subject'] as String? ?? '',
+        status: json['status'] as String? ?? 'Open',
+        resolutionAmount: (json['resolutionAmount'] as num?)?.toDouble(),
+        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+      );
+
+  final String id;
+  final String category;
+  final String subject;
+  final String status;
+  final double? resolutionAmount;
+  final DateTime createdAt;
+}
+
+class DisputeTicketDetail {
+  DisputeTicketDetail({
+    required this.id,
+    required this.category,
+    required this.subject,
+    required this.description,
+    this.photoUrl,
+    required this.status,
+    this.resolutionAmount,
+    this.resolutionNote,
+    this.orderId,
+    this.orderType,
+    required this.createdAt,
+    this.resolvedAt,
+  });
+
+  factory DisputeTicketDetail.fromJson(Map<String, dynamic> json) =>
+      DisputeTicketDetail(
+        id: json['id'] as String? ?? '',
+        category: json['category'] as String? ?? '',
+        subject: json['subject'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        photoUrl: json['photoUrl'] as String?,
+        status: json['status'] as String? ?? 'Open',
+        resolutionAmount: (json['resolutionAmount'] as num?)?.toDouble(),
+        resolutionNote: json['resolutionNote'] as String?,
+        orderId: json['orderId'] as String?,
+        orderType: json['orderType'] as String?,
+        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+        resolvedAt: json['resolvedAt'] == null
+            ? null
+            : DateTime.tryParse(json['resolvedAt'] as String),
+      );
+
+  final String id;
+  final String category;
+  final String subject;
+  final String description;
+  final String? photoUrl;
+  final String status;
+  final double? resolutionAmount;
+  final String? resolutionNote;
+  final String? orderId;
+  final String? orderType;
+  final DateTime createdAt;
+  final DateTime? resolvedAt;
 }

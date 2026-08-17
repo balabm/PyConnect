@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
@@ -215,6 +216,11 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       appBar: AppBar(
         title: Text(widget.vendorName ?? 'Menu'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: 'Share restaurant',
+            onPressed: () { _shareRestaurant(); },
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'Order History',
@@ -670,6 +676,14 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         );
       }
     }
+  }
+
+  Future<void> _shareRestaurant() async {
+    final name = widget.vendorName ?? 'this restaurant';
+    await Share.share(
+      'Check out $name on PY Connect! https://pyconnect.run.place/restaurant/${widget.vendorId}',
+      subject: name,
+    );
   }
 
   void _showProcessingOverlay() {

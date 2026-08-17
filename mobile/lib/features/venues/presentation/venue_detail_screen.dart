@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -106,6 +107,13 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
             SliverAppBar(
               expandedHeight: 220,
               pinned: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.share_outlined, color: Colors.white),
+                  tooltip: 'Share venue',
+                  onPressed: () { _shareVenue(venue); },
+                ),
+              ],
               flexibleSpace: FlexibleSpaceBar(
                 title: Text(
                   venue.name,
@@ -620,6 +628,13 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     });
     await _fetchVenueFromApi();
     ref.invalidate(venueListProvider);
+  }
+
+  Future<void> _shareVenue(Venue venue) async {
+    await Share.share(
+      'Check out ${venue.name} on PY Connect! https://pyconnect.run.place/venue/${venue.id}',
+      subject: venue.name,
+    );
   }
 
   String _dayOfWeekLabel(DayOfWeek day) {

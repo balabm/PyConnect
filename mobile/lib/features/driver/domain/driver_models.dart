@@ -12,6 +12,7 @@ class DispatchTaskModel {
     required this.status,
     this.driverId,
     this.orderId,
+    this.batchGroupId,
     this.orderItems,
   });
 
@@ -23,6 +24,7 @@ class DispatchTaskModel {
   final String status;
   final String? driverId;
   final String? orderId;
+  final String? batchGroupId;
   final List<OrderItemModel>? orderItems;
 
   factory DispatchTaskModel.fromJson(Map<String, dynamic> json) {
@@ -36,6 +38,7 @@ class DispatchTaskModel {
       status: json['status'] as String,
       driverId: json['driverId'] as String?,
       orderId: json['orderId'] as String?,
+      batchGroupId: json['batchGroupId'] as String?,
       orderItems: itemsRaw
           ?.map((e) => OrderItemModel.fromJson(e as Map<String, dynamic>))
           .toList(),

@@ -39,6 +39,14 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Universal Links for https://pyconnect.run.place.
+	     Enables iOS to open the app directly (without Safari) for shareable
+	     deep-link paths when domain ownership is verified via the
+	     apple-app-site-association file served at the domain root. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:pyconnect.run.place</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

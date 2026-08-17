@@ -476,6 +476,23 @@ class _DetailPane extends StatelessWidget {
           _DocAvailabilityChip(label: 'Aadhaar', url: driver.aadhaarUrl),
           _DocAvailabilityChip(label: 'Selfie', url: driver.selfieUrl),
           const SizedBox(height: 24),
+          const _SectionTitle('OCR Verification'),
+          _KycVerificationBadge(autoApproved: driver.kycAutoApproved),
+          _Field(label: 'Parsed Name', value: driver.kycParsedName ?? '—'),
+          _Field(label: 'License Number', value: driver.kycLicenseNumber ?? '—'),
+          _Field(
+              label: 'Expiry',
+              value: driver.kycExpiryDate != null
+                  ? '${driver.kycExpiryDate!.day.toString().padLeft(2, '0')}/${driver.kycExpiryDate!.month.toString().padLeft(2, '0')}/${driver.kycExpiryDate!.year}'
+                  : '—'),
+          _Field(
+              label: 'Confidence',
+              value: driver.kycConfidence != null
+                  ? '${(driver.kycConfidence! * 100).toStringAsFixed(0)}%'
+                  : '—'),
+          if (driver.kycVerificationReason?.isNotEmpty == true)
+            _Field(label: 'Reason', value: driver.kycVerificationReason!),
+          const SizedBox(height: 24),
           // Giant action buttons
           _ApproveButton(onPressed: onApprove, loading: approving),
           const SizedBox(height: 12),
@@ -562,6 +579,45 @@ class _DocAvailabilityChip extends StatelessWidget {
                   color: present ? AdminColors.success : AdminColors.warning,
                   fontSize: 12,
                   fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _KycVerificationBadge extends StatelessWidget {
+  const _KycVerificationBadge({required this.autoApproved});
+  final bool? autoApproved;
+
+  @override
+  Widget build(BuildContext context) {
+    final approved = autoApproved == true;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: approved
+            ? AdminColors.success.withValues(alpha: 0.12)
+            : AdminColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            approved ? Icons.verified_rounded : Icons.error_outline_rounded,
+            size: 16,
+            color: approved ? AdminColors.success : AdminColors.warning,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            approved ? 'Auto-Verified' : 'Needs Manual Review',
+            style: TextStyle(
+              color: approved ? AdminColors.success : AdminColors.warning,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

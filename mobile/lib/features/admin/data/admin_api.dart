@@ -450,6 +450,12 @@ class AdminDriver {
     this.rcUrl,
     this.insuranceUrl,
     this.selfieUrl,
+    this.kycAutoApproved,
+    this.kycConfidence,
+    this.kycVerificationReason,
+    this.kycParsedName,
+    this.kycLicenseNumber,
+    this.kycExpiryDate,
   });
 
   factory AdminDriver.fromJson(Map<String, dynamic> json) => AdminDriver(
@@ -476,6 +482,14 @@ class AdminDriver {
         rcUrl: json['rcUrl'] as String?,
         insuranceUrl: json['insuranceUrl'] as String?,
         selfieUrl: json['selfieUrl'] as String?,
+        kycAutoApproved: json['kycAutoApproved'] as bool?,
+        kycConfidence: (json['kycConfidence'] as num?)?.toDouble(),
+        kycVerificationReason: json['kycVerificationReason'] as String?,
+        kycParsedName: json['kycParsedName'] as String?,
+        kycLicenseNumber: json['kycLicenseNumber'] as String?,
+        kycExpiryDate: json['kycExpiryDate'] == null
+            ? null
+            : DateTime.tryParse(json['kycExpiryDate'] as String),
       );
 
   final String id;
@@ -498,6 +512,12 @@ class AdminDriver {
   final String? rcUrl;
   final String? insuranceUrl;
   final String? selfieUrl;
+  final bool? kycAutoApproved;
+  final double? kycConfidence;
+  final String? kycVerificationReason;
+  final String? kycParsedName;
+  final String? kycLicenseNumber;
+  final DateTime? kycExpiryDate;
 }
 
 class ApproveDriverResult {

@@ -47,7 +47,9 @@ class _TaskView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return switch (task.taskType) {
       'Ride' => DriverRideScreen(rideId: task.id, driverId: task.driverId ?? ''),
-      'FoodDelivery' || 'EssentialsDrop' => DeliveryLifecycleScreen(task: task),
+      'FoodDelivery' || 'EssentialsDrop' => task.batchGroupId != null
+          ? BatchedDeliveryScreen(task: task)
+          : DeliveryLifecycleScreen(task: task),
       _ => DeliveryLifecycleScreen(task: task),
     };
   }
@@ -931,6 +933,273 @@ class _DeliveryCompleteCard extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Multi-order batched delivery state machine.
+///
+/// Phase 1: Pickup all orders at the store/restaurant.
+/// Phase 2: Drop off each order in sequence.
+class BatchedDeliveryScreen extends ConsumerStatefulWidget {
+  const BatchedDeliveryScreen({super.key, required this.task});
+
+  final DispatchTaskModel task;
+
+  @override
+  ConsumerState<BatchedDeliveryScreen> createState() =>
+      _BatchedDeliveryScreenState();
+}
+
+class _BatchedDeliveryScreenState extends ConsumerState<BatchedDeliveryScreen> {
+  List<DispatchTaskModel> _batchedTasks = [];
+  final Set<String> _completed = {};
+  bool _loading = true;
+  bool _pickingUp = false;
+  bool _completing = false;
+
+  bool get _allPickedUp =>
+      _batchedTasks.every((t) => t.status == 'OutForDelivery' || _completed.contains(t.id));
+
+  bool get _allDelivered =>
+      _batchedTasks.every((t) => _completed.contains(t.id));
+
+  DispatchTaskModel? get _currentDropoff => _batchedTasks
+      .where((t) => !_completed.contains(t.id))
+      .firstOrNull;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBatched();
+  }
+
+  Future<void> _loadBatched() async {
+    if (widget.task.batchGroupId == null) return;
+    try {
+      final tasks = await ref
+          .read(driverApiProvider)
+          .getBatchedTasks(widget.task.batchGroupId!);
+      if (mounted) {
+        setState(() {
+          _batchedTasks = tasks;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load batch: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickupAll() async {
+    AppHaptics.medium();
+    if (_pickingUp) return;
+    setState(() => _pickingUp = true);
+
+    try {
+      final api = ref.read(driverApiProvider);
+      for (final t in _batchedTasks) {
+        final status = t.status;
+        if (status == 'Assigned' || status == 'InProgress') {
+          await api.markArrivedAtStore(t.id);
+          await api.markOutForDelivery(t.id);
+        } else if (status == 'ArrivedAtStore') {
+          await api.markOutForDelivery(t.id);
+        }
+      }
+      await _loadBatched();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pickup all failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _pickingUp = false);
+    }
+  }
+
+  Future<void> _completeDropoff(String taskId) async {
+    AppHaptics.medium();
+    if (_completing) return;
+    setState(() => _completing = true);
+
+    try {
+      await ref.read(driverApiProvider).completeTask(taskId);
+      if (mounted) {
+        setState(() {
+          _completed.add(taskId);
+          _completing = false;
+        });
+
+        if (_allDelivered) {
+          final earnings = _batchedTasks.fold<double>(
+              0, (sum, t) => sum + t.driverEarnings);
+          PostTripSummarySheet.show(
+            context,
+            customerPaid: earnings,
+            driverEarnings: earnings,
+            tripType: 'Batched Food Delivery',
+            onDone: () {
+              Navigator.pop(context);
+              ref.read(activeTaskProvider.notifier).state = null;
+              ref.read(driverSelectedTabProvider.notifier).state = 0;
+            },
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _completing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Complete failed: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Batched Delivery'),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_allDelivered) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, size: 64, color: AppTheme.emerald),
+              const SizedBox(height: 16),
+              const Text(
+                'All orders delivered',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!_allPickedUp) {
+      return _buildPickupAll(context);
+    }
+
+    return _buildDropoffSequence(context);
+  }
+
+  Widget _buildPickupAll(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Pickup all orders at the restaurant before heading out.',
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          ..._batchedTasks.asMap().entries.map((e) {
+            final index = e.key;
+            final t = e.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _InfoCard(
+                icon: Icons.receipt_long,
+                title: 'Order ${String.fromCharCode(65 + index)}',
+                subtitle: t.dropoffAddress,
+                iconColor: AppTheme.emerald,
+              ),
+            );
+          }),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _pickingUp ? null : _pickupAll,
+              icon: _pickingUp
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.check_circle),
+              label: const Text('Pickup All'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropoffSequence(BuildContext context) {
+    final current = _currentDropoff;
+    if (current == null) return const SizedBox.shrink();
+
+    final currentIndex = _batchedTasks.indexOf(current);
+    final label = 'Dropoff Order ${String.fromCharCode(65 + currentIndex)}';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _InfoCard(
+            icon: Icons.home_outlined,
+            title: current.dropoffAddress,
+            subtitle: label,
+            iconColor: AppTheme.info,
+          ),
+          const SizedBox(height: 16),
+          _NavigationButton(
+            label: 'Navigate to customer',
+            address: current.dropoffAddress,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Pending dropoffs',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          ..._batchedTasks.asMap().entries.map((e) {
+            final index = e.key;
+            final t = e.value;
+            final isDone = _completed.contains(t.id);
+            return ListTile(
+              leading: Icon(
+                isDone ? Icons.check_circle : Icons.circle_outlined,
+                color: isDone ? AppTheme.emerald : null,
+              ),
+              title: Text('Order ${String.fromCharCode(65 + index)}'),
+              subtitle: Text(t.dropoffAddress),
+              trailing: isDone
+                  ? null
+                  : FilledButton(
+                      onPressed: _completing ? null : () => _completeDropoff(t.id),
+                      child: const Text('Complete'),
+                    ),
+            );
+          }),
         ],
       ),
     );

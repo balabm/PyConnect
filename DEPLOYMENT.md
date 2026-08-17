@@ -194,6 +194,21 @@ flutter build apk --flavor partner --target lib/main_partner.dart --release
 jarsigner -verify -verbose build/app/outputs/flutter-apk/app-consumer-release.apk
 ```
 
+### 4.4 Configure Native Deep Links
+
+1. **Android App Links**: Replace the `PLACEHOLDER_SHA256_FINGERPRINT` values in `deploy/.well-known/assetlinks.json` with the real SHA-256 fingerprints of each flavor's release signing keystore:
+   ```bash
+   keytool -list -v -keystore pyconnect-release.jks -alias pyconnect | grep SHA256
+   ```
+   Upload the updated `assetlinks.json` to `https://pyconnect.run.place/.well-known/assetlinks.json`.
+
+2. **iOS Universal Links**: Update `TEAM_ID` in `deploy/.well-known/apple-app-site-association` with the real Apple Team ID. Upload the file (no file extension) to `https://pyconnect.run.place/.well-known/apple-app-site-association` and ensure it is served with `Content-Type: application/json`.
+
+3. Verify both files are reachable over HTTPS and match the package/bundle IDs:
+   - `com.pondyconnect.app`
+   - `com.pondyconnect.driver`
+   - `com.pondyconnect.partner`
+
 ---
 
 ## Phase 5: Post-Deployment Smoke Tests
