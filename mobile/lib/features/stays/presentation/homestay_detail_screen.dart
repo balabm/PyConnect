@@ -146,9 +146,27 @@ class _HomestayDetailScreenState extends ConsumerState<HomestayDetailScreen> {
             slivers: [
               // Image Gallery
               SliverAppBar(
-                expandedHeight: 280,
+                expandedHeight: 250,
                 pinned: true,
+                floating: false,
+                snap: false,
+                backgroundColor: AppTheme.night,
                 flexibleSpace: FlexibleSpaceBar(
+                  title: Text(
+                    homestay.name,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 1)),
+                      ],
+                    ),
+                  ),
+                  collapseMode: CollapseMode.parallax,
+                  stretchModes: const [StretchMode.zoomBackground],
                   background: Stack(
                     children: [
                       PageView.builder(

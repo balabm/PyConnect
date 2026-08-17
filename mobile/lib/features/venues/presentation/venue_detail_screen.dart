@@ -105,8 +105,18 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
           slivers: [
             // Hero image in SliverAppBar — shrinks on scroll
             SliverAppBar(
-              expandedHeight: 220,
+              expandedHeight: 250,
               pinned: true,
+              floating: false,
+              snap: false,
+              backgroundColor: AppTheme.night,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  AppHaptics.light();
+                  context.pop();
+                },
+              ),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.share_outlined, color: Colors.white),
@@ -115,15 +125,18 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                 ),
               ],
               flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.parallax,
+                stretchModes: const [StretchMode.zoomBackground],
                 title: Text(
                   venue.name,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     shadows: [
-                      Shadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 1)),
-                      Shadow(color: Colors.black54, blurRadius: 4),
+                      Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 1)),
                     ],
                   ),
                 ),

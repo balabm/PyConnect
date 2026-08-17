@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/providers.dart';
 import '../../../core/network/razorpay_payment_service.dart';
 import '../../auth/application/auth_controller.dart';
@@ -31,9 +32,13 @@ class DriverEarningsScreen extends ConsumerWidget {
         },
         child: earningsAsync.when(
           loading: () => const ShimmerList(withImage: false, count: 5),
-          error: (e, _) => ErrorState(
-            message: e.toString(),
-            onRetry: () => ref.invalidate(driverEarningsProvider),
+          error: (e, _) => EmptyStateView(
+            isError: true,
+            icon: Icons.cloud_off_rounded,
+            title: 'Something went wrong',
+            subtitle: e.toString(),
+            actionLabel: 'Retry Connection',
+            onAction: () => ref.invalidate(driverEarningsProvider),
           ),
           data: (data) => _EarningsBody(data: data),
         ),
@@ -56,6 +61,24 @@ class _EarningsBody extends ConsumerWidget {
     final monthRides = data['monthRides'] ?? 0;
     final avgRating = (data['avgRating'] as num?)?.toDouble() ?? 5.0;
     final recentRides = data['recentRides'] as List<dynamic>? ?? [];
+    final isOnline = ref.watch(driverOnlineStatusProvider);
+    final hasEarnings = (todayEarnings as num) > 0 ||
+        (weekEarnings as num) > 0 ||
+        (monthEarnings as num) > 0 ||
+        (todayRides as num) > 0 ||
+        (weekRides as num) > 0 ||
+        (monthRides as num) > 0 ||
+        recentRides.isNotEmpty;
+
+    if (!isOnline || !hasEarnings) {
+      return EmptyStateView(
+        icon: Icons.account_balance_wallet_outlined,
+        title: 'No Earnings Yet',
+        subtitle: 'Complete tasks to see your daily summary here.',
+        actionLabel: 'Start Browsing Tasks',
+        onAction: () => ref.read(driverSelectedTabProvider.notifier).state = 0,
+      );
+    }
 
     // Fetch driver profile for the profile section
     final profileAsync = ref.watch(driverProfileProvider);

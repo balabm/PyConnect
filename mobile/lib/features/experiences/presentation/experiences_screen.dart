@@ -6,6 +6,7 @@ import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../venues/application/venue_controller.dart';
 import '../../venues/data/venue_api.dart';
@@ -53,7 +54,7 @@ class ExperiencesScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           experiences.when(
-            loading: () => const ShimmerList(count: 3, withImage: true),
+            loading: () => const SkeletonList(type: SkeletonType.homeVibe, count: 3),
             error: (e, _) => ErrorState(
               message: 'Could not load experiences: $e',
               onRetry: () => ref.invalidate(experiencesProvider),

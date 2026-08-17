@@ -8,6 +8,7 @@ import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
 
 final essentialsListProvider = FutureProvider<List<dynamic>>((ref) async {
   final api = ref.watch(essentialsApiProvider);
@@ -132,7 +133,7 @@ class _EssentialsScreenState extends ConsumerState<EssentialsScreen> {
           const SizedBox(height: 4),
           Expanded(
             child: productsAsync.when(
-              loading: () => const ShimmerList(count: 6, withImage: true),
+              loading: () => const SkeletonList(type: SkeletonType.quickEssential, count: 6),
               error: (e, _) => ErrorState(
                 message: e.toString(),
                 onRetry: () => ref.invalidate(essentialsListProvider),

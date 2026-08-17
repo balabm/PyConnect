@@ -8,10 +8,12 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/empty_state_view.dart';
 import '../../home/presentation/contextual_home.dart';
 import '../application/venue_controller.dart';
 import '../data/venue_api.dart';
 import 'vibe.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
 
 class VenueListScreen extends ConsumerStatefulWidget {
   const VenueListScreen({super.key, this.initialCategory, this.initialFilter});
@@ -201,16 +203,23 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
           // Venue list
           venuesAsync.when(
             loading: () => const SliverFillRemaining(
-              child: ShimmerList(count: 6, withImage: true),
+              child: const SkeletonList(type: SkeletonType.venue, count: 6),
             ),
             error: (e, _) => SliverFillRemaining(
-              child: ErrorState(message: 'Could not load venues. Please try again.', onRetry: () => ref.read(venueListProvider.notifier).refresh()),
+              child: EmptyStateView(
+                isError: true,
+                icon: Icons.cloud_off_rounded,
+                title: 'Something went wrong',
+                subtitle: 'Could not load venues. Please try again.',
+                actionLabel: 'Retry',
+                onAction: () => ref.read(venueListProvider.notifier).refresh(),
+              ),
             ),
             data: (venues) {
               final filtered = _filterVenues(venues);
               if (filtered.isEmpty) {
                 return const SliverFillRemaining(
-                  child: EmptyState(
+                  child: EmptyStateView(
                     icon: Icons.search_off,
                     title: 'No venues found',
                     subtitle: 'Try a different search or category.',

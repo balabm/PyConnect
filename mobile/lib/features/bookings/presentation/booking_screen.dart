@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,7 @@ import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../venues/application/venue_controller.dart';
 import '../../venues/data/venue_api.dart';
 import '../data/booking_api.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
 
 /// Cover-charge plus table reservation flow for a venue.
 class BookingScreen extends ConsumerStatefulWidget {
@@ -30,6 +33,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   String? _error;
   Venue? _resolvedVenue;
   BookingResult? _bookingResult;
+
+  /// Razorpay payment guard state.
+  bool _paymentInProgress = false;
+  Timer? _paymentGuardTimer;
 
   @override
   void didChangeDependencies() {
@@ -70,7 +77,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         appBar: AppBar(title: const Text('Booking')),
         body: Center(
           child: isLoading
-              ? const CircularProgressIndicator()
+              ? const SkeletonList(type: SkeletonType.booking, count: 1)
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -315,6 +322,21 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final paymentService = ref.read(razorpayPaymentProvider);
     final authSession = ref.read(authControllerProvider).valueOrNull;
 
+    setState(() => _paymentInProgress = true);
+    _paymentGuardTimer?.cancel();
+    _paymentGuardTimer = Timer(const Duration(minutes: 5), () {
+      if (!_paymentInProgress) return;
+      if (mounted) {
+        setState(() => _paymentInProgress = false);
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {
+          // Overlay may already be dismissed.
+        }
+        _showPaymentCancelledSnackBar();
+      }
+    });
+
     try {
       final order = await paymentService.createOrder(
         amount: amount,
@@ -325,14 +347,24 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
       _showProcessingOverlay();
 
-      final paymentResult = await paymentService.startPayment(
-        orderId: order.providerOrderId,
-        amount: (amount * 100).round(), // paise
-        phone: authSession?.phone ?? '',
-        userName: authSession?.name,
-      );
+      final paymentResult = await paymentService
+          .startPayment(
+            orderId: order.providerOrderId,
+            amount: (amount * 100).round(), // paise
+            phone: authSession?.phone ?? '',
+            userName: authSession?.name,
+          )
+          .timeout(
+            const Duration(minutes: 5),
+            onTimeout: () => PaymentError(
+              code: -1,
+              message: 'Payment timed out. Please try again.',
+            ),
+          );
 
       if (!mounted) return;
+      _paymentGuardTimer?.cancel();
+      setState(() => _paymentInProgress = false);
       Navigator.of(context, rootNavigator: true).pop();
 
       switch (paymentResult) {
@@ -354,16 +386,11 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             setState(() => _error = 'Payment verification failed');
             return;
           }
+          // Only confirm the booking once the backend has verified payment.
           setState(() => _bookingResult = booking);
         case PaymentError(:final code, :final message):
           if (mounted) {
-            _showPaymentErrorSnackBar(code, message, () {
-              _initiateRazorpayPayment(
-                serviceBookingId: serviceBookingId,
-                amount: amount,
-                booking: booking,
-              );
-            });
+            _showPaymentCancelledSnackBar();
           }
         case PaymentExternalWallet():
           if (mounted) {
@@ -373,11 +400,16 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           }
       }
     } catch (e) {
+      _paymentGuardTimer?.cancel();
+      setState(() => _paymentInProgress = false);
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        setState(() {
-          _error = 'Payment initiation failed: $e';
-        });
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {
+          // Overlay may already be dismissed.
+        }
+        _showPaymentCancelledSnackBar();
+        setState(() => _error = 'Payment initiation failed: $e');
       }
     }
   }
@@ -418,15 +450,11 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     );
   }
 
-  void _showPaymentErrorSnackBar(int code, String message, VoidCallback onRetry) {
+  void _showPaymentCancelledSnackBar() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Payment failed: $message (code $code)'),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(
-          label: 'Retry Payment',
-          onPressed: onRetry,
-        ),
+      const SnackBar(
+        content: Text('Payment cancelled. Your booking is saved.'),
+        duration: Duration(seconds: 4),
       ),
     );
   }

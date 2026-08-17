@@ -6,6 +6,8 @@ import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
+import '../../../core/widgets/empty_state_view.dart';
 
 /// Unified activity feed provider that calls GET /api/activity/all.
 /// Falls back to separate endpoints if the unified endpoint fails.
@@ -152,15 +154,19 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
 
     // Loading state (fallback providers)
     if (foodAsync.isLoading || rideAsync.isLoading || staysAsync.isLoading || rentalsAsync.isLoading) {
-      return const ShimmerList(count: 6, withImage: false);
+      return const SkeletonList(type: SkeletonType.activity, count: 6);
     }
 
     // Error state — only show error if ALL providers failed
     final allError = foodAsync.hasError && rideAsync.hasError && staysAsync.hasError && rentalsAsync.hasError;
     if (allError) {
-      return ErrorState(
-        message: 'Could not load activity. Please try again.',
-        onRetry: () {
+      return EmptyStateView(
+        isError: true,
+        icon: Icons.cloud_off_rounded,
+        title: 'Something went wrong',
+        subtitle: 'Could not load activity. Please try again.',
+        actionLabel: 'Retry',
+        onAction: () {
           ref.invalidate(_unifiedActivityProvider);
           ref.invalidate(_foodOrdersProvider);
           ref.invalidate(_rideHistoryProvider);
@@ -363,21 +369,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
     });
 
     if (items.isEmpty) {
-      return EmptyState(
-        icon: _filter == 'Stays'
-            ? Icons.bed_outlined
-            : _filter == 'Food'
-                ? Icons.restaurant_outlined
-                : _filter == 'Rides'
-                    ? Icons.two_wheeler_outlined
-                    : _filter == 'Rentals'
-                        ? Icons.key_outlined
-                        : Icons.receipt_long_outlined,
-        title: 'No ${_filter == 'All' ? 'activity' : _filter.toLowerCase()} yet',
-        subtitle: _filter == 'All'
-            ? 'Start exploring to see your orders and rides here.'
-            : 'Your ${_filter.toLowerCase()} history will appear here.',
-      );
+      return _buildEmptyState(context);
     }
 
     return ListView.separated(
@@ -447,11 +439,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
     });
 
     if (items.isEmpty) {
-      return const EmptyState(
-        icon: Icons.history,
-        title: 'No Activity Yet',
-        subtitle: 'Your bookings, rides, and orders will appear here.',
-      );
+      return _buildEmptyState(context);
     }
 
     return ListView.separated(
@@ -476,6 +464,44 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       case _ActivityType.rental:
         context.push('/rentals');
     }
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    if (_filter == 'Food') {
+      return EmptyStateView(
+        icon: Icons.restaurant_outlined,
+        title: 'Hungry?',
+        subtitle: 'Your past food orders will appear here.',
+        actionLabel: 'Explore Restaurants',
+        onAction: () => context.go('/food'),
+      );
+    }
+    if (_filter == 'Rides') {
+      return const EmptyStateView(
+        icon: Icons.local_taxi_outlined,
+        title: 'No rides yet',
+        subtitle: 'Your ride history will show up here.',
+      );
+    }
+    if (_filter == 'Stays') {
+      return const EmptyStateView(
+        icon: Icons.bed_outlined,
+        title: 'No stays yet',
+        subtitle: 'Your bookings will appear here.',
+      );
+    }
+    if (_filter == 'Rentals') {
+      return const EmptyStateView(
+        icon: Icons.key_outlined,
+        title: 'No rentals yet',
+        subtitle: 'Your rental history will show up here.',
+      );
+    }
+    return const EmptyStateView(
+      icon: Icons.receipt_long_outlined,
+      title: 'No Activity Yet',
+      subtitle: 'Your bookings, rides, and orders will appear here.',
+    );
   }
 }
 

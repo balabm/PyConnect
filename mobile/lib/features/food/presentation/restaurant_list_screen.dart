@@ -7,7 +7,9 @@ import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/empty_state_view.dart';
 import 'widgets/restaurant_card.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
 
 final restaurantListProvider =
     FutureProvider.family<List<dynamic>, bool>((ref, foodVendorsOnly) async {
@@ -174,10 +176,14 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
           const SizedBox(height: 4),
           Expanded(
             child: restaurantsAsync.when(
-              loading: () => const ShimmerList(withImage: false, count: 6),
-              error: (e, _) => ErrorState(
-                message: e.toString(),
-                onRetry: () => ref.invalidate(restaurantListProvider(_foodVendorsOnly)),
+              loading: () => const SkeletonList(type: SkeletonType.restaurant, count: 6),
+              error: (e, _) => EmptyStateView(
+                isError: true,
+                icon: Icons.cloud_off_rounded,
+                title: 'Something went wrong',
+                subtitle: e.toString(),
+                actionLabel: 'Retry',
+                onAction: () => ref.invalidate(restaurantListProvider(_foodVendorsOnly)),
               ),
               data: (vendors) {
                 // Seed the real-time status map with the initial API data.
@@ -186,7 +192,7 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
                 });
                 final filtered = _filterRestaurants(vendors);
                 if (filtered.isEmpty) {
-                  return const EmptyState(
+                  return const EmptyStateView(
                     icon: Icons.restaurant_outlined,
                     title: 'No restaurants found',
                     subtitle: 'Try a different search or cuisine.',

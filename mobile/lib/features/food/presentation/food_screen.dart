@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -15,6 +17,7 @@ import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../checkout/cart_controller.dart';
 import '../data/food_api.dart';
 import 'widgets/item_customization_sheet.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
 
 final menuProvider = FutureProvider.family<List<dynamic>, String>((ref, vendorId) async {
   final api = ref.watch(foodApiProvider);
@@ -41,6 +44,15 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   bool _loading = false;
   String _searchQuery = '';
   String? _categoryFilter;
+
+  /// Razorpay payment guard state.
+  bool _paymentInProgress = false;
+  Timer? _paymentGuardTimer;
+
+  /// Last cart summary inputs so the checkout sheet can be reshown if the
+  /// user cancels or the Razorpay flow errors out.
+  List<dynamic>? _lastMenuItems;
+  double _lastSubtotal = 0;
 
   /// Service category for the universal cart guard. All food items share
   /// this category so the cross-category guard only triggers when mixing
@@ -191,6 +203,76 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     }).toList();
   }
 
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 250,
+      pinned: true,
+      floating: false,
+      snap: false,
+      backgroundColor: AppTheme.night,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          AppHaptics.light();
+          context.pop();
+        },
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.share_outlined, color: Colors.white),
+          tooltip: 'Share restaurant',
+          onPressed: () { _shareRestaurant(); },
+        ),
+        IconButton(
+          icon: const Icon(Icons.history, color: Colors.white),
+          tooltip: 'Order History',
+          onPressed: () => context.push('/food/orders'),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          widget.vendorName ?? 'Menu',
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 1)),
+            ],
+          ),
+        ),
+        collapseMode: CollapseMode.parallax,
+        stretchModes: const [StretchMode.zoomBackground],
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            AppNetworkImage(
+              imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
+              fit: BoxFit.cover,
+              fallbackIcon: Icons.restaurant,
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.3),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.5),
+                  ],
+                  stops: const [0, 0.5, 1],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(menuProvider(widget.vendorId));
@@ -212,195 +294,202 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     final cartCount = isThisVendorCart ? cartState.itemCount : 0;
     final subtotal = isThisVendorCart ? cartState.subtotal : 0.0;
 
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.vendorName ?? 'Menu'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            tooltip: 'Share restaurant',
-            onPressed: () { _shareRestaurant(); },
-          ),
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: 'Order History',
-            onPressed: () => context.push('/food/orders'),
-          ),
-        ],
+      body: menuAsync.when(
+        loading: () => const CustomScrollView(
+          slivers: [
+            _buildSliverAppBar(),
+            SliverFillRemaining(child: const SkeletonList(type: SkeletonType.menu, count: 8)),
+          ],
+        ),
+        error: (e, _) => CustomScrollView(
+          slivers: [
+            _buildSliverAppBar(),
+            SliverFillRemaining(
+              child: ErrorState(
+                message: 'Could not load menu. Please try again.',
+                onRetry: () => ref.invalidate(menuProvider(widget.vendorId)),
+              ),
+            ),
+          ],
+        ),
+        data: (items) => _buildMenuSlivers(items, cartState, isAcceptingOrders, cartCount, subtotal),
       ),
-      body: Column(
-        children: [
-          // "Currently Unavailable" banner when vendor has paused orders
-          if (!isAcceptingOrders)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: AppTheme.danger.withValues(alpha: 0.1),
-              child: Row(
-                children: [
-                  Icon(Icons.pause_circle, size: 20, color: AppTheme.danger),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This restaurant is currently not accepting orders.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.danger,
+    );
+
+  }
+
+  Widget _buildMenuSlivers(
+    List<dynamic> items,
+    CartState cartState,
+    bool isAcceptingOrders,
+    int cartCount,
+    double subtotal,
+  ) {
+    final filtered = _filterItems(items);
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () => ref.refresh(menuProvider(widget.vendorId).future),
+          child: CustomScrollView(
+            slivers: [
+              _buildSliverAppBar(),
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isAcceptingOrders)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        color: AppTheme.danger.withValues(alpha: 0.1),
+                        child: Row(
+                          children: [
+                            Icon(Icons.pause_circle, size: 20, color: AppTheme.danger),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'This restaurant is currently not accepting orders.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.danger,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    FadeSlideIn(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Search menu...',
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                              borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
+                            ),
+                          ),
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 80),
+                      child: SizedBox(
+                        height: 42,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          children: [
+                            _buildPill('All', _categoryFilter == null, () {
+                              AppHaptics.selection();
+                              setState(() => _categoryFilter = null);
+                            }),
+                            ..._extractCategories(items).map((cat) => _buildPill(cat, _categoryFilter == cat, () {
+                                  AppHaptics.selection();
+                                  setState(() => _categoryFilter = cat);
+                                })),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          FadeSlideIn(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search menu...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    borderSide: BorderSide.none,
+              if (filtered.isEmpty)
+                const SliverFillRemaining(
+                  child: EmptyState(
+                    icon: Icons.restaurant_outlined,
+                    title: 'No items found',
+                    subtitle: 'Try a different search or category.',
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
+                )
+              else
+                SliverPadding(
+                  padding: EdgeInsets.only(bottom: cartCount > 0 ? 90 : 16, top: 4),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final item = filtered[index] as Map<String, dynamic>;
+                        final qty = _qtyInCart(cartState, item);
+                        return FadeSlideIn(
+                          delay: Duration(milliseconds: index * 50),
+                          child: _MenuItemTile(
+                            name: item['name'] as String? ?? '',
+                            description: item['description'] as String?,
+                            price: (item['price'] as num).toDouble(),
+                            category: item['category'] as String?,
+                            isLateNight: item['isLateNight'] as bool? ?? false,
+                            isVeg: item['isVeg'] as bool? ?? false,
+                            imageUrl: item['imageUrl'] as String?,
+                            quantity: qty,
+                            isEnabled: isAcceptingOrders,
+                            onAdd: () {
+                              AppHaptics.light();
+                              final parsed = MenuItem.fromJson(item);
+                              if (parsed.hasModifiers) {
+                                _showCustomizationSheet(item, qty);
+                              } else {
+                                _addToCart(item, 1);
+                              }
+                            },
+                            onRemove: () {
+                              AppHaptics.light();
+                              ref.read(cartProvider.notifier).decrementQuantity(_itemId(item));
+                            },
+                            onCardTap: () {
+                              AppHaptics.light();
+                              _showCustomizationSheet(item, qty);
+                            },
+                          ),
+                        );
+                      },
+                      childCount: filtered.length,
+                    ),
                   ),
                 ),
-                onChanged: (v) => setState(() => _searchQuery = v),
-              ),
-            ),
+            ],
           ),
-          FadeSlideIn(
-            delay: const Duration(milliseconds: 80),
-            child: SizedBox(
-              height: 42,
-              child: menuAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-                data: (items) {
-                  final categories = _extractCategories(items);
-                  return ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      _buildPill('All', _categoryFilter == null, () {
-                        AppHaptics.selection();
-                        setState(() => _categoryFilter = null);
-                      }),
-                      ...categories.map((cat) => _buildPill(cat, _categoryFilter == cat, () {
-                            AppHaptics.selection();
-                            setState(() => _categoryFilter = cat);
-                          })),
-                    ],
-                  );
+        ),
+        if (cartCount > 0)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: FadeSlideIn(
+              child: _CheckoutBar(
+                itemCount: cartCount,
+                subtotal: subtotal,
+                loading: _loading,
+                enabled: isAcceptingOrders,
+                onCheckout: () {
+                  AppHaptics.medium();
+                  _showCartSummarySheet(items, subtotal);
+                },
+                onClear: () {
+                  AppHaptics.light();
+                  ref.read(cartProvider.notifier).clear();
                 },
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: menuAsync.when(
-              loading: () => const ShimmerList(withImage: false, count: 6),
-              error: (e, _) => ErrorState(
-                message: 'Could not load menu. Please try again.',
-                onRetry: () => ref.invalidate(menuProvider(widget.vendorId)),
-              ),
-              data: (items) {
-                final filtered = _filterItems(items);
-                if (filtered.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.restaurant_outlined,
-                    title: 'No items found',
-                    subtitle: 'Try a different search or category.',
-                  );
-                }
-
-                return Stack(
-                  children: [
-                    RefreshIndicator(
-                      onRefresh: () => ref.refresh(menuProvider(widget.vendorId).future),
-                      child: ListView.builder(
-                        padding: EdgeInsets.only(bottom: cartCount > 0 ? 90 : 16, top: 4),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final item = filtered[index] as Map<String, dynamic>;
-                          final qty = _qtyInCart(cartState, item);
-                          return FadeSlideIn(
-                            delay: Duration(milliseconds: index * 50),
-                            child: _MenuItemTile(
-                              name: item['name'] as String? ?? '',
-                              description: item['description'] as String?,
-                              price: (item['price'] as num).toDouble(),
-                              category: item['category'] as String?,
-                              isLateNight: item['isLateNight'] as bool? ?? false,
-                              isVeg: item['isVeg'] as bool? ?? false,
-                              imageUrl: item['imageUrl'] as String?,
-                              quantity: qty,
-                              isEnabled: isAcceptingOrders,
-                              onAdd: () {
-                                AppHaptics.light();
-                                // If the item has modifier groups, open the
-                                // customization sheet instead of adding directly.
-                                final parsed = MenuItem.fromJson(item);
-                                if (parsed.hasModifiers) {
-                                  _showCustomizationSheet(item, qty);
-                                } else {
-                                  _addToCart(item, 1);
-                                }
-                              },
-                              onRemove: () {
-                                AppHaptics.light();
-                                ref.read(cartProvider.notifier).decrementQuantity(_itemId(item));
-                              },
-                              onCardTap: () {
-                                AppHaptics.light();
-                                _showCustomizationSheet(item, qty);
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    if (cartCount > 0)
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: 16,
-                        child: FadeSlideIn(
-                          child: _CheckoutBar(
-                            itemCount: cartCount,
-                            subtotal: subtotal,
-                            loading: _loading,
-                            enabled: isAcceptingOrders,
-                            onCheckout: () {
-                              AppHaptics.medium();
-                              _showCartSummarySheet(items, subtotal);
-                            },
-                            onClear: () {
-                              AppHaptics.light();
-                              ref.read(cartProvider.notifier).clear();
-                            },
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -568,17 +657,18 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       final foodOrderId = result['orderId'] as String?;
 
       if (mounted) {
-        ref.read(cartProvider.notifier).clear();
         if (paymentMethod == 1) {
-          // Cash on Delivery — skip Razorpay, show success directly
-          if (mounted) {
-            showModalBottomSheet(
-              context: context,
-              isDismissible: false,
-              builder: (_) => _CheckoutResultSheet(result: result),
-            );
-          }
+          // Cash on Delivery — order is confirmed, safe to clear the cart
+          ref.read(cartProvider.notifier).clear();
+          showModalBottomSheet(
+            context: context,
+            isDismissible: false,
+            builder: (_) => _CheckoutResultSheet(result: result),
+          );
         } else {
+          // Razorpay — keep the cart until the backend confirms payment.
+          _lastMenuItems = items;
+          _lastSubtotal = subtotal;
           await _initiateRazorpayPayment(
             foodOrderId: foodOrderId,
             amount: totalAmount,
@@ -602,6 +692,24 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
   }) async {
     final paymentService = ref.read(razorpayPaymentProvider);
     final authSession = ref.read(authControllerProvider).valueOrNull;
+
+    setState(() => _paymentInProgress = true);
+    _paymentGuardTimer?.cancel();
+    _paymentGuardTimer = Timer(const Duration(minutes: 5), () {
+      if (!_paymentInProgress) return;
+      if (mounted) {
+        setState(() => _paymentInProgress = false);
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {
+          // Overlay may already be dismissed.
+        }
+        _showPaymentCancelledSnackBar();
+        if (_lastMenuItems != null) {
+          _showCartSummarySheet(_lastMenuItems!, _lastSubtotal);
+        }
+      }
+    });
 
     try {
       final order = await paymentService.createOrder(
@@ -634,32 +742,38 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
           );
 
       if (!mounted) return;
+      _paymentGuardTimer?.cancel();
+      setState(() => _paymentInProgress = false);
       Navigator.of(context, rootNavigator: true).pop(); // dismiss overlay
 
       switch (paymentResult) {
         case PaymentSuccess(:final paymentId, :final orderId, :final signature):
           // Verify payment signature on backend before confirming.
-          await paymentService.verifyPayment(
+          final verified = await paymentService.verifyPayment(
             razorpayPaymentId: paymentId,
             razorpayOrderId: orderId,
             razorpaySignature: signature,
           );
-          if (mounted) {
+          if (verified && mounted) {
+            // Backend confirmed the payment — now it's safe to clear the cart.
+            ref.read(cartProvider.notifier).clear();
             showModalBottomSheet(
               context: context,
               isDismissible: false,
               builder: (_) => _CheckoutResultSheet(result: orderResult),
             );
+          } else if (mounted) {
+            _showPaymentCancelledSnackBar();
+            if (_lastMenuItems != null) {
+              _showCartSummarySheet(_lastMenuItems!, _lastSubtotal);
+            }
           }
         case PaymentError(:final code, :final message):
           if (mounted) {
-            _showPaymentErrorSnackBar(code, message, () {
-              _initiateRazorpayPayment(
-                foodOrderId: foodOrderId,
-                amount: amount,
-                orderResult: orderResult,
-              );
-            });
+            _showPaymentCancelledSnackBar();
+            if (_lastMenuItems != null) {
+              _showCartSummarySheet(_lastMenuItems!, _lastSubtotal);
+            }
           }
         case PaymentExternalWallet():
           if (mounted) {
@@ -669,11 +783,18 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
           }
       }
     } catch (e) {
+      _paymentGuardTimer?.cancel();
+      setState(() => _paymentInProgress = false);
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // dismiss overlay
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment initiation failed: $e')),
-        );
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {
+          // Overlay may already be dismissed.
+        }
+        _showPaymentCancelledSnackBar();
+        if (_lastMenuItems != null) {
+          _showCartSummarySheet(_lastMenuItems!, _lastSubtotal);
+        }
       }
     }
   }
@@ -722,15 +843,11 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
     );
   }
 
-  void _showPaymentErrorSnackBar(int code, String message, VoidCallback onRetry) {
+  void _showPaymentCancelledSnackBar() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Payment failed: $message (code $code)'),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(
-          label: 'Retry Payment',
-          onPressed: onRetry,
-        ),
+      const SnackBar(
+        content: Text('Payment cancelled. Your cart is saved.'),
+        duration: Duration(seconds: 4),
       ),
     );
   }

@@ -24,6 +24,7 @@ abstract final class AppTheme {
   static const gold = Color(0xFFE9C46A);
   static const sky = Color(0xFF4895EF);
   static const seed = emerald;
+  static const primary = emerald;
 
   // --- Semantic colors ---
   static const success = Color(0xFF22C55E);

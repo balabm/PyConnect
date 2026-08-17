@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -39,10 +40,19 @@ import '../features/venues/presentation/venue_detail_screen.dart';
 import '../features/venues/presentation/venue_list_screen.dart';
 import '../shell/home_shell.dart';
 import '../core/providers.dart';
+import '../core/widgets/empty_state_view.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
+    errorBuilder: (context, state) => EmptyStateView(
+      icon: Icons.error_outline,
+      title: 'Page not found',
+      subtitle: 'The page you are looking for does not exist.',
+      actionLabel: 'Return to Home',
+      onAction: () => context.go('/'),
+      isError: true,
+    ),
     refreshListenable: _AuthRefreshListenable(ref),
     redirect: (context, state) {
       final authenticated = ref.read(authControllerProvider).valueOrNull?.isAuthenticated ?? false;

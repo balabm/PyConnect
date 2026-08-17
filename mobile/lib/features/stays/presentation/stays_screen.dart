@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../application/stays_providers.dart';
 import '../data/stays_api.dart';
 import 'widgets/homestay_card.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
 
 class StaysScreen extends ConsumerStatefulWidget {
   const StaysScreen({super.key});
@@ -88,7 +89,7 @@ class _StaysScreenState extends ConsumerState<StaysScreen> {
       );
       final searchAsync = ref.watch(homestaySearchProvider(params));
       return searchAsync.when(
-        loading: () => const ShimmerList(count: 4, withImage: true),
+        loading: () => const SkeletonList(type: SkeletonType.stay, count: 4),
         error: (e, _) => ErrorState(
           message: 'Search failed: $e',
           onRetry: () => ref.invalidate(homestaySearchProvider(params)),
