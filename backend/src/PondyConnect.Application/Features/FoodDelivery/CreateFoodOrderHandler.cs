@@ -38,6 +38,7 @@ public sealed record CheckoutResponse(
     decimal SubTotal,
     decimal DeliveryFee,
     decimal LateNightDriverBonus,
+    decimal Taxes,
     decimal PlatformFee,
     decimal TotalAmount,
     string Status);
@@ -182,6 +183,7 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
             subTotal: pricing.SubTotal,
             deliveryFee: pricing.DeliveryFee,
             lateNightDriverBonus: pricing.LateNightDriverBonus,
+            taxes: pricing.Taxes,
             paymentMethod: request.PaymentMethod,
             venueId: request.VenueId,
             notes: request.Notes);
@@ -237,6 +239,7 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
                 SubTotal: order.SubTotal,
                 DeliveryFee: order.DeliveryFee,
                 LateNightDriverBonus: order.LateNightDriverBonus,
+                Taxes: order.Taxes,
                 PlatformFee: order.PlatformFee,
                 TotalAmount: order.TotalAmount,
                 Status: order.Status.ToString());

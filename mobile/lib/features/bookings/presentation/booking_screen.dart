@@ -371,6 +371,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         case PaymentSuccess(:final paymentId, :final orderId, :final signature):
           // Verify payment signature on backend before confirming.
           final verified = await paymentService.verifyPayment(
+            paymentId: order.paymentId,
             razorpayPaymentId: paymentId,
             razorpayOrderId: orderId,
             razorpaySignature: signature,

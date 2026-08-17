@@ -25,6 +25,7 @@ public sealed class FoodOrderConfiguration : IEntityTypeConfiguration<FoodOrder>
         builder.Property(o => o.DeliveryFee).HasPrecision(10, 2);
         builder.Property(o => o.LateNightDriverBonus).HasPrecision(10, 2);
         builder.Property(o => o.PlatformFee).HasPrecision(10, 2);
+        builder.Property(o => o.Taxes).HasPrecision(10, 2);
         builder.Property(o => o.TotalAmount).HasPrecision(10, 2);
 
         builder.Property(o => o.Currency).HasMaxLength(3).IsRequired();

@@ -6,7 +6,7 @@ using PondyConnect.Domain.ValueObjects;
 
 /// <summary>
 /// A food delivery order with transparent pricing.
-/// VendorPayout = SubTotal (100% to vendor), PlatformFee = ₹2.
+/// VendorPayout = SubTotal (100% to vendor), PlatformFee = ₹2, GST = 5%.
 /// </summary>
 public sealed class FoodOrder : BaseEntity
 {
@@ -27,6 +27,8 @@ public sealed class FoodOrder : BaseEntity
     public decimal LateNightDriverBonus { get; private set; }
 
     public decimal PlatformFee { get; private set; }
+
+    public decimal Taxes { get; private set; }
 
     public decimal TotalAmount { get; private set; }
 
@@ -61,6 +63,7 @@ public sealed class FoodOrder : BaseEntity
         decimal subTotal,
         decimal deliveryFee,
         decimal lateNightDriverBonus,
+        decimal taxes,
         PaymentMethod paymentMethod,
         Guid? venueId = null,
         string? notes = null)
@@ -73,6 +76,7 @@ public sealed class FoodOrder : BaseEntity
         ArgumentOutOfRangeException.ThrowIfNegative(subTotal, nameof(subTotal));
         ArgumentOutOfRangeException.ThrowIfNegative(deliveryFee, nameof(deliveryFee));
         ArgumentOutOfRangeException.ThrowIfNegative(lateNightDriverBonus, nameof(lateNightDriverBonus));
+        ArgumentOutOfRangeException.ThrowIfNegative(taxes, nameof(taxes));
 
         return new FoodOrder
         {
@@ -86,7 +90,8 @@ public sealed class FoodOrder : BaseEntity
             DeliveryFee = deliveryFee,
             LateNightDriverBonus = lateNightDriverBonus,
             PlatformFee = 2m,
-            TotalAmount = subTotal + deliveryFee + lateNightDriverBonus + 2m,
+            Taxes = taxes,
+            TotalAmount = subTotal + deliveryFee + lateNightDriverBonus + 2m + taxes,
             PaymentMethod = paymentMethod,
             PlacedAt = DateTimeOffset.UtcNow,
             Notes = notes
@@ -157,11 +162,11 @@ public sealed class FoodOrder : BaseEntity
         var item = _items.FirstOrDefault(i => i.Id == itemId)
             ?? throw new InvalidOperationException("Item not found in this order.");
 
-        var refundAmount = item.LineTotal;
+        var totalBefore = TotalAmount;
         _items.Remove(item);
         Recalculate();
         MarkUpdated();
-        return refundAmount;
+        return totalBefore - TotalAmount;
     }
 
     public void RecordPayment(PaymentStatus status)
@@ -174,7 +179,8 @@ public sealed class FoodOrder : BaseEntity
     {
         SubTotal = _items.Sum(i => i.LineTotal);
         VendorPayout = SubTotal;
-        TotalAmount = SubTotal + DeliveryFee + LateNightDriverBonus + PlatformFee;
+        Taxes = SubTotal * 0.05m;
+        TotalAmount = SubTotal + Taxes + DeliveryFee + LateNightDriverBonus + PlatformFee;
     }
 }
 

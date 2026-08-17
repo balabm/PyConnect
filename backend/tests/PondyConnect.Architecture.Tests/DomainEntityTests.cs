@@ -153,7 +153,7 @@ public sealed class FoodOrderEntityTests
     {
         var order = FoodOrder.Create(
             Guid.NewGuid(), Guid.NewGuid(), "123 Main St",
-            GeoLocation.Create(11.93, 79.83), 280m, 30m, 0m, PaymentMethod.Cash);
+            GeoLocation.Create(11.93, 79.83), 280m, 30m, 0m, 0m, PaymentMethod.Cash);
 
         order.Status.Should().Be(FoodOrderStatus.Placed);
         order.Currency.Should().Be("INR");
@@ -166,7 +166,7 @@ public sealed class FoodOrderEntityTests
     {
         var order = FoodOrder.Create(
             Guid.NewGuid(), Guid.NewGuid(), "123 Main St",
-            GeoLocation.Create(11.93, 79.83), 280m, 30m, 0m, PaymentMethod.Cash);
+            GeoLocation.Create(11.93, 79.83), 280m, 30m, 0m, 0m, PaymentMethod.Cash);
 
         order.VendorPayout.Should().Be(order.SubTotal);
         order.PlatformFee.Should().Be(2m);
@@ -178,12 +178,12 @@ public sealed class FoodOrderEntityTests
     {
         var order = FoodOrder.Create(
             Guid.NewGuid(), Guid.NewGuid(), "123 Main St",
-            GeoLocation.Create(11.93, 79.83), 0m, 30m, 0m, PaymentMethod.Cash);
+            GeoLocation.Create(11.93, 79.83), 0m, 30m, 0m, 0m, PaymentMethod.Cash);
 
         order.AddItem("Pizza", 2, 150m);
 
         order.SubTotal.Should().Be(300m);
-        order.TotalAmount.Should().Be(332m);
+        order.TotalAmount.Should().Be(347m);
         order.Items.Should().HaveCount(1);
     }
 
@@ -242,7 +242,7 @@ public sealed class FoodOrderEntityTests
     private static FoodOrder CreateDefaultFoodOrder()
         => FoodOrder.Create(
             Guid.NewGuid(), Guid.NewGuid(), "123 Main St",
-            GeoLocation.Create(11.93, 79.83), 280m, 30m, 0m, PaymentMethod.Cash);
+            GeoLocation.Create(11.93, 79.83), 280m, 30m, 0m, 0m, PaymentMethod.Cash);
 }
 
 public sealed class ServiceBookingEntityTests
