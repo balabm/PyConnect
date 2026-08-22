@@ -477,6 +477,7 @@ class AdminDriver {
     this.kycLicenseNumber,
     this.kycExpiryDate,
     this.upiId,
+    this.vehiclePlate,
   });
 
   factory AdminDriver.fromJson(Map<String, dynamic> json) => AdminDriver(
@@ -512,6 +513,7 @@ class AdminDriver {
             ? null
             : DateTime.tryParse(json['kycExpiryDate'] as String),
         upiId: json['upiId'] as String?,
+        vehiclePlate: json['vehiclePlate'] as String?,
       );
 
   final String id;
@@ -541,6 +543,7 @@ class AdminDriver {
   final String? kycLicenseNumber;
   final DateTime? kycExpiryDate;
   final String? upiId;
+  final String? vehiclePlate;
 }
 
 class ApproveDriverResult {

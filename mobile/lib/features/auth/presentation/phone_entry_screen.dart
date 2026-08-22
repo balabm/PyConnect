@@ -338,8 +338,14 @@ class PhoneEntryScreen extends ConsumerWidget {
                             TextButton.icon(
                               onPressed: () {
                                 AppHaptics.light();
-                                final isAuthenticated =
-                                    authState.valueOrNull?.isAuthenticated ?? false;
+                                final session = authState.valueOrNull;
+                                final isAuthenticated = isPartner
+                                    ? (session is VendorAuthSession
+                                        ? session.isAuthenticated
+                                        : false)
+                                    : (session is AuthSession
+                                        ? session.isAuthenticated
+                                        : false);
                                 if (isAuthenticated) {
                                   context.go('/register');
                                 } else {

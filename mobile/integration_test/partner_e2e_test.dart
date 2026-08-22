@@ -13,6 +13,7 @@ library partner_e2e_test;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:integration_test/integration_test.dart';
 
 import 'package:pondyconnect/features/auth/application/vendor_auth_controller.dart';
 import 'package:pondyconnect/features/vendor/presentation/pending_approval_screen.dart';
