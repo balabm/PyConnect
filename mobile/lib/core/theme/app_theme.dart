@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// Modern coastal palette inspired by Pondicherry's coastline.
-/// Lagoon Teal + Terracotta Coral on a crisp off-white canvas.
+/// Sophisticated Emerald + Terracotta Coral on a crisp off-white canvas.
 abstract final class AppTheme {
   // --- Brand colors (Premium Swiggy/Uber Standard) ---
-  static const emerald = Color(0xFF00D290);  // Pondy Emerald — primary CTA
-  static const emeraldLight = Color(0xFF10E3A0);
-  static const emeraldDark = Color(0xFF00B07D);
+  // Softened from neon #00D290 to sophisticated #10B981 (Tailwind emerald-500)
+  static const emerald = Color(0xFF10B981);  // Pondy Emerald — primary CTA
+  static const emeraldLight = Color(0xFF34D399);
+  static const emeraldDark = Color(0xFF059669);
   // Legacy brand aliases for compatibility during migration
   static const lagoon = Color(0xFF0D9488);
   static const lagoonLight = Color(0xFF14B8A6);
@@ -65,7 +66,7 @@ abstract final class AppTheme {
 
   // --- Gradient presets (subtle, used sparingly) ---
   static const emeraldGradient = LinearGradient(
-    colors: [Color(0xFF00D290), Color(0xFF00B07D)],
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -177,10 +178,10 @@ abstract final class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: white,
-        selectedColor: emerald.withValues(alpha: 0.1),
+        backgroundColor: searchFill,
+        selectedColor: charcoal,
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: charcoal),
-        side: const BorderSide(color: Color(0xFFF3F4F6)),
+        side: BorderSide.none,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
@@ -296,9 +297,9 @@ abstract final class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: darkCard,
-        selectedColor: emerald.withValues(alpha: 0.2),
+        selectedColor: darkTextPrimary,
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: darkTextPrimary),
-        side: const BorderSide(color: darkBorder),
+        side: BorderSide.none,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.pill),
         ),

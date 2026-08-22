@@ -1017,7 +1017,19 @@ class _MenuItemTile extends StatelessWidget {
                 ),
                 if (description != null) ...[
                   const SizedBox(height: 4),
-                  Text(description!, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  Text(
+                    description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppTheme.darkTextSecondary
+                          : const Color(0xFF6B7280),
+                      fontWeight: FontWeight.w400,
+                      height: 1.3,
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 8),
                 Row(
@@ -1066,17 +1078,31 @@ class _MenuItemTile extends StatelessWidget {
               ? GestureDetector(
                   onTap: isEnabled ? onAdd : null,
                   child: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isEnabled
-                          ? AppTheme.emerald
-                          : AppTheme.emerald.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppTheme.darkSurface
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isEnabled
+                            ? AppTheme.emerald
+                            : AppTheme.emerald.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
                       boxShadow: isEnabled
-                          ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))]
+                          ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))]
                           : [],
                     ),
-                    child: const Icon(Icons.add, color: Colors.white, size: 20),
+                    child: Text(
+                      'ADD',
+                      style: TextStyle(
+                        color: isEnabled ? AppTheme.emerald : AppTheme.emerald.withValues(alpha: 0.3),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
                 )
               : Container(

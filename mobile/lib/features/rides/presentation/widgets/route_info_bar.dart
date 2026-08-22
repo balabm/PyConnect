@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
 
-/// Modern gradient bar showing route distance and duration from OSRM.
+/// Clean, structured route info — no colored banner.
+/// Integrates seamlessly into the bottom sheet like Uber.
 class RouteInfoBar extends StatelessWidget {
   const RouteInfoBar({
     super.key,
@@ -15,80 +16,45 @@ class RouteInfoBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-      decoration: BoxDecoration(
-        gradient: AppTheme.oceanGradient,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.emerald.withValues(alpha: 0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _MetricChip(
-            icon: Icons.straighten,
-            value: '${distanceKm.toStringAsFixed(1)} km',
-            label: 'Distance',
-          ),
-          Container(
-            width: 1,
-            height: 32,
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-          _MetricChip(
-            icon: Icons.access_time,
-            value: '$durationMin min',
-            label: 'Duration',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.85)),
-            const SizedBox(width: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
-            ),
-          ],
+        Icon(
+          Icons.route,
+          size: 16,
+          color: isDark ? AppTheme.darkTextSecondary : AppTheme.slate,
         ),
-        const SizedBox(height: 2),
+        const SizedBox(width: 6),
         Text(
-          label,
+          '${distanceKm.toStringAsFixed(1)} km',
           style: TextStyle(
-            fontSize: 11,
-            color: Colors.white.withValues(alpha: 0.7),
-            fontWeight: FontWeight.w500,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          width: 4,
+          height: 4,
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkTextSecondary : AppTheme.slate,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Icon(
+          Icons.access_time,
+          size: 16,
+          color: isDark ? AppTheme.darkTextSecondary : AppTheme.slate,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$durationMin min',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
           ),
         ),
       ],

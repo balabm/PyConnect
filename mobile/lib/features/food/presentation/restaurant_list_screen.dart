@@ -230,6 +230,7 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
   }
 
   Widget _buildPill(String label, bool selected, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
@@ -238,21 +239,19 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.emerald : Theme.of(context).colorScheme.surface,
+            color: selected
+                ? AppTheme.charcoal
+                : isDark ? AppTheme.darkCard : AppTheme.searchFill,
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(
-              color: selected ? AppTheme.emerald : Theme.of(context).dividerColor,
-            ),
-            boxShadow: selected
-                ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              color: selected
+                  ? Colors.white
+                  : isDark ? AppTheme.darkTextSecondary : AppTheme.slate,
             ),
           ),
         ),

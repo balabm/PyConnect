@@ -35,7 +35,11 @@ class _TransitScreenState extends ConsumerState<TransitScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The Ride tab (index 0) is a full-screen map experience.
+    // Use extendBody so the map extends behind the nav bar,
+    // giving the bottom sheet 100% of vertical real estate.
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _index,
         children: const [

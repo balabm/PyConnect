@@ -147,18 +147,11 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                         venue.name,
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.3,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 6,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
                         ),
                       ),
                     ),

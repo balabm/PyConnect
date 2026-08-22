@@ -174,21 +174,23 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: selected ? AppTheme.emerald : Theme.of(context).colorScheme.surface,
+                            color: selected
+                                ? AppTheme.charcoal
+                                : Theme.of(context).brightness == Brightness.dark
+                                    ? AppTheme.darkCard
+                                    : AppTheme.searchFill,
                             borderRadius: BorderRadius.circular(AppRadius.pill),
-                            border: Border.all(
-                              color: selected ? AppTheme.emerald : const Color(0xFFE5E7EB),
-                            ),
-                            boxShadow: selected
-                                ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
-                                : [],
                           ),
                           child: Text(
                             cat,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: selected ? Colors.white : AppTheme.slate,
+                              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                              color: selected
+                                  ? Colors.white
+                                  : Theme.of(context).brightness == Brightness.dark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.slate,
                             ),
                           ),
                         ),
@@ -442,7 +444,9 @@ class _VenueCard extends StatelessWidget {
                   Text(
                     venue.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          letterSpacing: -0.2,
                         ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -455,7 +459,13 @@ class _VenueCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           '${venue.category} · ${venue.address ?? 'Pondicherry'}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? AppTheme.darkTextSecondary
+                                : const Color(0xFF6B7280),
+                            fontWeight: FontWeight.w400,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
