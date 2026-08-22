@@ -86,7 +86,7 @@ class VenueStatsPanel extends StatelessWidget {
                       color: AppTheme.emerald.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.payments, color: AppTheme.emerald, size: 20),
+                    child: Icon(Icons.payments, color: AppTheme.emerald, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

@@ -23,7 +23,7 @@ class ManageHubScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        title: const Text('Manage', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Manage', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -243,7 +243,7 @@ class ManageHubScreen extends ConsumerWidget {
                 gradient: const LinearGradient(colors: [AppTheme.emerald, AppTheme.emeraldLight]),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.store, color: Colors.white, size: 24),
+              child: Icon(Icons.store, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -293,7 +293,7 @@ class ManageHubScreen extends ConsumerWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.edit, color: AppTheme.emerald),
+              icon: Icon(Icons.edit, color: AppTheme.emerald),
               onPressed: () {
                 AppHaptics.light();
                 context.push('/venue');
@@ -412,7 +412,7 @@ class _ManageTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
             color: isDisabled
-                ? Colors.white.withValues(alpha: 0.05)
+                ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1)
                 : color.withValues(alpha: 0.15),
             width: 1,
           ),

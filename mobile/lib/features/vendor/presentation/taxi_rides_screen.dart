@@ -61,10 +61,10 @@ class _TaxiRidesScreenState extends ConsumerState<TaxiRidesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rides', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Rides', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: () { AppHaptics.light(); _loadData(); },
           ),
         ],
@@ -129,8 +129,8 @@ class _TaxiRidesScreenState extends ConsumerState<TaxiRidesScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              icon: Icon(Icons.refresh),
+              label: Text('Retry'),
               onPressed: () { setState(() => _loading = true); _loadData(); },
             ),
           ],

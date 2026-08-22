@@ -59,10 +59,10 @@ class VendorMenuScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Menu Management'),
+        title: Text('Menu Management'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: () {
               AppHaptics.light();
               ref.read(vendorMenuProvider.notifier).load();
@@ -76,7 +76,7 @@ class VendorMenuScreen extends ConsumerWidget {
           AppHaptics.light();
           _showAddItemSheet(context, ref);
         },
-        child: const Icon(Icons.add),
+        child: Icon(Icons.add),
       ),
       body: menuAsync.when(
         loading: () => const ShimmerList(withImage: false, count: 6),
@@ -150,7 +150,7 @@ class _MenuItemCard extends ConsumerWidget {
                 color: AppTheme.emerald.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.restaurant, color: AppTheme.emerald),
+              child: Icon(Icons.restaurant, color: AppTheme.emerald),
             ),
           const SizedBox(width: 16),
           Expanded(
@@ -162,10 +162,10 @@ class _MenuItemCard extends ConsumerWidget {
                     Flexible(
                       child: Text(
                         item.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -286,7 +286,7 @@ class _MenuItemCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(),
@@ -294,7 +294,7 @@ class _MenuItemCard extends ConsumerWidget {
               Navigator.pop(ctx);
               ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
             },
-            child: const Text('Mark Unavailable'),
+            child: Text('Mark Unavailable'),
           ),
         ],
       ),

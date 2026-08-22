@@ -125,10 +125,10 @@ class _LiveToastState extends State<LiveToast>
                           children: [
                             Text(
                               widget.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.charcoal,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -138,7 +138,7 @@ class _LiveToastState extends State<LiveToast>
                               widget.statusText,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.slate,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -172,7 +172,7 @@ class _LiveToastState extends State<LiveToast>
                         child: Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: AppTheme.slate,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

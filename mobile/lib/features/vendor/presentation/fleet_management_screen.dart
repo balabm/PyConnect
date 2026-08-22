@@ -65,12 +65,12 @@ class _FleetManagementScreenState extends ConsumerState<FleetManagementScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        title: const Text('Fleet', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Fleet', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: () { AppHaptics.light(); _loadData(); },
           ),
         ],
@@ -90,16 +90,16 @@ class _FleetManagementScreenState extends ConsumerState<FleetManagementScreen> {
                       const SizedBox(height: 16),
                       _buildStatRow(activeRentals.length, available.length),
                       const SizedBox(height: 16),
-                      const Text('Active Rentals',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Active Rentals',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       if (activeRentals.isEmpty)
                         _buildEmpty('No active rentals', Icons.pedal_bike)
                       else
                         ...activeRentals.map((b) => _ScooterCard(booking: b, isActive: true)),
                       const SizedBox(height: 24),
-                      const Text('Available / Returned',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Available / Returned',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       if (available.isEmpty)
                         _buildEmpty('No returned scooters', Icons.history)
@@ -121,23 +121,23 @@ class _FleetManagementScreenState extends ConsumerState<FleetManagementScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.payments_outlined, color: AppTheme.emerald, size: 28),
+          Icon(Icons.payments_outlined, color: AppTheme.emerald, size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Hourly Rate', style: TextStyle(color: AppTheme.emerald, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text('Hourly Rate', style: TextStyle(color: AppTheme.emerald, fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text('\u20B9150/hour', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.emerald)),
                 const SizedBox(height: 2),
                 Text('Daily cap: \u20B9800 · Weekly: \u20B94,500',
-                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5))),
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ],
             ),
           ),
           IconButton.outlined(
-            icon: const Icon(Icons.edit, size: 18),
+            icon: Icon(Icons.edit, size: 18),
             onPressed: () {
               AppHaptics.light();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -168,9 +168,9 @@ class _FleetManagementScreenState extends ConsumerState<FleetManagementScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(icon, size: 48, color: Colors.white.withValues(alpha: 0.2)),
+            Icon(icon, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
             const SizedBox(height: 12),
-            Text(message, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14)),
+            Text(message, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
           ],
         ),
       ),
@@ -184,15 +184,15 @@ class _FleetManagementScreenState extends ConsumerState<FleetManagementScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text('Could not load fleet',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              icon: Icon(Icons.refresh),
+              label: Text('Retry'),
               onPressed: () { setState(() => _loading = true); _loadData(); },
             ),
           ],
@@ -222,8 +222,8 @@ class _StatTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$value', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-              Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+              Text('$value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.bold)),
+              Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
             ],
           ),
         ],
@@ -265,10 +265,10 @@ class _ScooterCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(booking.customerName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
                 const SizedBox(height: 4),
                 Text(booking.serviceType,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
               ],
             ),
           ),
@@ -276,7 +276,7 @@ class _ScooterCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('\u20B9${booking.amount.toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

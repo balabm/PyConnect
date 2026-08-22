@@ -90,9 +90,9 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        title: const Text('Venue Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Venue Profile', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: venueAsync.when(
         loading: () => Center(
@@ -112,15 +112,15 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+                Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
                 const SizedBox(height: 16),
                 Text('Could not load venue',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 18)),
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  icon: Icon(Icons.refresh),
+                  label: Text('Retry'),
                   onPressed: () => ref.read(venueDetailProvider.notifier).load(),
                 ),
               ],
@@ -137,10 +137,10 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.store_mall_directory, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+                    Icon(Icons.store_mall_directory, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
                     const SizedBox(height: 16),
                     Text('No venue found',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 18)),
                     const SizedBox(height: 8),
                     Text('Contact admin to set up your venue profile.',
                         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 13),
@@ -268,7 +268,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),
@@ -286,11 +286,11 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
             fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

@@ -17,12 +17,12 @@ class VendorWalletScreen extends ConsumerWidget {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        title: const Text('Wallet & Credits', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Wallet & Credits', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: () {
               AppHaptics.light();
               ref.invalidate(vendorWalletProvider);
@@ -39,16 +39,16 @@ class VendorWalletScreen extends ConsumerWidget {
               const CircularProgressIndicator(color: AppTheme.emerald),
               const SizedBox(height: 16),
               Text('Loading wallet...',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5))),
             ],
           ),
         ),
         error: (e, _) => _buildError(context, ref, e.toString()),
         data: (wallet) => CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _buildBalanceCard(wallet.balance)),
-            SliverToBoxAdapter(child: _buildStatsRow(wallet.totalEarned, wallet.totalSpent)),
-            SliverToBoxAdapter(child: _buildSectionHeader('Transaction History')),
+            SliverToBoxAdapter(child: _buildBalanceCard(context, wallet.balance)),
+            SliverToBoxAdapter(child: _buildStatsRow(context, wallet.totalEarned, wallet.totalSpent)),
+            SliverToBoxAdapter(child: _buildSectionHeader(context, 'Transaction History')),
             transactionsAsync.when(
               loading: () => const SliverToBoxAdapter(
                 child: Center(child: Padding(
@@ -56,10 +56,10 @@ class VendorWalletScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(color: AppTheme.emerald),
                 )),
               ),
-              error: (e, _) => SliverToBoxAdapter(child: _buildTransactionsError(e.toString())),
+              error: (e, _) => SliverToBoxAdapter(child: _buildTransactionsError(context, e.toString())),
               data: (transactions) {
                 if (transactions.isEmpty) {
-                  return SliverToBoxAdapter(child: _buildEmptyTransactions());
+                  return SliverToBoxAdapter(child: _buildEmptyTransactions(context));
                 }
                 return SliverList(
                   delegate: SliverChildBuilderDelegate(
@@ -75,7 +75,7 @@ class VendorWalletScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBalanceCard(double balance) {
+  Widget _buildBalanceCard(BuildContext context, double balance) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(24),
@@ -102,16 +102,16 @@ class VendorWalletScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 24),
+                child: Icon(Icons.account_balance_wallet, color: Theme.of(context).colorScheme.onSurface, size: 24),
               ),
               const SizedBox(width: 12),
               Text(
                 'Available Balance',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -121,8 +121,8 @@ class VendorWalletScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Text(
             '\u20B9${balance.toStringAsFixed(0)}',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 42,
               fontWeight: FontWeight.bold,
             ),
@@ -131,12 +131,12 @@ class VendorWalletScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               'Priority Ping Credits',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w500),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -144,7 +144,7 @@ class VendorWalletScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsRow(double earned, double spent) {
+  Widget _buildStatsRow(BuildContext context, double earned, double spent) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -171,13 +171,13 @@ class VendorWalletScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 16,
           fontWeight: FontWeight.bold,
         ),
@@ -192,19 +192,19 @@ class VendorWalletScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text('Could not load wallet',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 8),
             Text(error,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4), fontSize: 13),
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              icon: Icon(Icons.refresh),
+              label: Text('Retry'),
               onPressed: () => ref.invalidate(vendorWalletProvider),
             ),
           ],
@@ -213,29 +213,29 @@ class VendorWalletScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTransactionsError(String error) {
+  Widget _buildTransactionsError(BuildContext context, String error) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Center(
         child: Text(
           'Could not load transactions: $error',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4), fontSize: 13),
           textAlign: TextAlign.center,
         ),
       ),
     );
   }
 
-  Widget _buildEmptyTransactions() {
+  Widget _buildEmptyTransactions(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.receipt_long, size: 48, color: Colors.white.withValues(alpha: 0.2)),
+            Icon(Icons.receipt_long, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
             Text('No transactions yet',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3), fontSize: 14)),
           ],
         ),
       ),
@@ -273,8 +273,8 @@ class _StatTile extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -283,7 +283,7 @@ class _StatTile extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.4),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -331,8 +331,8 @@ class _TransactionCard extends StatelessWidget {
               children: [
                 Text(
                   transaction.description,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -343,7 +343,7 @@ class _TransactionCard extends StatelessWidget {
                   Text(
                     _formatDate(transaction.timestamp),
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                       fontSize: 11,
                     ),
                   ),

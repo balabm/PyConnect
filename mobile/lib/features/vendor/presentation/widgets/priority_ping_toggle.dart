@@ -46,7 +46,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
           FilledButton(
             style: FilledButton.styleFrom(),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Activate'),
+            child: Text('Activate'),
           ),
         ],
       ),
@@ -97,7 +97,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
         border: Border.all(
           color: widget.isActive
               ? AppTheme.emerald.withValues(alpha: 0.3)
-              : Colors.white.withValues(alpha: 0.05),
+              : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
         ),
       ),
       child: Row(
@@ -108,7 +108,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
               color: AppTheme.emerald.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.rocket_launch, color: AppTheme.emerald, size: 24),
+            child: Icon(Icons.rocket_launch, color: AppTheme.emerald, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(

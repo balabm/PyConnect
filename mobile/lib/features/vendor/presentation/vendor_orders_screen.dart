@@ -40,12 +40,12 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        title: const Text('Live Orders', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Live Orders', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: () {
               AppHaptics.light();
               ref.read(vendorOrdersProvider.notifier).load();
@@ -98,8 +98,8 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -133,7 +133,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
           const CircularProgressIndicator(color: AppTheme.emerald),
           const SizedBox(height: 16),
           Text('Loading orders...',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ],
       ),
     );
@@ -146,19 +146,19 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text('Could not load orders',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18)),
             const SizedBox(height: 8),
             Text(error,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              icon: Icon(Icons.refresh),
+              label: Text('Retry'),
               onPressed: () => ref.read(vendorOrdersProvider.notifier).load(),
             ),
           ],
@@ -172,16 +172,16 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_outlined, size: 64, color: Colors.white.withValues(alpha: 0.2)),
+          Icon(Icons.receipt_outlined, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
           const SizedBox(height: 16),
           Text('No orders yet',
               style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Text('New food delivery orders will appear here',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 13)),
         ],
       ),
     );
@@ -249,8 +249,8 @@ class _OrderCard extends StatelessWidget {
             children: [
               Text(
                 '#${order.id.substring(0, 8)}',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                 ),
@@ -288,7 +288,7 @@ class _OrderCard extends StatelessWidget {
                 Text(
                   _formatTime(order.placedAt),
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.4),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),
@@ -315,16 +315,16 @@ class _OrderCard extends StatelessWidget {
                     final confirmed = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Cancel Order?'),
-                        content: const Text('This action cannot be undone.'),
+                        title: Text('Cancel Order?'),
+                        content: Text('This action cannot be undone.'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('No'),
+                            child: Text('No'),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Yes, Cancel'),
+                            child: Text('Yes, Cancel'),
                           ),
                         ],
                       ),
@@ -332,7 +332,7 @@ class _OrderCard extends StatelessWidget {
                     if (confirmed == true) onAdvance('Cancelled');
                   },
                   style: TextButton.styleFrom(foregroundColor: AppTheme.emerald),
-                  child: const Text('Cancel'),
+                  child: Text('Cancel'),
                 ),
               ],
             ),
@@ -359,7 +359,7 @@ class _OrderCard extends StatelessWidget {
         'OutForDelivery' => AppTheme.emerald,
         'Delivered' => AppTheme.success,
         'Cancelled' => AppTheme.danger,
-        _ => Colors.white.withValues(alpha: 0.5),
+        _ => Colors.grey,
       };
 
   _NextAction? _nextAction(String status) => switch (status) {
@@ -406,7 +406,7 @@ class _CompletedOrderCard extends StatelessWidget {
             child: Text(
               '#${order.id.substring(0, 8)}',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.5),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 fontSize: 13,
               ),
             ),
@@ -414,7 +414,7 @@ class _CompletedOrderCard extends StatelessWidget {
           Text(
             '\u20B9${order.totalAmount.toStringAsFixed(0)}',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),

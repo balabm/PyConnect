@@ -75,7 +75,7 @@ class _LiveTablesScreenState extends ConsumerState<LiveTablesScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Live Tables'),
+        title: Text('Live Tables'),
         actions: [
           // Auto-refresh indicator
           RotationTransition(
@@ -137,7 +137,7 @@ class _LiveTablesScreenState extends ConsumerState<LiveTablesScreen>
               });
               _loadTables();
             },
-            child: const Text('Retry'),
+            child: Text('Retry'),
           ),
         ),
       ],
@@ -157,7 +157,7 @@ class _LiveTablesScreenState extends ConsumerState<LiveTablesScreen>
               color: AppTheme.emerald.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.table_restaurant, size: 44, color: AppTheme.emerald),
+            child: Icon(Icons.table_restaurant, size: 44, color: AppTheme.emerald),
           ),
         ),
         const SizedBox(height: 20),
@@ -320,7 +320,7 @@ class _LiveTableCard extends StatelessWidget {
                     color: AppTheme.emerald.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.person, color: AppTheme.emerald, size: 22),
+                  child: Icon(Icons.person, color: AppTheme.emerald, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -353,8 +353,8 @@ class _LiveTableCard extends StatelessWidget {
                   ),
                   child: Text(
                     '${table.guestCount} guests',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),

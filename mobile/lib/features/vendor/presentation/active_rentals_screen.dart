@@ -65,10 +65,10 @@ class _ActiveRentalsScreenState extends ConsumerState<ActiveRentalsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Active Rentals', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Active Rentals', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: () { AppHaptics.light(); _loadData(); },
           ),
         ],
@@ -122,8 +122,8 @@ class _ActiveRentalsScreenState extends ConsumerState<ActiveRentalsScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              icon: Icon(Icons.refresh),
+              label: Text('Retry'),
               onPressed: () { setState(() => _loading = true); _loadData(); },
             ),
           ],
@@ -214,7 +214,7 @@ class _RentalCard extends StatelessWidget {
                   color: AppTheme.info.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.pedal_bike, color: AppTheme.info, size: 24),
+                child: Icon(Icons.pedal_bike, color: AppTheme.info, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -248,13 +248,13 @@ class _RentalCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           // Countdown timer section
-          _buildCountdown(countdown, color),
+          _buildCountdown(context, countdown, color),
         ],
       ),
     );
   }
 
-  Widget _buildCountdown(_CountdownInfo countdown, Color color) {
+  Widget _buildCountdown(BuildContext context, _CountdownInfo countdown, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -298,7 +298,7 @@ class _RentalCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: countdown.progress,
               minHeight: 8,
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              backgroundColor: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),

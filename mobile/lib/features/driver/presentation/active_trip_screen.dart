@@ -370,8 +370,6 @@ class _DeliveryLifecycleScreenState
             child: const Text('No'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(foregroundColor: Colors.white,
-            ),
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Yes'),
           ),

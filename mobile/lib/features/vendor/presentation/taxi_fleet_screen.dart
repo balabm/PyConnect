@@ -57,10 +57,10 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fleet', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Fleet', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: () { AppHaptics.light(); _loadData(); },
           ),
         ],
@@ -135,8 +135,8 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              icon: Icon(Icons.refresh),
+              label: Text('Retry'),
               onPressed: () { setState(() => _loading = true); _loadData(); },
             ),
           ],
@@ -202,7 +202,7 @@ class _TaxiCard extends ConsumerWidget {
                   color: AppTheme.warning.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.local_taxi, color: AppTheme.warning, size: 24),
+                child: Icon(Icons.local_taxi, color: AppTheme.warning, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -241,7 +241,7 @@ class _TaxiCard extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -332,7 +332,7 @@ class _TaxiCard extends ConsumerWidget {
                 }
               }
             },
-            child: const Text('Save'),
+            child: Text('Save'),
           ),
         ],
       ),

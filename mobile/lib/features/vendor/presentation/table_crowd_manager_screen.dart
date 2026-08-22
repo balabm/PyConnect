@@ -30,7 +30,7 @@ class _TableCrowdManagerScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Table & Crowd Manager'),
+        title: Text('Table & Crowd Manager'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -238,13 +238,13 @@ class _TableCrowdManagerScreenState
         children: [
           Row(
             children: [
-              const Icon(Icons.people_alt, color: AppTheme.emerald, size: 20),
+              Icon(Icons.people_alt, color: AppTheme.emerald, size: 20),
               const SizedBox(width: 8),
-              const Text('Guestlist',
+              Text('Guestlist',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.person_add, size: 20),
+                icon: Icon(Icons.person_add, size: 20),
                 onPressed: _addGuest,
               ),
             ],
@@ -277,7 +277,7 @@ class _TableCrowdManagerScreenState
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add to Guestlist'),
+        title: Text('Add to Guestlist'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -297,7 +297,7 @@ class _TableCrowdManagerScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           FilledButton(
             onPressed: () {
@@ -311,7 +311,7 @@ class _TableCrowdManagerScreenState
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Add'),
+            child: Text('Add'),
           ),
         ],
       ),

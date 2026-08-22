@@ -104,12 +104,12 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        title: const Text('Drinks Menu', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Drinks Menu', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: () {
               AppHaptics.light();
               ref.read(vendorMenuProvider.notifier).load();
@@ -123,7 +123,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
           AppHaptics.light();
           _showAddDrinkSheet(context, ref);
         },
-        child: const Icon(Icons.add),
+        child: Icon(Icons.add),
       ),
       body: menuAsync.when(
         loading: () => ListView(
@@ -163,9 +163,9 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               if (vipItems.isNotEmpty) ...[
                 Row(
                   children: [
-                    const Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
+                    Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
                     const SizedBox(width: 8),
-                    const Text('VIP Menu',
+                    Text('VIP Menu',
                         style: TextStyle(
                             color: Color(0xFFFFD700),
                             fontSize: 18,
@@ -200,13 +200,13 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
                 const SizedBox(height: 24),
               ],
               // Regular Drinks Menu
-              const Row(
+              Row(
                 children: [
                   Icon(Icons.local_bar, color: AppTheme.emerald, size: 20),
                   SizedBox(width: 8),
                   Text('Drinks Menu',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 18,
                           fontWeight: FontWeight.bold)),
                 ],
@@ -251,11 +251,11 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.groups, color: AppTheme.emerald, size: 22),
+              Icon(Icons.groups, color: AppTheme.emerald, size: 22),
               const SizedBox(width: 8),
-              const Text('Live Crowd',
+              Text('Live Crowd',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.bold)),
               const Spacer(),
@@ -293,7 +293,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
             child: LinearProgressIndicator(
               value: _crowdPercent / 100,
               minHeight: 8,
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              backgroundColor: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
@@ -339,12 +339,12 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.confirmation_number, color: AppTheme.emerald, size: 20),
               SizedBox(width: 8),
               Text('Cover Charges',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 12),
@@ -356,8 +356,8 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              icon: const Icon(Icons.edit, size: 16),
-              label: const Text('Edit Cover Charges'),
+              icon: Icon(Icons.edit, size: 16),
+              label: Text('Edit Cover Charges'),
               onPressed: () {
                 AppHaptics.light();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -380,7 +380,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w500)),
                 Text(subtitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 12)),
               ],
             ),
@@ -405,11 +405,11 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.list_alt, color: AppTheme.emerald, size: 22),
+              Icon(Icons.list_alt, color: AppTheme.emerald, size: 22),
               const SizedBox(width: 8),
-              const Text('Guestlist',
+              Text('Guestlist',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.bold)),
               const Spacer(),
@@ -457,8 +457,8 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
                 AppHaptics.light();
                 _showAddGuestDialog(context);
               },
-              icon: const Icon(Icons.person_add, size: 18),
-              label: const Text('Add to Guestlist'),
+              icon: Icon(Icons.person_add, size: 18),
+              label: Text('Add to Guestlist'),
             ),
           ),
         ],
@@ -476,14 +476,14 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
         border: Border.all(
           color: entry.checkedIn
               ? AppTheme.emerald.withValues(alpha: 0.4)
-              : Colors.white.withValues(alpha: 0.08),
+              : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
         children: [
           Icon(
             entry.checkedIn ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: entry.checkedIn ? AppTheme.emerald : Colors.white.withValues(alpha: 0.4),
+            color: entry.checkedIn ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             size: 22,
           ),
           const SizedBox(width: 12),
@@ -494,7 +494,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
                 Text(
                   entry.name,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     decoration: entry.checkedIn ? TextDecoration.lineThrough : null,
@@ -574,7 +574,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(),
@@ -589,7 +589,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               _saveGuestlist();
               Navigator.pop(dialogContext);
             },
-            child: const Text('Add'),
+            child: Text('Add'),
           ),
         ],
       ),
@@ -605,15 +605,15 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text('Could not load menu',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              icon: Icon(Icons.refresh),
+              label: Text('Retry'),
               onPressed: () => ref.read(vendorMenuProvider.notifier).load(),
             ),
           ],
@@ -628,13 +628,13 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.local_bar, size: 64, color: Colors.white.withValues(alpha: 0.2)),
+            Icon(Icons.local_bar, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.2)),
             const SizedBox(height: 16),
             Text('No drinks on the menu yet',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 18)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 18)),
             const SizedBox(height: 8),
             Text('Tap + to add your first drink',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3), fontSize: 13)),
           ],
         ),
       ),
@@ -705,8 +705,8 @@ class _DrinkCard extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -738,7 +738,7 @@ class _DrinkCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -842,8 +842,8 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Add Drink',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          Text('Add Drink',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           _buildField(_nameController, 'Drink name', Icons.local_bar),
           const SizedBox(height: 12),
@@ -880,7 +880,7 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
               child: _submitting
                   ? SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
-                  : const Text('Add Drink'),
+                  : Text('Add Drink'),
             ),
           ),
         ],
@@ -903,11 +903,11 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
         fillColor: Theme.of(context).scaffoldBackgroundColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

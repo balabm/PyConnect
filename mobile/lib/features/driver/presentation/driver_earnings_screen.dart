@@ -585,7 +585,7 @@ class _WalletCardState extends ConsumerState<_WalletCard> {
                   child: FilledButton.icon(
                     onPressed: _settling ? null : () => _settleDues(wallet, settleAmount),
                     icon: _settling
-                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                         : const Icon(Icons.payment),
                     label: Text(_settling ? 'Processing...' : 'Settle Dues \u20B9${settleAmount.toStringAsFixed(2)}'),
                     style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12),

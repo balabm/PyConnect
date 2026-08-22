@@ -238,9 +238,9 @@ class _VendorRegistrationScreenState
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Partner Registration'),
+        title: Text('Partner Registration'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back),
           onPressed: () {
             AppHaptics.light();
             if (_currentStep > 0 && _currentStep < 3) {
@@ -277,11 +277,11 @@ class _VendorRegistrationScreenState
                                   ? _submitRegistration
                                   : details.onStepContinue,
                           child: _isSubmitting
-                              ? const SizedBox(
+                              ? SizedBox(
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white),
+                                      strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                                 )
                               : Text(isLast ? 'Submit Registration' : 'Continue'),
                         ),
@@ -297,8 +297,8 @@ class _VendorRegistrationScreenState
               },
               steps: [
                 Step(
-                  title: const Text('Business Details'),
-                  subtitle: const Text('Tell us about your business'),
+                  title: Text('Business Details'),
+                  subtitle: Text('Tell us about your business'),
                   content: _buildBusinessStep(),
                   isActive: true,
                   state: _isStep1Valid
@@ -306,8 +306,8 @@ class _VendorRegistrationScreenState
                       : StepState.indexed,
                 ),
                 Step(
-                  title: const Text('KYC Documents'),
-                  subtitle: const Text('FSSAI, GST, PAN'),
+                  title: Text('KYC Documents'),
+                  subtitle: Text('FSSAI, GST, PAN'),
                   content: _buildKycStep(),
                   isActive: true,
                   state: _isStep2Valid
@@ -315,8 +315,8 @@ class _VendorRegistrationScreenState
                       : StepState.indexed,
                 ),
                 Step(
-                  title: const Text('Bank Details'),
-                  subtitle: const Text('For payout transfers'),
+                  title: Text('Bank Details'),
+                  subtitle: Text('For payout transfers'),
                   content: _buildBankStep(),
                   isActive: true,
                   state: _isStep3Valid
@@ -500,7 +500,7 @@ class _VendorRegistrationScreenState
                 color: AppTheme.success.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle,
+              child: Icon(Icons.check_circle,
                   size: 64, color: AppTheme.success),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -526,8 +526,8 @@ class _VendorRegistrationScreenState
                 AppHaptics.light();
                 context.go('/auth');
               },
-              icon: const Icon(Icons.login),
-              label: const Text('Back to Login'),
+              icon: Icon(Icons.login),
+              label: Text('Back to Login'),
             ),
           ],
         ),
@@ -592,7 +592,7 @@ class _KycField extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.check_circle, color: AppTheme.success, size: 18),
+                Icon(Icons.check_circle, color: AppTheme.success, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -602,7 +602,7 @@ class _KycField extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 18),
+                  icon: Icon(Icons.close, size: 18),
                   onPressed: () => onPickFile(file!),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -614,8 +614,8 @@ class _KycField extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           OutlinedButton.icon(
             onPressed: onPick,
-            icon: const Icon(Icons.upload_file, size: 18),
-            label: const Text('Upload Document'),
+            icon: Icon(Icons.upload_file, size: 18),
+            label: Text('Upload Document'),
           ),
         ],
       ],

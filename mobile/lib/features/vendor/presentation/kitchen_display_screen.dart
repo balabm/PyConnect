@@ -387,7 +387,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   Future<bool?> _showRefundBottomSheet(KdsOrderItem item, double refundAmount) {
     return showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: AppTheme.darkSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -421,7 +421,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel'),
+                      child: Text('Cancel'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -429,7 +429,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                     child: FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Confirm Refund'),
+                      child: Text('Confirm Refund'),
                     ),
                   ),
                 ],
@@ -450,7 +450,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: AppTheme.darkBackground,
       body: _loading
           ? _buildLoading()
           : _error != null
@@ -491,8 +491,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              icon: Icon(Icons.refresh),
+              label: Text('Retry'),
               onPressed: () {
                 AppHaptics.light();
                 setState(() => _loading = true);
@@ -611,7 +611,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
           children: [
             Row(
               children: [
-                const Icon(Icons.print_disabled, color: Colors.white, size: 20),
+                Icon(Icons.print_disabled, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -635,7 +635,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                     'Reprint #${order.orderNumber}',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
                   ),
-                  avatar: const Icon(Icons.print, size: 16, color: Colors.white),
+                  avatar: Icon(Icons.print, size: 16, color: Colors.white),
                   backgroundColor: Colors.white.withValues(alpha: 0.2),
                   side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                   onPressed: () => _printOrder(order),
@@ -838,7 +838,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                           color: AppTheme.info.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.print,
                           size: 14,
                           color: AppTheme.info,
@@ -971,7 +971,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                     minimumSize: Size.zero,
                   ),
                   onPressed: () => _rejectOrder(order),
-                  child: const Text('Reject'),
+                  child: Text('Reject'),
                 ),
                 FilledButton.tonal(
                   style: FilledButton.styleFrom(
@@ -981,7 +981,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                     minimumSize: Size.zero,
                   ),
                   onPressed: () => _advanceOrder(order),
-                  child: const Text('Accept Order'),
+                  child: Text('Accept Order'),
                 ),
               ],
             )
@@ -1001,8 +1001,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                   onPressed: _printingOrderIds.contains(order.id)
                       ? null
                       : () => _printOrder(order),
-                  icon: const Icon(Icons.print),
-                  label: const Text('Reprint'),
+                  icon: Icon(Icons.print),
+                  label: Text('Reprint'),
                 ),
                 FilledButton.tonal(
                   style: FilledButton.styleFrom(
@@ -1030,8 +1030,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
                 onPressed: _printingOrderIds.contains(order.id)
                     ? null
                     : () => _printOrder(order),
-                icon: const Icon(Icons.print),
-                label: const Text('Reprint'),
+                icon: Icon(Icons.print),
+                label: Text('Reprint'),
               ),
             ),
         ],

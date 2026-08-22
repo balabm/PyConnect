@@ -168,9 +168,9 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        title: const Text('Printer Settings',
+        title: Text('Printer Settings',
             style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
@@ -191,15 +191,15 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 icon: _scanning
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       )
-                    : const Icon(Icons.bluetooth_searching),
+                    : Icon(Icons.bluetooth_searching),
                 label: Text(_scanning ? 'Scanning...' : 'Scan for Printers'),
                 onPressed: _scanning ? null : _scan,
               ),
@@ -214,10 +214,10 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
 
             // Discovered devices list
             if (_devices.isNotEmpty) ...[
-              const Text(
+              Text(
                 'Discovered Printers',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -232,13 +232,13 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                     children: [
                       Icon(Icons.print,
                           size: 48,
-                          color: Colors.white.withValues(alpha: 0.2)),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.2)),
                       const SizedBox(height: 12),
                       Text(
                         'No printers found.\nTap "Scan for Printers" to search.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.4),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                           fontSize: 13,
                         ),
                       ),
@@ -269,8 +269,8 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                             color: AppTheme.emerald,
                           ),
                         )
-                      : const Icon(Icons.receipt),
-                  label: const Text('Print Test Ticket'),
+                      : Icon(Icons.receipt),
+                  label: Text('Print Test Ticket'),
                   onPressed: _testing ? null : _testPrint,
                 ),
               ),
@@ -281,8 +281,8 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.danger,
                   ),
-                  icon: const Icon(Icons.link_off),
-                  label: const Text('Disconnect Printer'),
+                  icon: Icon(Icons.link_off),
+                  label: Text('Disconnect Printer'),
                   onPressed: _disconnect,
                 ),
               ),
@@ -324,7 +324,7 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                 Text(
                   'Printer Status',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     fontSize: 12,
                   ),
                 ),
@@ -341,11 +341,11 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
             ),
           ),
           if (_connecting)
-            const SizedBox(
+            SizedBox(
               width: 24,
               height: 24,
               child:
-                  CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+                  CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
         ],
       ),
@@ -371,15 +371,15 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                 Text(
                   'Default Printer',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     fontSize: 11,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   _savedName ?? 'Unknown',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -387,7 +387,7 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                 Text(
                   _savedAddress ?? '',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.4),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                     fontSize: 11,
                   ),
                 ),
@@ -411,19 +411,19 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
         border: Border.all(
           color: isSelected
               ? AppTheme.emerald.withValues(alpha: 0.4)
-              : Colors.white.withValues(alpha: 0.08),
+              : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
           width: isSelected ? 2 : 1,
         ),
       ),
       child: ListTile(
         leading: Icon(
           Icons.print,
-          color: isSelected ? AppTheme.emerald : Colors.white.withValues(alpha: 0.5),
+          color: isSelected ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
         title: Text(
           device.name ?? 'Unknown Device',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -431,7 +431,7 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
         subtitle: Text(
           device.address ?? '',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.4),
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             fontSize: 11,
           ),
         ),
@@ -454,13 +454,13 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: isSelected
                       ? AppTheme.emerald.withValues(alpha: 0.15)
-                      : Colors.white.withValues(alpha: 0.08),
-                  foregroundColor: isSelected ? AppTheme.emerald : Colors.white,
+                      : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
+                  foregroundColor: isSelected ? AppTheme.emerald : Theme.of(context).colorScheme.onSurfaceVariant,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   minimumSize: const Size(0, 32),
                 ),
                 onPressed: () => _connectToDevice(device),
-                child: const Text('Connect'),
+                child: Text('Connect'),
               ),
           ],
         ),

@@ -121,7 +121,7 @@ class _OrderTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -216,7 +216,7 @@ class _OrderTile extends StatelessWidget {
       case 'cancelled':
         return AppTheme.danger;
       default:
-        return Colors.white.withValues(alpha: 0.5);
+        return Colors.grey;
     }
   }
 }

@@ -66,10 +66,10 @@ class PendingApprovalScreen extends ConsumerWidget {
                     ),
                     const Divider(height: 1),
                     ListTile(
-                      leading: const Icon(Icons.phone_outlined),
-                      title: const Text('Call support'),
-                      subtitle: const Text('+91 94439 12345'),
-                      trailing: const Icon(Icons.chevron_right),
+                      leading: Icon(Icons.phone_outlined),
+                      title: Text('Call support'),
+                      subtitle: Text('+91 94439 12345'),
+                      trailing: Icon(Icons.chevron_right),
                       onTap: () {
                         AppHaptics.light();
                         // In a real build this launches tel: +919443912345
@@ -84,8 +84,8 @@ class PendingApprovalScreen extends ConsumerWidget {
                   AppHaptics.light();
                   ref.invalidate(vendorAuthControllerProvider);
                 },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Check status again'),
+                icon: Icon(Icons.refresh),
+                label: Text('Check status again'),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
@@ -93,8 +93,8 @@ class PendingApprovalScreen extends ConsumerWidget {
                   AppHaptics.light();
                   ref.read(vendorAuthControllerProvider.notifier).signOut();
                 },
-                icon: const Icon(Icons.logout),
-                label: const Text('Sign out'),
+                icon: Icon(Icons.logout),
+                label: Text('Sign out'),
               ),
             ],
           ),

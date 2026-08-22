@@ -36,7 +36,7 @@ class _VendorBookingsScreenState extends ConsumerState<VendorBookingsScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Bookings'),
+        title: Text('Bookings'),
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
@@ -45,7 +45,7 @@ class _VendorBookingsScreenState extends ConsumerState<VendorBookingsScreen>
               AppHaptics.light();
               ref.read(vendorBookingsProvider.notifier).load();
             },
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
           ),
         ],
         bottom: TabBar(
@@ -151,7 +151,7 @@ class _VendorBookingsScreenState extends ConsumerState<VendorBookingsScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off, size: 48, color: AppTheme.emerald),
+            Icon(Icons.cloud_off, size: 48, color: AppTheme.emerald),
             const SizedBox(height: 12),
             Text(
               'Could not load bookings',
@@ -166,7 +166,7 @@ class _VendorBookingsScreenState extends ConsumerState<VendorBookingsScreen>
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => ref.read(vendorBookingsProvider.notifier).load(),
-              child: const Text('Retry'),
+              child: Text('Retry'),
             ),
           ],
         ),
@@ -239,7 +239,7 @@ class _CoverChargeCard extends StatelessWidget {
                   color: AppTheme.emerald.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.nightlife, color: AppTheme.emerald, size: 20),
+                child: Icon(Icons.nightlife, color: AppTheme.emerald, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -304,8 +304,8 @@ class _CoverChargeCard extends StatelessWidget {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: onAccept,
-                    icon: const Icon(Icons.check, size: 16),
-                    label: const Text('Accept'),
+                    icon: Icon(Icons.check, size: 16),
+                    label: Text('Accept'),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
@@ -315,11 +315,11 @@ class _CoverChargeCard extends StatelessWidget {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: onReject,
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Reject'),
+                    icon: Icon(Icons.close, size: 16),
+                    label: Text('Reject'),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.danger,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
@@ -450,11 +450,11 @@ class _BookingCard extends StatelessWidget {
           Expanded(
             child: FilledButton.icon(
               onPressed: () => onAdvance(next),
-              icon: const Icon(Icons.arrow_forward, size: 16),
+              icon: Icon(Icons.arrow_forward, size: 16),
               label: Text(_statusLabel(next)),
               style: FilledButton.styleFrom(
                 backgroundColor: _statusColor(next, context),
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
                 padding: const EdgeInsets.symmetric(vertical: 10),
               ),
             ),
@@ -463,7 +463,7 @@ class _BookingCard extends StatelessWidget {
           if (_canCancel(booking.status))
             IconButton(
               onPressed: () => onAdvance('Cancelled'),
-              icon: const Icon(Icons.cancel_outlined, color: AppTheme.danger),
+              icon: Icon(Icons.cancel_outlined, color: AppTheme.danger),
               tooltip: 'Cancel',
             ),
         ],

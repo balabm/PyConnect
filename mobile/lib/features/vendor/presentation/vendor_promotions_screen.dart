@@ -20,7 +20,7 @@ class VendorPromotionsScreen extends ConsumerWidget {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: const Text('Promotions & Flash Sales'),
+          title: Text('Promotions & Flash Sales'),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Promotions', icon: Icon(Icons.local_offer)),
@@ -177,7 +177,7 @@ class _CreatePromotionFormState extends State<_CreatePromotionForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Create Promotion', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('Create Promotion', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -279,7 +279,7 @@ class _PromotionCard extends StatelessWidget {
               color: AppTheme.emerald.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.local_offer, color: AppTheme.emerald),
+            child: Icon(Icons.local_offer, color: AppTheme.emerald),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -288,7 +288,7 @@ class _PromotionCard extends StatelessWidget {
               children: [
                 Text(
                   promo.title ?? 'Promotion',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                 ),
                 if (promo.description != null) ...[
                   const SizedBox(height: 4),
@@ -447,7 +447,7 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Launch Flash Sale', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('Launch Flash Sale', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -495,12 +495,12 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
                 AppHaptics.medium();
                 _submit();
               },
-              icon: const Icon(Icons.flash_on),
+              icon: Icon(Icons.flash_on),
               label: _submitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                     )
                   : Text('', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
               style: FilledButton.styleFrom(),
@@ -530,7 +530,7 @@ class _FlashPromoCard extends StatelessWidget {
               color: AppTheme.gold.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.flash_on, color: AppTheme.gold),
+            child: Icon(Icons.flash_on, color: AppTheme.gold),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -539,7 +539,7 @@ class _FlashPromoCard extends StatelessWidget {
               children: [
                 Text(
                   promo.title ?? 'Flash Sale',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                 ),
                 const SizedBox(height: 6),
                 FareRow(
