@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatf
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../../../core/services/notification_service.dart';
+
 /// Top-level background message handler. Must be a top-level function and
 /// annotated with `@pragma('vm:entry-point')` so the Dart compiler keeps it
 /// alive for background isolate execution.
@@ -84,11 +86,14 @@ String? _resolveRoute(Map<String, dynamic> data) {
   switch (type) {
     case 'ride_accepted':
     case 'ride_started':
+    case 'ride_status':
+    case 'ride_arrived':
       return id != null ? '/rides/$id' : null;
     case 'ride_completed':
       return id != null ? '/rides/$id/receipt' : null;
     case 'order_ready':
     case 'order_delivered':
+    case 'order_status':
       return id != null ? '/food/orders/$id' : null;
     case 'booking_confirmed':
       return '/activity';
@@ -105,6 +110,38 @@ void _showLocalNotificationFromPayload(RemoteMessage message) {
   final type = message.data['type'] as String? ?? '';
   final title = message.notification?.title ?? message.data['title'] as String? ?? _defaultTitle(type);
   final body = message.notification?.body ?? message.data['body'] as String? ?? '';
+
+  // Handle progress notifications for order/ride status updates.
+  // These use the NotificationService to show ongoing notifications
+  // with progress bars instead of spawning new notifications each time.
+  if (type == 'order_status' || type == 'ride_status') {
+    final entityId = message.data['id'] as String? ??
+        message.data['orderId'] as String? ??
+        message.data['rideId'] as String?;
+    final status = message.data['status'] as String? ?? '';
+    final etaMinutes = int.tryParse(message.data['etaMinutes'] as String? ?? '');
+
+    if (entityId != null && entityId.isNotEmpty) {
+      final progress = type == 'order_status'
+          ? NotificationService.progressForStatus(status)
+          : NotificationService.progressForRideStatus(status);
+      final statusText = type == 'order_status'
+          ? NotificationService.statusTextForOrder(status, etaMinutes: etaMinutes)
+          : NotificationService.statusTextForRide(status, etaMinutes: etaMinutes);
+      final isComplete = progress >= 100 ||
+          status.toLowerCase().contains('cancelled');
+
+      NotificationService.instance.showProgressNotification(
+        entityId: entityId,
+        title: title,
+        statusText: statusText.isNotEmpty ? statusText : body,
+        progressPercent: progress,
+        route: _resolveRoute(message.data),
+        isComplete: isComplete,
+      );
+      return;
+    }
+  }
 
   String channelId;
   int priority = 2;
@@ -166,8 +203,14 @@ String _defaultTitle(String type) {
       return 'Driver Assigned';
     case 'ride_completed':
       return 'Ride Completed';
+    case 'ride_status':
+      return 'Ride Update';
     case 'order_status':
       return 'Order Update';
+    case 'order_ready':
+      return 'Order Ready';
+    case 'order_delivered':
+      return 'Order Delivered';
     default:
       return 'PY Connect';
   }
@@ -187,6 +230,7 @@ class FcmService {
   static Future<FcmService> initialize({FirebaseOptions? options}) async {
     await Firebase.initializeApp(options: options);
     await _initLocalNotifications();
+    await NotificationService.instance.initialize();
 
     // Register the background handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
