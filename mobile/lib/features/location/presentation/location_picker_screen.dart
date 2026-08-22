@@ -3,6 +3,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+
+import '../../../core/design/map_tile_config.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/address_provider.dart';
@@ -154,10 +156,7 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
           onMapEvent: _onMapEvent,
         ),
         children: [
-          TileLayer(
-            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            subdomains: const ['a', 'b', 'c'],
-          ),
+          MapTileConfig.forTheme(context),
           MarkerLayer(
             markers: [
               Marker(

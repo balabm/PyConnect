@@ -963,11 +963,12 @@ class _MenuItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onCardTap,
       child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 18),
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -984,144 +985,179 @@ class _MenuItemTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Text section (left, expanded)
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Veg/non-veg indicator
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isVeg ? AppTheme.emerald : AppTheme.danger,
-                          width: 1.5,
+            child: Padding(
+              // Right padding leaves room for the image + overlapping ADD button
+              padding: const EdgeInsets.only(right: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // Veg/non-veg indicator
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isVeg ? AppTheme.emerald : AppTheme.danger,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        borderRadius: BorderRadius.circular(2),
+                        child: Icon(
+                          isVeg ? Icons.circle : Icons.change_circle,
+                          size: 8,
+                          color: isVeg ? AppTheme.emerald : AppTheme.danger,
+                        ),
                       ),
-                      child: Icon(
-                        isVeg ? Icons.circle : Icons.change_circle,
-                        size: 8,
-                        color: isVeg ? AppTheme.emerald : AppTheme.danger,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    if (isLateNight) ...[
-                      Icon(Icons.nightlight_round, size: 14, color: AppTheme.info.withValues(alpha: 0.6)),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
+                      if (isLateNight) ...[
+                        Icon(Icons.nightlight_round, size: 14, color: AppTheme.info.withValues(alpha: 0.6)),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: -0.2))),
                     ],
-                    Flexible(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
-                  ],
-                ),
-                if (description != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    description!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppTheme.darkTextSecondary
-                          : const Color(0xFF6B7280),
-                      fontWeight: FontWeight.w400,
-                      height: 1.3,
+                  ),
+                  if (description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      description!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.darkTextSecondary : const Color(0xFF6B7280),
+                        fontWeight: FontWeight.w400,
+                        height: 1.3,
+                      ),
                     ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text('\u20B9${price.toStringAsFixed(0)}', style: TextStyle(color: isDark ? const Color(0xE6FFFFFF) : AppTheme.charcoal, fontWeight: FontWeight.w700, fontSize: 15)),
+                      if (category != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: AppTheme.emerald.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppRadius.pill)),
+                          child: Text(category!, style: TextStyle(fontSize: 10, color: AppTheme.emerald, fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text('\u20B9${price.toStringAsFixed(0)}', style: TextStyle(color: AppTheme.emerald, fontWeight: FontWeight.w700, fontSize: 15)),
-                    if (category != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: AppTheme.emerald.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppRadius.pill)),
-                        child: Text(category!, style: TextStyle(fontSize: 10, color: AppTheme.emerald, fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ],
+              ),
+            ),
+          ),
+          // Image + overlapping ADD button (Swiggy-style)
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Item thumbnail (96x96 — Swiggy size)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 96,
+                  height: 96,
+                  child: imageUrl != null && imageUrl!.isNotEmpty
+                      ? AppNetworkImage(
+                          imageUrl: imageUrl!,
+                          fit: BoxFit.cover,
+                          width: 96,
+                          height: 96,
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: isDark
+                                  ? [const Color(0xFF1F2937), const Color(0xFF111827)]
+                                  : [const Color(0xFFF9FAFB), const Color(0xFFE5E7EB)],
+                            ),
+                          ),
+                        ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Item thumbnail (64x64, 1:1 aspect ratio)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 64,
-              height: 64,
-              child: imageUrl != null && imageUrl!.isNotEmpty
-                  ? AppNetworkImage(
-                      imageUrl: imageUrl!,
-                      fit: BoxFit.cover,
-                      width: 64,
-                      height: 64,
-                      fallbackIcon: Icons.restaurant_outlined,
-                    )
-                  : Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      child: Icon(
-                        Icons.restaurant_outlined,
-                        size: 28,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+              ),
+              // Floating ADD button — overlaps bottom edge of image
+              if (quantity == 0)
+                Positioned(
+                  bottom: -10,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: isEnabled ? onAdd : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.darkSurface : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isEnabled
+                              ? AppTheme.emerald
+                              : AppTheme.emerald.withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                        boxShadow: isEnabled
+                            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2))]
+                            : [],
                       ),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          quantity == 0
-              ? GestureDetector(
-                  onTap: isEnabled ? onAdd : null,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppTheme.darkSurface
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isEnabled
-                            ? AppTheme.emerald
-                            : AppTheme.emerald.withValues(alpha: 0.3),
-                        width: 1.5,
-                      ),
-                      boxShadow: isEnabled
-                          ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))]
-                          : [],
-                    ),
-                    child: Text(
-                      'ADD',
-                      style: TextStyle(
-                        color: isEnabled ? AppTheme.emerald : AppTheme.emerald.withValues(alpha: 0.3),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        letterSpacing: 0.5,
+                      child: Text(
+                        'ADD',
+                        style: TextStyle(
+                          color: isEnabled ? AppTheme.emerald : AppTheme.emerald.withValues(alpha: 0.3),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
                 )
-              : Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.emerald.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(icon: const Icon(Icons.remove, size: 18), onPressed: isEnabled ? onRemove : null, color: AppTheme.emerald),
-                      Text('$quantity', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      IconButton(icon: const Icon(Icons.add, size: 18), onPressed: isEnabled ? onAdd : null, color: AppTheme.emerald),
-                    ],
+              else
+                Positioned(
+                  bottom: -10,
+                  right: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkSurface : Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.emerald, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove, size: 16),
+                          onPressed: isEnabled ? onRemove : null,
+                          color: AppTheme.emerald,
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                        Text('$quantity', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                        IconButton(
+                          icon: const Icon(Icons.add, size: 16),
+                          onPressed: isEnabled ? onAdd : null,
+                          color: AppTheme.emerald,
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+            ],
+          ),
         ],
       ),
-    ),
+      ),
     );
   }
 }

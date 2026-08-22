@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Modern coastal palette inspired by Pondicherry's coastline.
 /// Sophisticated Emerald + Terracotta Coral on a crisp off-white canvas.
@@ -101,15 +102,15 @@ abstract final class AppTheme {
   static ThemeData get light {
     final scheme = ColorScheme.fromSeed(
       seedColor: emerald,
-      primary: emerald,
-      secondary: emeraldLight,
+      primary: charcoal,       // Monochrome CTA — charcoal, not emerald
+      secondary: emerald,      // Emerald reserved for status/accents
       surface: cardBackground,
       surfaceContainerHighest: searchFill,
       onSurface: charcoal,
       onSurfaceVariant: slate,
-      error: Color(0xFFEF4444),
+      error: const Color(0xFFEF4444),
     );
-    return ThemeData(
+    final base = ThemeData(
       colorScheme: scheme,
       brightness: Brightness.light,
       scaffoldBackgroundColor: white,
@@ -135,12 +136,17 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
         ),
       ),
+      // Monochrome primary CTA — charcoal button, white text (Uber/Swiggy style)
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: emerald,
+          backgroundColor: charcoal,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          textStyle: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            letterSpacing: -0.3,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
@@ -148,8 +154,8 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: emerald,
-          side: const BorderSide(color: emerald, width: 1.5),
+          foregroundColor: charcoal,
+          side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
@@ -198,25 +204,30 @@ abstract final class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      textTheme: const TextTheme(
-        bodyLarge: TextStyle(color: charcoal),
-        bodyMedium: TextStyle(color: charcoal),
-        bodySmall: TextStyle(color: slate, fontSize: 12),
-        titleLarge: TextStyle(color: charcoal, fontWeight: FontWeight.bold),
-        titleMedium: TextStyle(color: charcoal, fontWeight: FontWeight.w600),
-        titleSmall: TextStyle(color: charcoal, fontWeight: FontWeight.w500),
-        labelLarge: TextStyle(color: charcoal),
-        labelMedium: TextStyle(color: slate),
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(
+        const TextTheme(
+          bodyLarge: TextStyle(color: charcoal),
+          bodyMedium: TextStyle(color: charcoal),
+          bodySmall: TextStyle(color: slate, fontSize: 12),
+          titleLarge: TextStyle(color: charcoal, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+          titleMedium: TextStyle(color: charcoal, fontWeight: FontWeight.w600, letterSpacing: -0.3),
+          titleSmall: TextStyle(color: charcoal, fontWeight: FontWeight.w500),
+          labelLarge: TextStyle(color: charcoal),
+          labelMedium: TextStyle(color: slate),
+        ),
       ),
       iconTheme: const IconThemeData(color: slate),
     );
+    return base;
   }
   /// Dark theme — pure OLED black with premium dark slate surfaces.
+  /// Uber-style: monochrome CTAs (light grey button, black text).
+  /// Emerald reserved for status indicators only.
   static ThemeData get dark {
     final scheme = ColorScheme.fromSeed(
       seedColor: emerald,
-      primary: emerald,
-      secondary: emeraldLight,
+      primary: const Color(0xFFE0E0E0),   // Light grey CTA — Uber dark mode style
+      secondary: emerald,                  // Emerald for status/accents only
       brightness: Brightness.dark,
       surface: darkSurface,
       surfaceContainerHighest: darkCard,
@@ -224,7 +235,7 @@ abstract final class AppTheme {
       onSurfaceVariant: darkTextSecondary,
       error: const Color(0xFFEF4444),
     );
-    return ThemeData(
+    final base = ThemeData(
       colorScheme: scheme,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: darkBackground,
@@ -251,12 +262,17 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
         ),
       ),
+      // Uber-style dark mode CTA: light grey button, BLACK text
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: emerald,
-          foregroundColor: Colors.white,
+          backgroundColor: const Color(0xFFE0E0E0),
+          foregroundColor: pureBlack,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          textStyle: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            letterSpacing: -0.3,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
@@ -264,8 +280,8 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: emerald,
-          side: const BorderSide(color: emerald, width: 1.5),
+          foregroundColor: darkTextPrimary,
+          side: const BorderSide(color: darkBorder, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
@@ -316,26 +332,31 @@ abstract final class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      textTheme: const TextTheme(
-        bodyLarge: TextStyle(color: darkTextPrimary),
-        bodyMedium: TextStyle(color: darkTextPrimary),
-        bodySmall: TextStyle(color: darkTextSecondary, fontSize: 12),
-        titleLarge: TextStyle(color: darkTextPrimary, fontWeight: FontWeight.bold),
-        titleMedium: TextStyle(color: darkTextPrimary, fontWeight: FontWeight.w600),
-        titleSmall: TextStyle(color: darkTextPrimary, fontWeight: FontWeight.w500),
-        labelLarge: TextStyle(color: darkTextPrimary),
-        labelMedium: TextStyle(color: darkTextSecondary),
+      // Uber-style opacity-based whites: 0.9 for headers, 0.6 for subtitles
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(
+        const TextTheme(
+          bodyLarge: TextStyle(color: Color(0xE6FFFFFF)),  // white 0.9
+          bodyMedium: TextStyle(color: Color(0x99FFFFFF)),  // white 0.6
+          bodySmall: TextStyle(color: Color(0x60FFFFFF), fontSize: 12),  // white 0.38
+          titleLarge: TextStyle(color: Color(0xE6FFFFFF), fontWeight: FontWeight.w700, letterSpacing: -0.5),
+          titleMedium: TextStyle(color: Color(0xE6FFFFFF), fontWeight: FontWeight.w600, letterSpacing: -0.3),
+          titleSmall: TextStyle(color: Color(0x99FFFFFF), fontWeight: FontWeight.w500),
+          labelLarge: TextStyle(color: Color(0xE6FFFFFF)),
+          labelMedium: TextStyle(color: Color(0x99FFFFFF)),
+        ),
       ),
       iconTheme: const IconThemeData(color: darkTextSecondary),
     );
+    return base;
   }
 
   /// Driver app theme — high-contrast operational UI.
+  /// Monochrome CTA (charcoal), emerald for status only.
   static ThemeData get driverTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: emerald,
-      primary: emerald,
-      secondary: emeraldLight,
+      primary: charcoal,
+      secondary: emerald,
       surface: cardBackground,
       onSurface: charcoal,
       error: const Color(0xFFEF4444),
@@ -353,15 +374,19 @@ abstract final class AppTheme {
         backgroundColor: cardBackground,
         indicatorColor: emerald.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+          GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: emerald,
+          backgroundColor: charcoal,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          textStyle: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            letterSpacing: -0.3,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
