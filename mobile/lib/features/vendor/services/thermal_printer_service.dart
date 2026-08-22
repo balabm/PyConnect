@@ -60,7 +60,7 @@ class OrderTicket {
 /// [SharedPreferences] so [autoConnect] can re-establish the connection
 /// without user intervention.
 class ThermalPrinterService {
-  ThermalPrinterService() : _bluetooth = BlueThermalPrinter();
+  ThermalPrinterService() : _bluetooth = BlueThermalPrinter.instance;
 
   static const _prefKeyAddress = 'thermal_printer_address';
   static const _prefKeyName = 'thermal_printer_name';
@@ -93,7 +93,7 @@ class ThermalPrinterService {
   /// an empty list is returned.
   Future<List<BluetoothDevice>> scanPrinters() async {
     try {
-      return await _bluetooth.getDevices();
+      return await _bluetooth.getBondedDevices();
     } catch (_) {
       return [];
     }
@@ -158,7 +158,7 @@ class ThermalPrinterService {
     final name = prefs.getString(_prefKeyName);
     if (address == null) return false;
 
-    final device = BluetoothDevice(address: address, name: name ?? '');
+    final device = BluetoothDevice(name ?? '', address);
     return connect(device);
   }
 
@@ -220,7 +220,7 @@ class ThermalPrinterService {
     try {
       final profile = await CapabilityProfile.load();
       final generator = Generator(PaperSize.mm58, profile);
-      final bytes = <int>[];
+      var bytes = <int>[];
       bytes += generator.text(
         'PY Connect',
         styles: const PosStyles(
@@ -255,7 +255,7 @@ class ThermalPrinterService {
   Future<List<int>> _buildTicketBytes(OrderTicket ticket) async {
     final profile = await CapabilityProfile.load();
     final generator = Generator(PaperSize.mm58, profile);
-    final bytes = <int>[];
+    var bytes = <int>[];
 
     // Header — big bold Order ID (double-height + double-width)
     bytes += generator.text(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/animations/haptic.dart';
-import '../../../core/design/design.dart';
-import '../../../core/theme/app_theme.dart';
-import '../data/food_api.dart';
+import '../../../../core/animations/haptic.dart';
+import '../../../../core/design/design.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../data/food_api.dart';
 
 /// Result returned by [ItemCustomizationSheet] when the user confirms.
 /// Contains the selected modifier IDs and the computed unit price

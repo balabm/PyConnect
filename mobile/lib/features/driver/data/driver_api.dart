@@ -62,6 +62,25 @@ class DriverApi {
     await _api.post('api/driver/tasks/$taskId/out-for-delivery');
   }
 
+  /// Uploads a proof-of-delivery photo for a food/essentials order.
+  /// Called by the Captain when tapping "Delivered" — they snap a photo
+  /// of the bag at the door. The photo is uploaded and attached to the
+  /// order record to eliminate "I never got my food" disputes.
+  Future<String?> uploadDeliveryProof(String orderId, File photo) async {
+    try {
+      final formData = FormData.fromMap({
+        'photo': await MultipartFile.fromFile(photo.path),
+      });
+      final response = await _api.post(
+        'api/driver/orders/$orderId/delivery-proof',
+        data: formData,
+      );
+      return (response as Map<String, dynamic>?)?['proofUrl'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<DriverWalletModel> getWallet() async {
     final data = await _api.get('api/driver/wallet');
     return DriverWalletModel.fromJson(data as Map<String, dynamic>);

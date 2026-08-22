@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/network/offline_mutation_queue.dart';
+import '../../../core/services/geofence_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers.dart';
 import '../application/driver_providers.dart';
@@ -40,18 +42,66 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
   bool _fareSheetShown = false;
   Timer? _tripTimer;
   int _tripSeconds = 0;
+  Timer? _geofenceTimer;
+  bool _autoArrivalTriggered = false;
 
   @override
   void initState() {
     super.initState();
     _loadRide();
+    _startGeofenceCheck();
   }
 
   @override
   void dispose() {
     _otpController.dispose();
     _tripTimer?.cancel();
+    _geofenceTimer?.cancel();
     super.dispose();
+  }
+
+  /// Periodically checks if the driver has arrived at the pickup location
+  /// (within 50m geofence). If so, automatically triggers arrival — no
+  /// manual button tap required. Only runs when ride status is
+  /// DriverAssigned (heading to pickup).
+  void _startGeofenceCheck() {
+    _geofenceTimer?.cancel();
+    _geofenceTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (_ride == null || _autoArrivalTriggered) return;
+
+      final status = (_ride!['status'] as String?).toString().toLowerCase();
+      if (status != 'driverassigned') return;
+
+      final pickupLat = _ride!['pickupLat'] as num?;
+      final pickupLng = _ride!['pickupLng'] as num?;
+      if (pickupLat == null || pickupLng == null) return;
+
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 3),
+          ),
+        );
+        final driverPos = LatLng(position.latitude, position.longitude);
+        final pickupPos = LatLng(pickupLat.toDouble(), pickupLng.toDouble());
+
+        if (GeofenceService.isWithinGeofence(driverPos, pickupPos)) {
+          _autoArrivalTriggered = true;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Arrived at pickup location (50m geofence detected).'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          _arriveAtPickup();
+        }
+      } catch (_) {
+        // GPS error — skip this check cycle.
+      }
+    });
   }
 
   Future<void> _loadRide() async {

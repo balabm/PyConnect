@@ -120,6 +120,7 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
             path: 'ride/:id',
             builder: (_, state) => DriverRideScreen(
               rideId: state.pathParameters['id']!,
+              taskId: state.pathParameters['id']!,
               driverId: state.uri.queryParameters['driverId'] ?? '',
             ),
           ),

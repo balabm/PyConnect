@@ -1,7 +1,7 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:google_place/google_place.dart' as gp;
 import 'package:latlong2/latlong.dart';
 
 const String _kGooglePlacesApiKey = String.fromEnvironment(
@@ -9,16 +9,22 @@ const String _kGooglePlacesApiKey = String.fromEnvironment(
   defaultValue: '',
 );
 
-/// Search delegate backed by Google Places autocomplete, debounced by 300ms.
-/// Restricted to India and biased around Pondicherry.
+/// Search delegate backed by Google Places Autocomplete API via [Dio],
+/// debounced by 300ms. Restricted to India and biased around Pondicherry.
+///
+/// Replaces the abandoned `google_place` package which depends on
+/// `http ^0.13.3` and conflicts with `flutter_map`'s `http ^1.2.1`.
+/// Uses `dio` (already in the project) for direct REST calls.
 class AddressSearchDelegate extends SearchDelegate<LatLng?> {
   AddressSearchDelegate({required this.onSelected});
 
   final ValueChanged<LatLng> onSelected;
 
-  final gp.GooglePlace? _googlePlace = _kGooglePlacesApiKey.isNotEmpty
-      ? gp.GooglePlace(_kGooglePlacesApiKey)
-      : null;
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: 'https://maps.googleapis.com/maps/api/place',
+    connectTimeout: const Duration(seconds: 5),
+    receiveTimeout: const Duration(seconds: 5),
+  ));
 
   @override
   List<Widget>? buildActions(BuildContext context) => [
@@ -40,7 +46,7 @@ class AddressSearchDelegate extends SearchDelegate<LatLng?> {
   @override
   Widget buildResults(BuildContext context) => _SuggestionsList(
         query: query,
-        googlePlace: _googlePlace,
+        dio: _dio,
         onSelected: (latLng) {
           onSelected(latLng);
           close(context, null);
@@ -50,7 +56,7 @@ class AddressSearchDelegate extends SearchDelegate<LatLng?> {
   @override
   Widget buildSuggestions(BuildContext context) => _SuggestionsList(
         query: query,
-        googlePlace: _googlePlace,
+        dio: _dio,
         onSelected: (latLng) {
           onSelected(latLng);
           close(context, null);
@@ -61,12 +67,12 @@ class AddressSearchDelegate extends SearchDelegate<LatLng?> {
 class _SuggestionsList extends StatefulWidget {
   const _SuggestionsList({
     required this.query,
-    required this.googlePlace,
+    required this.dio,
     required this.onSelected,
   });
 
   final String query;
-  final gp.GooglePlace? googlePlace;
+  final Dio dio;
   final ValueChanged<LatLng> onSelected;
 
   @override
@@ -74,7 +80,7 @@ class _SuggestionsList extends StatefulWidget {
 }
 
 class _SuggestionsListState extends State<_SuggestionsList> {
-  List<gp.AutocompletePrediction> _predictions = [];
+  List<_PlacePrediction> _predictions = [];
   bool _loading = false;
   Timer? _debounce;
 
@@ -102,7 +108,7 @@ class _SuggestionsListState extends State<_SuggestionsList> {
   }
 
   Future<void> _search(String input) async {
-    if (input.isEmpty || widget.googlePlace == null) {
+    if (input.isEmpty || _kGooglePlacesApiKey.isEmpty) {
       setState(() {
         _predictions = [];
         _loading = false;
@@ -112,15 +118,25 @@ class _SuggestionsListState extends State<_SuggestionsList> {
 
     setState(() => _loading = true);
     try {
-      final response = await widget.googlePlace!.autocomplete.get(
-        input,
-        components: 'country:in',
-        language: 'en',
-        location: gp.Location(lat: 11.9356, lng: 79.8301),
-        radius: 50000,
+      final response = await widget.dio.get(
+        '/autocomplete/json',
+        queryParameters: {
+          'input': input,
+          'key': _kGooglePlacesApiKey,
+          'components': 'country:in',
+          'language': 'en',
+          'location': '11.9356,79.8301',
+          'radius': 50000,
+        },
       );
+      final predictions = response.data['predictions'] as List? ?? [];
       setState(() {
-        _predictions = response?.predictions ?? [];
+        _predictions = predictions
+            .map((p) => _PlacePrediction(
+                  placeId: p['place_id'] as String? ?? '',
+                  description: p['description'] as String? ?? '',
+                ))
+            .toList();
         _loading = false;
       });
     } catch (_) {
@@ -131,17 +147,21 @@ class _SuggestionsListState extends State<_SuggestionsList> {
     }
   }
 
-  Future<void> _onPredictionTapped(gp.AutocompletePrediction prediction) async {
-    final placeId = prediction.placeId;
-    if (placeId == null || placeId.isEmpty || widget.googlePlace == null) return;
+  Future<void> _onPredictionTapped(_PlacePrediction prediction) async {
+    if (prediction.placeId.isEmpty || _kGooglePlacesApiKey.isEmpty) return;
 
     try {
-      final details = await widget.googlePlace!.details.get(
-        placeId,
-        fields: ['geometry'],
+      final response = await widget.dio.get(
+        '/details/json',
+        queryParameters: {
+          'place_id': prediction.placeId,
+          'key': _kGooglePlacesApiKey,
+          'fields': 'geometry',
+        },
       );
-      final lat = details?.result?.geometry?.location?.lat;
-      final lng = details?.result?.geometry?.location?.lng;
+      final location = response.data['result']?['geometry']?['location'];
+      final lat = location?['lat']?.toDouble();
+      final lng = location?['lng']?.toDouble();
       if (lat != null && lng != null) {
         widget.onSelected(LatLng(lat, lng));
       }
@@ -184,10 +204,17 @@ class _SuggestionsListState extends State<_SuggestionsList> {
         final prediction = _predictions[index];
         return ListTile(
           leading: const Icon(Icons.location_on_outlined),
-          title: Text(prediction.description ?? ''),
+          title: Text(prediction.description),
           onTap: () => _onPredictionTapped(prediction),
         );
       },
     );
   }
+}
+
+class _PlacePrediction {
+  final String placeId;
+  final String description;
+
+  _PlacePrediction({required this.placeId, required this.description});
 }

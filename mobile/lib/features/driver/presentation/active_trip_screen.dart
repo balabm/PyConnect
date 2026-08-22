@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
@@ -9,6 +13,7 @@ import '../../../core/network/offline_mutation_queue.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/driver_providers.dart';
+import '../data/driver_api.dart';
 import '../domain/driver_models.dart';
 import 'driver_ride_screen.dart';
 import 'post_trip_summary_sheet.dart';
@@ -438,8 +443,35 @@ class _DeliveryLifecycleScreenState
 
   Future<void> _completeDelivery(BuildContext context) async {
     AppHaptics.medium();
+
+    // Capture proof-of-delivery photo before completing.
+    final picker = ImagePicker();
+    final XFile? photo = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 70,
+      preferredCameraDevice: CameraDevice.rear,
+    );
+    if (photo == null) {
+      // User cancelled — don't complete delivery without proof.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Delivery proof photo is required to complete delivery.'),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _completing = true);
     try {
+      // Upload proof-of-delivery photo (best-effort — completion proceeds
+      // even if upload fails, since the task completion is the critical path).
+      final orderId = widget.task.orderId ?? widget.task.id;
+      unawaited(
+        ref.read(driverApiProvider).uploadDeliveryProof(orderId, File(photo.path)),
+      );
+
       await ref.read(driverApiProvider).completeTask(widget.task.id);
       if (mounted) {
         // Show the celebratory post-trip summary sheet with the earnings

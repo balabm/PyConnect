@@ -379,6 +379,7 @@ class ManageHubScreen extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
