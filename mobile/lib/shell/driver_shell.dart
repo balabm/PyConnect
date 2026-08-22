@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../core/device/location_security.dart';
 import '../core/animations/haptic.dart';
+import '../core/navigation/floating_nav_bar.dart';
 import '../core/theme/app_theme.dart';
 import '../core/network/offline_mutation_queue.dart';
 import '../core/services/gps_buffer_service.dart';
@@ -456,8 +457,9 @@ class _DriverShellState extends ConsumerState<DriverShell> {
 
     _locationTimer?.cancel();
     _locationTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      Position? currentPosition;
       try {
-        final position = await Geolocator.getCurrentPosition(
+        currentPosition = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
             timeLimit: Duration(seconds: 5),
@@ -467,14 +469,14 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         // Anti-spoofing: check if the position is from a mock-location app.
         // If so, drop the ping, force the driver offline, and show a
         // permanent red warning screen. Log the anomaly to the backend.
-        if (LocationSecurity.isMocked(position)) {
+        if (LocationSecurity.isMocked(currentPosition)) {
           _handleMockLocationDetected(ref);
           return;
         }
 
         await ref.read(driverApiProvider).updateLocation(
-              position.latitude,
-              position.longitude,
+              currentPosition.latitude,
+              currentPosition.longitude,
             );
         // GPS + network succeeded — reset the failure counter and flush
         // any buffered pings from a previous offline period.
@@ -483,11 +485,13 @@ class _DriverShellState extends ConsumerState<DriverShell> {
       } catch (e) {
         // Network or GPS error — buffer the GPS ping so the trip trail
         // remains complete when connectivity is restored.
-        try {
-          final buffer = ref.read(gpsBufferServiceProvider);
-          await buffer.enqueue(position.latitude, position.longitude);
-        } catch (_) {
-          // Buffer not ready — drop silently.
+        if (currentPosition != null) {
+          try {
+            final buffer = ref.read(gpsBufferServiceProvider);
+            await buffer.enqueue(currentPosition.latitude, currentPosition.longitude);
+          } catch (_) {
+            // Buffer not ready — drop silently.
+          }
         }
 
         // GPS error — track consecutive failures and warn the driver
@@ -605,6 +609,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
     }
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: const Text('PY Connect Captain'),
         actions: [
@@ -689,24 +694,24 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           ),
         ],
       )),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: FloatingNavBar(
         selectedIndex: currentIndex,
         onDestinationSelected: (i) => ref.read(driverSelectedTabProvider.notifier).state = i,
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.list_outlined),
-            selectedIcon: Icon(Icons.list),
+          FloatingNavDestination(
+            icon: Icons.list_outlined,
+            activeIcon: Icons.list,
             label: 'Tasks',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.two_wheeler_outlined),
-            selectedIcon: Icon(Icons.two_wheeler),
+          FloatingNavDestination(
+            icon: Icons.two_wheeler_outlined,
+            activeIcon: Icons.two_wheeler,
             label: 'Active Trip',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet),
-            label: 'Earnings & Profile',
+          FloatingNavDestination(
+            icon: Icons.account_balance_wallet_outlined,
+            activeIcon: Icons.account_balance_wallet,
+            label: 'Earnings',
           ),
         ],
       ),

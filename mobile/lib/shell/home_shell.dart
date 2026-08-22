@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/navigation/floating_nav_bar.dart';
 import '../features/activity/presentation/activity_hub_screen.dart';
 import '../features/food/presentation/restaurant_list_screen.dart';
 import '../features/hub/services_hub_screen.dart';
@@ -28,7 +29,8 @@ class _Hub extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(child: _buildStack(index)),
-      bottomNavigationBar: NavigationBar(
+      extendBody: true,
+      bottomNavigationBar: FloatingNavBar(
         selectedIndex: index,
         onDestinationSelected: (i) {
           switch (i) {
@@ -47,34 +49,34 @@ class _Hub extends ConsumerWidget {
           }
         },
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.local_bar_outlined),
-            selectedIcon: Icon(Icons.local_bar),
+          FloatingNavDestination(
+            icon: Icons.local_bar_outlined,
+            activeIcon: Icons.local_bar,
             label: 'Vibe',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.restaurant_outlined),
-            selectedIcon: Icon(Icons.restaurant),
+          FloatingNavDestination(
+            icon: Icons.restaurant_outlined,
+            activeIcon: Icons.restaurant,
             label: 'Food',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.two_wheeler_outlined),
-            selectedIcon: Icon(Icons.two_wheeler),
+          FloatingNavDestination(
+            icon: Icons.two_wheeler_outlined,
+            activeIcon: Icons.two_wheeler,
             label: 'Ride',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.bed_outlined),
-            selectedIcon: Icon(Icons.bed),
+          FloatingNavDestination(
+            icon: Icons.bed_outlined,
+            activeIcon: Icons.bed,
             label: 'Stays',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
+          FloatingNavDestination(
+            icon: Icons.receipt_long_outlined,
+            activeIcon: Icons.receipt_long,
             label: 'Activity',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view),
+          FloatingNavDestination(
+            icon: Icons.grid_view_outlined,
+            activeIcon: Icons.grid_view,
             label: 'More',
           ),
         ],

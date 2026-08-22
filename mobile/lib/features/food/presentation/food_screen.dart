@@ -18,9 +18,11 @@ import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../checkout/cart_conflict_exception.dart';
 import '../../checkout/cart_controller.dart';
+import '../../checkout/presentation/floating_cart_pill.dart';
 import '../data/food_api.dart';
 import 'widgets/item_customization_sheet.dart';
 import '../../../core/widgets/skeleton_loaders.dart';
+import '../../../core/widgets/menu_shimmer_grid.dart';
 
 final menuProvider = FutureProvider.family<List<dynamic>, String>((ref, vendorId) async {
   final api = ref.watch(foodApiProvider);
@@ -290,10 +292,10 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
 
     return Scaffold(
       body: menuAsync.when(
-        loading: () => const CustomScrollView(
+        loading: () => CustomScrollView(
           slivers: [
             _buildSliverAppBar(),
-            SliverFillRemaining(child: const SkeletonList(type: SkeletonType.menu, count: 8)),
+            const SliverFillRemaining(child: MenuShimmerGrid(itemCount: 8)),
           ],
         ),
         error: (e, _) => CustomScrollView(
@@ -461,26 +463,13 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
           ),
         ),
         if (cartCount > 0)
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 16,
-            child: FadeSlideIn(
-              child: _CheckoutBar(
-                itemCount: cartCount,
-                subtotal: subtotal,
-                loading: _loading,
-                enabled: isAcceptingOrders,
-                onCheckout: () {
-                  AppHaptics.medium();
-                  _showCartSummarySheet(items, subtotal);
-                },
-                onClear: () {
-                  AppHaptics.light();
-                  ref.read(cartProvider.notifier).clear();
-                },
-              ),
-            ),
+          FloatingCartPill(
+            itemCount: cartCount,
+            subtotal: subtotal,
+            onCheckout: () {
+              AppHaptics.medium();
+              _showCartSummarySheet(items, subtotal);
+            },
           ),
       ],
     );

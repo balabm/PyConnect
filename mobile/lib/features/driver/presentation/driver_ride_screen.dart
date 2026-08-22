@@ -13,6 +13,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers.dart';
 import '../application/driver_providers.dart';
 import '../../rides/presentation/widgets/ride_map.dart';
+import 'floating_trip_hud.dart';
 import 'post_trip_summary_sheet.dart';
 
 class DriverRideScreen extends ConsumerStatefulWidget {
@@ -456,6 +457,18 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
     }
   }
 
+  Future<void> _launchNavigation(String address) async {
+    final encoded = Uri.encodeComponent(address);
+    final nativeUrl = 'google.navigation:q=$encoded&mode=d';
+    final webUrl = 'https://www.google.com/maps/dir/?api=1&destination=$encoded&travelmode=driving';
+    final nativeUri = Uri.parse(nativeUrl);
+    if (await canLaunchUrl(nativeUri)) {
+      await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
+    } else {
+      await launchUrl(Uri.parse(webUrl), mode: LaunchMode.externalApplication);
+    }
+  }
+
   /// Checks if an exception is a network error (vs a server error).
   /// Network errors are queued for retry; server errors are surfaced.
   bool _isNetworkError(Exception e) {
@@ -515,13 +528,44 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
       body: Column(
         children: [
           SizedBox(
-            height: 200,
-            child: RideMap(
-              pickup: LatLng(pickupLat, pickupLng),
-              dropoff: LatLng(dropoffLat, dropoffLng),
-              routePoints: _routePoints,
-              zoom: 14.0,
-              fitRoute: true,
+            height: 240,
+            child: Stack(
+              children: [
+                RideMap(
+                  pickup: LatLng(pickupLat, pickupLng),
+                  dropoff: LatLng(dropoffLat, dropoffLng),
+                  routePoints: _routePoints,
+                  zoom: 14.0,
+                  fitRoute: true,
+                ),
+                // Floating glassmorphic trip HUD overlay
+                Positioned(
+                  top: 8,
+                  left: 12,
+                  right: 12,
+                  child: SafeArea(
+                    bottom: false,
+                    child: FloatingTripHud(
+                      maneuverIcon: isEnRoute
+                          ? Icons.location_on_rounded
+                          : Icons.navigation_rounded,
+                      maneuverText: isEnRoute
+                          ? 'En route to drop-off'
+                          : (isDriverAssigned
+                              ? 'Head to pickup'
+                              : 'Active ride'),
+                      etaMinutes: estimatedDurationMin,
+                      distanceKm: distanceKm,
+                      destinationLabel: isEnRoute
+                          ? 'Drop-off: $dropoffAddress'
+                          : 'Pickup: $pickupAddress',
+                      onTapNavigate: () => _launchNavigation(
+                        isEnRoute ? dropoffAddress : pickupAddress,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(

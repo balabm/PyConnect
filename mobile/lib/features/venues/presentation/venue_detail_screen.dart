@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +12,9 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/menu_shimmer_grid.dart';
 import '../application/venue_controller.dart';
 import '../data/venue_api.dart';
 import 'vibe.dart';
@@ -60,10 +64,10 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
       final isLoading = venuesAsync.isLoading || _loadingDetail;
       return Scaffold(
         appBar: AppBar(title: const Text('Venue')),
-        body: Center(
-          child: isLoading
-              ? const CircularProgressIndicator()
-              : Column(
+        body: isLoading
+            ? const VenueShimmerList(itemCount: 3)
+            : Center(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -76,7 +80,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     ),
                   ],
                 ),
-        ),
+              ),
       );
     }
 
@@ -103,13 +107,15 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
         onRefresh: _refreshVenue,
         child: CustomScrollView(
           slivers: [
-            // Hero image in SliverAppBar — shrinks on scroll
+            // Hero image in SliverAppBar — shrinks on scroll with
+            // parallax + frosted glass header on collapse
             SliverAppBar(
-              expandedHeight: 250,
+              expandedHeight: 280,
               pinned: true,
               floating: false,
               snap: false,
               backgroundColor: AppTheme.night,
+              surfaceTintColor: Colors.transparent,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () {
@@ -124,22 +130,38 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                   onPressed: () { _shareVenue(venue); },
                 ),
               ],
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.parallax,
-                stretchModes: const [StretchMode.zoomBackground],
-                title: Text(
-                  venue.name,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 1)),
-                    ],
-                  ),
-                ),
+              flexibleSpace: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Calculate collapse progress (0 = expanded, 1 = collapsed)
+                  final collapseProgress = ((250 - constraints.biggest.height) / 200)
+                      .clamp(0.0, 1.0);
+                  final isCollapsed = collapseProgress > 0.7;
+
+                  return FlexibleSpaceBar(
+                    collapseMode: CollapseMode.parallax,
+                    stretchModes: const [StretchMode.zoomBackground],
+                    title: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: isCollapsed ? 1.0 : 0.0,
+                      child: Text(
+                        venue.name,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.3,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.4),
+                              blurRadius: 6,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -225,6 +247,8 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     ),
                   ],
                 ),
+                  );
+                },
               ),
             ),
             // Detail content

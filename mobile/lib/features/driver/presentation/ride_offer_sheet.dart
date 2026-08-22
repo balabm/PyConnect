@@ -6,6 +6,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/driver_signalr_provider.dart';
+import 'swipe_to_accept.dart';
 
 /// Bottom sheet that shows an incoming ride offer to the driver with
 /// a countdown timer. Auto-declines when the timer expires.
@@ -214,33 +215,30 @@ class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStat
             ),
           ),
           const SizedBox(height: 24),
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    AppHaptics.heavy();
-                    _countdownTimer?.cancel();
-                    widget.onDecline();
-                  },
-                  style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.secondary, side: BorderSide(color: Theme.of(context).colorScheme.secondary)),
-                  child: const Padding(padding: EdgeInsets.all(16), child: Text('Decline', style: TextStyle(fontSize: 16))),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () {
-                    AppHaptics.success();
-                    _countdownTimer?.cancel();
-                    widget.onAccept();
-                  },
-                  style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
-                  child: const Padding(padding: EdgeInsets.all(16), child: Text('Accept', style: TextStyle(fontSize: 16))),
-                ),
-              ),
-            ],
+          // Swipe-to-accept bar (premium, prevents accidental taps)
+          SwipeToAccept(
+            label: 'Swipe to Accept',
+            color: AppTheme.emerald,
+            onAccept: () {
+              _countdownTimer?.cancel();
+              widget.onAccept();
+            },
+          ),
+          const SizedBox(height: 12),
+          // Decline button (text button, less prominent)
+          TextButton(
+            onPressed: () {
+              AppHaptics.heavy();
+              _countdownTimer?.cancel();
+              widget.onDecline();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.secondary,
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('Decline', style: TextStyle(fontSize: 15)),
+            ),
           ),
           const SizedBox(height: 16),
         ],
