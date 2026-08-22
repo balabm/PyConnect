@@ -9,6 +9,7 @@ using PondyConnect.Api.Hubs;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.FoodDelivery;
 using PondyConnect.Application.Features.Luggage;
+using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Features.Vendor;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
@@ -27,6 +28,7 @@ public sealed class VendorController : ControllerBase
     private readonly IStorageService _storage;
     private readonly IPaymentGateway _paymentGateway;
     private readonly IHubContext<VendorHub> _hubContext;
+    private readonly INotificationService _notifications;
 
     public VendorController(
         IMediator mediator,
@@ -34,7 +36,8 @@ public sealed class VendorController : ControllerBase
         ICurrentUserService currentUser,
         IStorageService storage,
         IPaymentGateway paymentGateway,
-        IHubContext<VendorHub> hubContext)
+        IHubContext<VendorHub> hubContext,
+        INotificationService notifications)
     {
         _mediator = mediator;
         _context = context;
@@ -42,6 +45,7 @@ public sealed class VendorController : ControllerBase
         _storage = storage;
         _paymentGateway = paymentGateway;
         _hubContext = hubContext;
+        _notifications = notifications;
     }
 
     /// <summary>
@@ -933,6 +937,128 @@ public sealed class VendorController : ControllerBase
             qrPayload));
     }
 
+    // ── Photo-Verified Custody (luggage cloak) ──
+
+    /// <summary>
+    /// Receives bags at the partner location. The Partner must photograph
+    /// the bags with security tags to protect against liability disputes.
+    /// The intake photo is uploaded to S3 and displayed on the Consumer
+    /// app for transparency. Transitions the status from Reserved to Dropped.
+    /// </summary>
+    [HttpPost("luggage/{dropOffId:guid}/receive")]
+    [ProducesResponseType(typeof(ReceiveBagsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ReceiveBags(
+        Guid dropOffId,
+        [FromForm] IFormFile? intakePhoto,
+        CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendor = await _context.Vendors.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        var dropOff = await _context.LuggageDropOffs
+            .FirstOrDefaultAsync(d => d.Id == dropOffId, cancellationToken);
+        if (dropOff is null)
+            return NotFound(new { Message = "Drop-off not found." });
+
+        if (dropOff.VendorId != vendor.Id)
+            return Forbid();
+
+        // Upload intake photo if provided.
+        string? intakeUrl = null;
+        if (intakePhoto is not null && intakePhoto.Length > 0)
+        {
+            if (intakePhoto.Length > 10 * 1024 * 1024)
+                return BadRequest(new { Message = "Photo must be under 10MB." });
+
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+            if (!allowedTypes.Contains(intakePhoto.ContentType))
+                return BadRequest(new { Message = "Photo must be JPEG, PNG, or WebP." });
+
+            await using var stream = intakePhoto.OpenReadStream();
+            intakeUrl = await _storage.UploadFileAsync(stream, intakePhoto.FileName, intakePhoto.ContentType, isPrivate: false, cancellationToken: cancellationToken);
+        }
+
+        try
+        {
+            dropOff.MarkDropped(intakeUrl);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // Notify the consumer that their bags are secured.
+            await _notifications.SendTargetedPushAsync(
+                dropOff.UserId,
+                "Bags Secured",
+                "Your luggage has been received and secured. Show your retrieval PIN at pickup.",
+                dataPayload: new() { ["type"] = "luggage_dropped", ["dropOffId"] = dropOff.Id.ToString() },
+                cancellationToken: cancellationToken);
+
+            return Ok(new ReceiveBagsResponse(dropOff.Id, "Bags received and secured.", intakeUrl));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Collects bags using the retrieval PIN. The Partner scans the
+    /// Consumer's QR code or manually enters the 6-digit PIN. Closes
+    /// the liability loop. Transitions the status from Dropped to Collected.
+    /// </summary>
+    [HttpPost("luggage/{dropOffId:guid}/collect")]
+    [ProducesResponseType(typeof(CollectBagsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> CollectBags(
+        Guid dropOffId,
+        [FromBody] CollectBagsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendor = await _context.Vendors.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        var dropOff = await _context.LuggageDropOffs
+            .FirstOrDefaultAsync(d => d.Id == dropOffId, cancellationToken);
+        if (dropOff is null)
+            return NotFound(new { Message = "Drop-off not found." });
+
+        if (dropOff.VendorId != vendor.Id)
+            return Forbid();
+
+        try
+        {
+            dropOff.CollectWithPin(request.Pin);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // Notify the consumer that their bags have been collected.
+            await _notifications.SendTargetedPushAsync(
+                dropOff.UserId,
+                "Bags Returned",
+                "Your luggage has been successfully returned. Thank you for using PY Connect!",
+                dataPayload: new() { ["type"] = "luggage_collected", ["dropOffId"] = dropOff.Id.ToString() },
+                cancellationToken: cancellationToken);
+
+            return Ok(new CollectBagsResponse(dropOff.Id, "Bags successfully returned."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
     // ── Transit trip driver assignment (taxi operator vendors) ──
 
     /// <summary>
@@ -1080,6 +1206,10 @@ public sealed record UpdateOccupancyRequest(Guid VenueId, int OccupancyPercentag
 public sealed record CreateClaimCheckRequest(string CustomerName, int BagCount);
 
 public sealed record ClaimCheckResponse(Guid ClaimCheckId, string CustomerName, int BagCount, string QrPayload);
+
+public sealed record ReceiveBagsResponse(Guid DropOffId, string Message, string? IntakeImageUrl);
+public sealed record CollectBagsRequest(string Pin);
+public sealed record CollectBagsResponse(Guid DropOffId, string Message);
 
 public sealed record AssignTransitDriverRequest(string? DriverName, string? VehiclePlate);
 

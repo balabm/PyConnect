@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
+import '../../../core/config/system_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/razorpay_payment_service.dart';
@@ -1211,7 +1212,7 @@ class _CheckoutResultSheet extends StatelessWidget {
 /// Swiggy-style cart summary bottom sheet with rounded top border.
 /// Shows itemized cart contents, delivery address selector, payment method,
 /// and bill details (including taxes) before confirming order.
-class _CartSummarySheet extends StatefulWidget {
+class _CartSummarySheet extends ConsumerStatefulWidget {
   const _CartSummarySheet({
     required this.cartState,
     required this.deliveryFee,
@@ -1221,12 +1222,22 @@ class _CartSummarySheet extends StatefulWidget {
   final double deliveryFee;
 
   @override
-  State<_CartSummarySheet> createState() => _CartSummarySheetState();
+  ConsumerState<_CartSummarySheet> createState() => _CartSummarySheetState();
 }
 
-class _CartSummarySheetState extends State<_CartSummarySheet> {
+class _CartSummarySheetState extends ConsumerState<_CartSummarySheet> {
   String _deliveryAddress = 'Current Location, Pondicherry';
   int _paymentMethod = 0; // 0 = Razorpay, 1 = Cash on Delivery
+
+  /// Whether Razorpay is active (from system config kill switches).
+  /// If false, online payment options are hidden and COD is forced.
+  bool get _isRazorpayActive {
+    final config = ref.read(systemConfigProvider);
+    return config.maybeWhen(
+      data: (c) => c.isRazorpayActive,
+      orElse: () => true,
+    );
+  }
 
   double get _subtotal => widget.cartState.subtotal;
   double get _taxes => widget.cartState.taxes;
@@ -1415,16 +1426,42 @@ class _CartSummarySheetState extends State<_CartSummarySheet> {
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface)),
                 const SizedBox(height: 4),
-                RadioListTile<int>(
-                  value: 0,
-                  groupValue: _paymentMethod,
-                  activeColor: AppTheme.emerald,
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Razorpay (Online)'),
-                  subtitle: const Text('UPI, Card, Net Banking'),
-                  onChanged: (v) => setState(() => _paymentMethod = v ?? 0),
-                ),
+                // Kill switch: hide Razorpay when IsRazorpayActive is false.
+                // Force Cash on Delivery and show a maintenance banner.
+                if (!_isRazorpayActive) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.amber, size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Online payments are currently undergoing maintenance. Cash only.',
+                            style: TextStyle(fontSize: 12, color: Colors.amber),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (_isRazorpayActive)
+                  RadioListTile<int>(
+                    value: 0,
+                    groupValue: _paymentMethod,
+                    activeColor: AppTheme.emerald,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Razorpay (Online)'),
+                    subtitle: const Text('UPI, Card, Net Banking'),
+                    onChanged: (v) => setState(() => _paymentMethod = v ?? 0),
+                  ),
                 RadioListTile<int>(
                   value: 1,
                   groupValue: _paymentMethod,

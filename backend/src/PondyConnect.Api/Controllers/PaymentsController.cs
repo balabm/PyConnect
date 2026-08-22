@@ -3,7 +3,9 @@ namespace PondyConnect.Api.Controllers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Payments;
+using PondyConnect.Application.Features.Wallet;
 
 [ApiController]
 [Route("api/payments")]
@@ -11,10 +13,14 @@ using PondyConnect.Application.Features.Payments;
 public sealed class PaymentsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ICurrentUserService _currentUser;
+    private readonly LoyaltyService _loyalty;
 
-    public PaymentsController(IMediator mediator)
+    public PaymentsController(IMediator mediator, ICurrentUserService currentUser, LoyaltyService loyalty)
     {
         _mediator = mediator;
+        _currentUser = currentUser;
+        _loyalty = loyalty;
     }
 
     [HttpPost]
@@ -101,7 +107,55 @@ public sealed class PaymentsController : ControllerBase
             return NotFound(new { Message = "Payment not found." });
         }
     }
+
+    // ── PY Coins Loyalty Endpoints ──
+
+    /// <summary>
+    /// Returns the user's current PY Coin balance.
+    /// </summary>
+    [HttpGet("loyalty/balance")]
+    [ProducesResponseType(typeof(LoyaltyBalanceResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<LoyaltyBalanceResponse>> GetCoinBalance(CancellationToken ct = default)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null || userId == Guid.Empty)
+            return Unauthorized(new { Message = "User not authenticated." });
+
+        var balance = await _loyalty.GetCoinBalanceAsync(userId.Value, ct);
+        return Ok(new LoyaltyBalanceResponse(balance));
+    }
+
+    /// <summary>
+    /// Redeems PY Coins against a platform fee. 1 PY Coin = ₹1.
+    /// Called during checkout when the user toggles "Use PY Coins".
+    /// Returns the discount amount applied.
+    /// </summary>
+    [HttpPost("loyalty/redeem")]
+    [ProducesResponseType(typeof(RedeemCoinsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<RedeemCoinsResponse>> RedeemCoins(
+        [FromBody] RedeemCoinsRequest request,
+        CancellationToken ct = default)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null || userId == Guid.Empty)
+            return Unauthorized(new { Message = "User not authenticated." });
+
+        try
+        {
+            var discount = await _loyalty.RedeemCoinsAsync(userId.Value, request.Coins, ct);
+            return Ok(new RedeemCoinsResponse(discount, request.Coins, "PY Coins redeemed successfully."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
 }
+
+public sealed record LoyaltyBalanceResponse(int PyCoins);
+public sealed record RedeemCoinsRequest(int Coins);
+public sealed record RedeemCoinsResponse(decimal DiscountApplied, int CoinsRedeemed, string Message);
 
 public sealed record VerifyPaymentRequest(
     Guid PaymentId,

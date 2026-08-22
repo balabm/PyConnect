@@ -175,6 +175,34 @@ public sealed class WalletController : ControllerBase
         return Ok(new VerifyTopUpResponse(true, "Wallet topped up successfully."));
     }
 
+    /// <summary>
+    /// Returns the driver's debt status — whether they are suspended,
+    /// the outstanding amount owed, and whether they can go online.
+    /// Used by the Captain app to display the debt clearance screen.
+    /// </summary>
+    [HttpGet("debt-status")]
+    [ProducesResponseType(typeof(DebtStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<DebtStatusResponse>> GetDebtStatus(CancellationToken ct)
+    {
+        var driverId = await ResolveDriverIdAsync(ct);
+        if (driverId is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var wallet = await _walletService.GetWalletAsync(driverId.Value, ct);
+        if (wallet is null)
+            return NotFound(new { Message = "Wallet not available." });
+
+        var outstandingAmount = wallet.Balance < 0 ? Math.Abs(wallet.Balance) : 0m;
+
+        return Ok(new DebtStatusResponse(
+            wallet.Suspended,
+            outstandingAmount,
+            wallet.Balance,
+            wallet.HardLimit,
+            !wallet.Suspended));
+    }
+
     private async Task<Guid?> ResolveDriverIdAsync(CancellationToken ct)
     {
         var userId = _currentUser.UserId;
@@ -198,6 +226,13 @@ public sealed record VerifyTopUpRequest(
     string? RazorpaySignature);
 
 public sealed record VerifyTopUpResponse(bool Success, string Message);
+
+public sealed record DebtStatusResponse(
+    bool Suspended,
+    decimal OutstandingAmount,
+    decimal Balance,
+    decimal HardLimit,
+    bool CanGoOnline);
 
 public sealed record WithdrawalRequestDto(decimal Amount);
 

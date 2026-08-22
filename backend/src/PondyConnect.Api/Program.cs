@@ -66,6 +66,9 @@ builder.Services.AddScoped<AccountDeletionService>();
 builder.Services.AddScoped<FoodCancellationService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Homestays.InventoryService>();
 builder.Services.AddHostedService<InventoryLockCleanupService>();
+builder.Services.AddScoped<PondyConnect.Application.Features.Wallet.LoyaltyService>();
+builder.Services.AddHostedService<WalletMonitorWorker>();
+builder.Services.AddScoped<PondyConnect.Application.Features.Admin.SystemConfigService>();
 
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SectionName));
 builder.Services.AddHttpClient<WhatsAppHttpClient>(client =>

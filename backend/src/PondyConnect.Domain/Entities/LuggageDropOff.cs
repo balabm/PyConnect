@@ -34,6 +34,25 @@ public sealed class LuggageDropOff : BaseEntity
 
     public string? Notes { get; private set; }
 
+    /// <summary>
+    /// Photo of the bags taken by the Partner at drop-off. Protects
+    /// Partners from liability disputes ("my laptop is missing").
+    /// Displayed on the Consumer app for transparency.
+    /// </summary>
+    public string? IntakeImageUrl { get; private set; }
+
+    /// <summary>
+    /// Time-sensitive 6-digit PIN generated for secure retrieval.
+    /// The Partner must scan the QR or manually enter this PIN to
+    /// transition the status to Collected.
+    /// </summary>
+    public string? RetrievalPin { get; private set; }
+
+    /// <summary>
+    /// When the retrieval PIN was generated (for expiry validation).
+    /// </summary>
+    public DateTimeOffset? RetrievalPinGeneratedAt { get; private set; }
+
     private LuggageDropOff()
     {
         // EF Core constructor.
@@ -73,11 +92,59 @@ public sealed class LuggageDropOff : BaseEntity
         };
     }
 
-    public void MarkDropped()
+    /// <summary>
+    /// Marks the luggage as dropped off and records the intake photo.
+    /// The Partner must photograph the bags with security tags to
+    /// protect against liability disputes.
+    /// </summary>
+    public void MarkDropped(string? intakeImageUrl = null)
     {
         if (Status != LuggageStatus.Reserved)
             throw new InvalidOperationException("Only reserved slots can be marked dropped.");
         Status = LuggageStatus.Dropped;
+        IntakeImageUrl = intakeImageUrl;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Generates a time-sensitive 6-digit retrieval PIN. Called when
+    /// the Consumer is ready to pick up their bags. The PIN expires
+    /// after 10 minutes.
+    /// </summary>
+    public void GenerateRetrievalPin()
+    {
+        if (Status != LuggageStatus.Dropped)
+            throw new InvalidOperationException("Retrieval PIN can only be generated for dropped luggage.");
+
+        RetrievalPin = Random.Shared.Next(100000, 999999).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        RetrievalPinGeneratedAt = DateTimeOffset.UtcNow;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Collects the luggage using the retrieval PIN. The Partner must
+    /// scan the QR code or manually enter the PIN. Closes the liability
+    /// loop.
+    /// </summary>
+    public void CollectWithPin(string pin)
+    {
+        if (Status != LuggageStatus.Dropped)
+            throw new InvalidOperationException("Only dropped luggage can be collected.");
+
+        if (string.IsNullOrEmpty(RetrievalPin))
+            throw new InvalidOperationException("No retrieval PIN has been generated. Ask the customer to generate one.");
+
+        // PIN expires after 10 minutes
+        if (RetrievalPinGeneratedAt is { } generatedAt &&
+            DateTimeOffset.UtcNow - generatedAt > TimeSpan.FromMinutes(10))
+            throw new InvalidOperationException("Retrieval PIN has expired. Ask the customer to generate a new one.");
+
+        if (!string.Equals(RetrievalPin, pin, StringComparison.Ordinal))
+            throw new InvalidOperationException("Invalid retrieval PIN.");
+
+        Status = LuggageStatus.Collected;
+        PickedUpAt = DateTimeOffset.UtcNow;
+        RetrievalPin = null; // Clear the PIN after successful collection
         MarkUpdated();
     }
 
