@@ -8,14 +8,19 @@ import '../../../core/network/api_client.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/waiver_sheet.dart';
+import '../../rides/presentation/rides_screen.dart';
 import '../../vendor/data/vendor_api.dart';
 import '../application/transit_controller.dart';
 import '../data/luggage_api.dart';
 import '../data/rental_api.dart';
 import '../data/transit_api.dart';
 
-/// The "Arrival to Departure" hub: intercity pickup sync, luggage cloak
-/// network and hyper-local mobility (rentals / bike taxis).
+/// The unified "Transit & Ride" hub: ride hailing, intercity pickup sync,
+/// luggage cloak network, and hyper-local mobility (rentals / bike taxis).
+///
+/// Replaces the standalone RideHailingScreen tab and the separate Transit
+/// route. Ride hailing is the first (default) sub-tab since it's the most
+/// frequently used feature.
 class TransitScreen extends ConsumerStatefulWidget {
   const TransitScreen({super.key});
 
@@ -31,24 +36,10 @@ class _TransitScreenState extends ConsumerState<TransitScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Arrival to Departure'),
-        actions: [
-          if (_authed)
-            IconButton(
-              tooltip: 'Notifications',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Safety alerts & pickup updates will arrive here.')),
-                );
-              },
-              icon: const Icon(Icons.notifications_outlined),
-            ),
-        ],
-      ),
       body: IndexedStack(
         index: _index,
         children: const [
+          RideHailingScreen(),
           _TripsPickupTab(),
           _LuggageCloakTab(),
           _MobilityTab(),
@@ -58,6 +49,11 @@ class _TransitScreenState extends ConsumerState<TransitScreen> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.two_wheeler_outlined),
+            selectedIcon: Icon(Icons.two_wheeler),
+            label: 'Ride',
+          ),
           NavigationDestination(
             icon: Icon(Icons.tour_outlined),
             selectedIcon: Icon(Icons.tour),
@@ -69,9 +65,9 @@ class _TransitScreenState extends ConsumerState<TransitScreen> {
             label: 'Luggage',
           ),
           NavigationDestination(
-            icon: Icon(Icons.two_wheeler_outlined),
-            selectedIcon: Icon(Icons.two_wheeler),
-            label: 'Mobility',
+            icon: Icon(Icons.electric_scooter_outlined),
+            selectedIcon: Icon(Icons.electric_scooter),
+            label: 'Rentals',
           ),
         ],
       ),

@@ -52,12 +52,6 @@ class ServicesHubScreen extends ConsumerWidget {
       route: '',
     ),
     _HubService(
-      icon: Icons.directions_bus_outlined,
-      title: 'Transit',
-      subtitle: 'Bus, ferry & luggage cloak',
-      route: '/transit',
-    ),
-    _HubService(
       icon: Icons.shopping_bag_outlined,
       title: 'Quick Essentials',
       subtitle: 'Essentials & daily needs',

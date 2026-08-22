@@ -232,7 +232,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'rides',
-            builder: (_, _) => const RideHailingScreen(),
+            builder: (_, _) => const TransitScreen(),
             routes: [
               GoRoute(
                 path: 'history',
