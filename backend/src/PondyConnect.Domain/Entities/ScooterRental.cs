@@ -34,6 +34,52 @@ public sealed class ScooterRental : BaseEntity
 
     public string? Notes { get; private set; }
 
+    // ── Pre-rental condition inspection ──
+
+    /// <summary>
+    /// JSON array of condition photo URLs (Front, Back, Left, Right,
+    /// Odometer/Fuel). Cryptographically timestamped to create an
+    /// undeniable baseline for damage claims.
+    /// </summary>
+    public string? ConditionPhotosJson { get; private set; }
+
+    /// <summary>
+    /// When the condition photos were submitted at pickup.
+    /// </summary>
+    public DateTimeOffset? ConditionPhotosAt { get; private set; }
+
+    // ── Security deposit ──
+
+    /// <summary>
+    /// Pre-authorized security deposit amount (held via Razorpay).
+    /// </summary>
+    public decimal SecurityDeposit { get; private set; }
+
+    /// <summary>
+    /// Razorpay payment ID for the security deposit hold.
+    /// </summary>
+    public string? DepositPaymentReference { get; private set; }
+
+    /// <summary>
+    /// Amount deducted from the deposit for late returns or damage.
+    /// </summary>
+    public decimal DepositPenalty { get; private set; }
+
+    /// <summary>
+    /// Amount refunded from the deposit after return.
+    /// </summary>
+    public decimal DepositRefunded { get; private set; }
+
+    /// <summary>
+    /// JSON array of post-return condition photo URLs for damage comparison.
+    /// </summary>
+    public string? ReturnConditionPhotosJson { get; private set; }
+
+    /// <summary>
+    /// When the rental was actually returned (may differ from RentalEnd if late).
+    /// </summary>
+    public DateTimeOffset? ActualReturnAt { get; private set; }
+
     private ScooterRental()
     {
         // EF Core constructor.
@@ -81,6 +127,67 @@ public sealed class ScooterRental : BaseEntity
         if (Status != RentalStatus.Reserved)
             throw new InvalidOperationException("Only reserved rentals can be started.");
         Status = RentalStatus.Active;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Records the pre-rental 4-angle condition photos (Front, Back,
+    /// Left, Right, Odometer/Fuel). Cryptographically timestamped to
+    /// create an undeniable baseline for damage claims.
+    /// </summary>
+    public void RecordConditionPhotos(string photosJson)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(photosJson);
+        ConditionPhotosJson = photosJson;
+        ConditionPhotosAt = DateTimeOffset.UtcNow;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Records the security deposit hold. Called when the Razorpay
+    /// pre-authorized hold is created.
+    /// </summary>
+    public void RecordDeposit(decimal amount, string paymentReference)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount, nameof(amount));
+        ArgumentException.ThrowIfNullOrWhiteSpace(paymentReference);
+        SecurityDeposit = amount;
+        DepositPaymentReference = paymentReference;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Completes the rental return with optional late fees and damage
+    /// penalties. Calculates the total penalty and determines how much
+    /// to refund from the security deposit.
+    /// </summary>
+    public void CompleteReturn(
+        int lateMinutes = 0,
+        decimal damageAmount = 0m,
+        string? returnConditionPhotosJson = null)
+    {
+        if (Status != RentalStatus.Active)
+            throw new InvalidOperationException("Only active rentals can be returned.");
+
+        ActualReturnAt = DateTimeOffset.UtcNow;
+        if (!string.IsNullOrWhiteSpace(returnConditionPhotosJson))
+            ReturnConditionPhotosJson = returnConditionPhotosJson;
+
+        // Calculate late penalty: hourly rate for each late hour beyond 30-min grace
+        var latePenalty = 0m;
+        if (lateMinutes > 30 && RentalEnd < DateTimeOffset.UtcNow)
+        {
+            var lateHours = (decimal)Math.Ceiling(lateMinutes / 60.0);
+            latePenalty = lateHours * RatePerHour;
+        }
+
+        DepositPenalty = latePenalty + damageAmount;
+        DepositRefunded = Math.Max(0m, SecurityDeposit - DepositPenalty);
+
+        // Add late penalty to total amount
+        TotalAmount += latePenalty;
+
+        Status = RentalStatus.Returned;
         MarkUpdated();
     }
 

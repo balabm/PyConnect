@@ -99,6 +99,31 @@ public sealed class RideRequest : BaseEntity
     // Live trip sharing
     public Guid? TripShareToken { get; private set; }
 
+    // ── Edge-case scenario fields ──
+
+    /// <summary>
+    /// Toll and parking pass-through surcharge. Added by the captain
+    /// before ending the trip. Zero platform deduction — 100% goes to driver.
+    /// </summary>
+    public decimal TollAndParking { get; private set; }
+
+    /// <summary>
+    /// Receipt photo URL for toll/parking reimbursement (optional).
+    /// </summary>
+    public string? TollReceiptUrl { get; private set; }
+
+    /// <summary>
+    /// Whether the fare has been locked due to route deviation.
+    /// Prevents inflated metered charges during safety review.
+    /// </summary>
+    public bool IsFareLocked { get; private set; }
+
+    /// <summary>
+    /// Whether this ride was split from a breakdown of another ride.
+    /// If set, <see cref="OriginalRideId"/> points to the parent ride.
+    /// </summary>
+    public Guid? OriginalRideId { get; private set; }
+
     private RideRequest()
     {
     }
@@ -158,6 +183,51 @@ public sealed class RideRequest : BaseEntity
             DistanceFare = distanceFare,
             TimeFare = timeFare
         };
+    }
+
+    /// <summary>
+    /// Creates a new ride request for Leg 2 of a breakdown split.
+    /// The pickup is the breakdown location, the dropoff is the original
+    /// destination. Marked with high priority for immediate dispatch.
+    /// </summary>
+    public static RideRequest CreateSplitRide(
+        Guid originalRideId,
+        Guid userId,
+        GeoLocation breakdownLocation,
+        string breakdownAddress,
+        GeoLocation originalDropoff,
+        string originalDropoffAddress,
+        double remainingDistanceKm,
+        int remainingDurationMin,
+        VehicleType vehicleType,
+        decimal fare,
+        PaymentMethod paymentMethod,
+        decimal surgeMultiplier = 1.0m,
+        string? surgeReason = null,
+        decimal baseFare = 0m,
+        decimal distanceFare = 0m,
+        decimal timeFare = 0m)
+    {
+        var ride = Create(
+            userId,
+            breakdownLocation,
+            breakdownAddress,
+            originalDropoff,
+            originalDropoffAddress,
+            remainingDistanceKm,
+            remainingDurationMin,
+            vehicleType,
+            fare,
+            paymentMethod,
+            surgeMultiplier: surgeMultiplier,
+            surgeReason: surgeReason,
+            baseFare: baseFare,
+            distanceFare: distanceFare,
+            timeFare: timeFare);
+
+        ride.OriginalRideId = originalRideId;
+        ride.CancelReason = "Breakdown replacement — priority dispatch";
+        return ride;
     }
 
     /// <summary>
@@ -427,6 +497,87 @@ public sealed class RideRequest : BaseEntity
         TripShareToken ??= Guid.NewGuid();
         MarkUpdated();
         return TripShareToken.Value;
+    }
+
+    /// <summary>
+    /// Add toll and parking pass-through surcharge. The captain enters
+    /// the receipt amount before ending the trip. This is a pass-through
+    /// with zero platform deduction — 100% goes to the driver.
+    /// </summary>
+    public void AddTollAndParking(decimal amount, string? receiptUrl = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount, nameof(amount));
+        TollAndParking += amount;
+        if (!string.IsNullOrWhiteSpace(receiptUrl))
+            TollReceiptUrl = receiptUrl;
+        TotalAmount += amount;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Lock the fare due to route deviation. Prevents inflated metered
+    /// charges during safety review. The fare is frozen at the current
+    /// estimate until an admin unlocks it.
+    /// </summary>
+    public void LockFare()
+    {
+        if (Status != RideStatus.EnRoute)
+            throw new InvalidOperationException("Fare can only be locked during an active ride.");
+        IsFareLocked = true;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Unlock the fare after safety review. Used by admin to release
+    /// the fare lock after route deviation is resolved.
+    /// </summary>
+    public void UnlockFare()
+    {
+        IsFareLocked = false;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Complete the ride as a breakdown split. The ride is completed
+    /// with the traveled distance from pickup to the breakdown location.
+    /// The rider pays a prorated fare for Leg 1.
+    /// </summary>
+    public void CompleteWithBreakdown(double traveledDistanceKm, int traveledDurationMin)
+    {
+        if (Status != RideStatus.EnRoute)
+            throw new InvalidOperationException("Only en-route rides can be completed via breakdown.");
+        if (IsFareLocked)
+            throw new InvalidOperationException("Cannot complete a ride with a locked fare. Admin must unlock first.");
+
+        ActualDistanceKm = traveledDistanceKm;
+        ActualDurationMin = traveledDurationMin;
+        Status = RideStatus.Completed;
+        CompletedAt = DateTimeOffset.UtcNow;
+        CancelReason = "Vehicle breakdown — trip split";
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Cancel the ride as a rider no-show. The captain has arrived at
+    /// the pickup location and waited 5 minutes. The rider is charged
+    /// a cancellation fee credited to the captain's wallet.
+    /// </summary>
+    public void CancelForRiderNoShow()
+    {
+        if (Status != RideStatus.ArrivedAtPickup)
+            throw new InvalidOperationException("Rider no-show can only be declared after arriving at pickup.");
+
+        // Must have waited at least 5 minutes since arrival
+        if (ArrivedAtPickupAt is { } arrivedAt &&
+            DateTimeOffset.UtcNow - arrivedAt < TimeSpan.FromMinutes(5))
+            throw new InvalidOperationException("Must wait at least 5 minutes after arrival before declaring no-show.");
+
+        CancellationFee = 50m; // ₹50 no-show fee credited to captain
+        CancelledBy = Enums.CancelledBy.Rider;
+        CancelReason = "Rider no-show at pickup";
+        Status = RideStatus.Cancelled;
+        CancelledAt = DateTimeOffset.UtcNow;
+        MarkUpdated();
     }
 
     /// <summary>

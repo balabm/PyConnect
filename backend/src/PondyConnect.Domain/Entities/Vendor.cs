@@ -45,6 +45,20 @@ public sealed class Vendor : BaseEntity
     public int? PrepTimeMinutes { get; private set; }
 
     /// <summary>
+    /// Dynamic prep buffer added to estimated delivery times when the
+    /// kitchen is overloaded. Set by the KdsThrottlingWorker when 5+
+    /// orders remain in Preparing state for >20 minutes. Reset to 0
+    /// when the backlog clears.
+    /// </summary>
+    public int DynamicPrepBufferMinutes { get; private set; }
+
+    /// <summary>
+    /// Whether the vendor has manually enabled Busy Mode via the KDS.
+    /// Temporarily raises the prep buffer and restricts incoming pings.
+    /// </summary>
+    public bool IsBusyMode { get; private set; }
+
+    /// <summary>
     /// FCM device token for push notifications to the vendor's partner app.
     /// Updated when the vendor logs in and the Flutter app registers its token.
     /// </summary>
@@ -174,6 +188,28 @@ public sealed class Vendor : BaseEntity
     public void SetAcceptingOrders(bool isAcceptingOrders)
     {
         IsAcceptingOrders = isAcceptingOrders;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Sets the dynamic prep buffer minutes. Called by the
+    /// KdsThrottlingWorker when the kitchen is overloaded.
+    /// </summary>
+    public void SetDynamicPrepBuffer(int bufferMinutes)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(bufferMinutes, nameof(bufferMinutes));
+        DynamicPrepBufferMinutes = bufferMinutes;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Toggles Busy Mode. When enabled, raises the prep buffer by 30
+    /// minutes and restricts incoming order pings.
+    /// </summary>
+    public void SetBusyMode(bool isBusy)
+    {
+        IsBusyMode = isBusy;
+        DynamicPrepBufferMinutes = isBusy ? Math.Max(DynamicPrepBufferMinutes, 30) : 0;
         MarkUpdated();
     }
 

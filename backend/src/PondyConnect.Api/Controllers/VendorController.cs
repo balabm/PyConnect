@@ -10,6 +10,7 @@ using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.FoodDelivery;
 using PondyConnect.Application.Features.Luggage;
 using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Application.Features.Rental;
 using PondyConnect.Application.Features.Vendor;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
@@ -29,6 +30,7 @@ public sealed class VendorController : ControllerBase
     private readonly IPaymentGateway _paymentGateway;
     private readonly IHubContext<VendorHub> _hubContext;
     private readonly INotificationService _notifications;
+    private readonly RentalDepositService _rentalDeposit;
 
     public VendorController(
         IMediator mediator,
@@ -37,7 +39,8 @@ public sealed class VendorController : ControllerBase
         IStorageService storage,
         IPaymentGateway paymentGateway,
         IHubContext<VendorHub> hubContext,
-        INotificationService notifications)
+        INotificationService notifications,
+        RentalDepositService rentalDeposit)
     {
         _mediator = mediator;
         _context = context;
@@ -46,6 +49,7 @@ public sealed class VendorController : ControllerBase
         _paymentGateway = paymentGateway;
         _hubContext = hubContext;
         _notifications = notifications;
+        _rentalDeposit = rentalDeposit;
     }
 
     /// <summary>
@@ -514,6 +518,76 @@ public sealed class VendorController : ControllerBase
         }, cancellationToken);
 
         return Ok(result);
+    }
+
+    // ── Kitchen Busy Mode Toggle ──
+
+    /// <summary>
+    /// Toggles Busy Mode for the authenticated vendor's kitchen. When
+    /// enabled, raises the prep buffer by 30 minutes and restricts
+    /// incoming order pings. Used by the KDS when the kitchen is
+    /// overwhelmed.
+    /// </summary>
+    [HttpPost("kds/busy-mode")]
+    [ProducesResponseType(typeof(BusyModeResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<BusyModeResponse>> ToggleBusyMode(
+        [FromBody] ToggleBusyModeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendor = await _context.Vendors
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        vendor.SetBusyMode(request.IsBusy);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Broadcast to all clients watching this vendor
+        await _hubContext.Clients.Group($"vendor:{vendor.Id}")
+            .SendAsync("VendorThrottled", new
+            {
+                VendorId = vendor.Id,
+                PrepBufferMinutes = vendor.DynamicPrepBufferMinutes,
+                Message = request.IsBusy
+                    ? "Busy Mode enabled. +30 min prep buffer applied."
+                    : "Busy Mode disabled. Normal prep times restored."
+            }, cancellationToken);
+
+        return Ok(new BusyModeResponse(vendor.Id, request.IsBusy, vendor.DynamicPrepBufferMinutes));
+    }
+
+    /// <summary>
+    /// Captain confirms the sealed bag is intact before departure.
+    /// Transfers transit liability from the restaurant to the logistics
+    /// partner. If the customer reports transit spillage after this
+    /// confirmation, the financial liability is assigned to logistics.
+    /// </summary>
+    [HttpPost("orders/{orderId:guid}/confirm-sealed")]
+    [ProducesResponseType(typeof(SealedBagResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SealedBagResponse>> ConfirmSealedBag(
+        Guid orderId,
+        CancellationToken cancellationToken)
+    {
+        var order = await _context.FoodOrders
+            .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
+        if (order is null)
+            return NotFound(new { Message = "Order not found." });
+
+        try
+        {
+            order.ConfirmSealedBag();
+            await _context.SaveChangesAsync(cancellationToken);
+            return Ok(new SealedBagResponse(orderId, "Sealed bag confirmed. Transit liability transferred to logistics."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -1059,6 +1133,96 @@ public sealed class VendorController : ControllerBase
         }
     }
 
+    // ── Pre-Rental Condition Photo Lock ──
+
+    /// <summary>
+    /// Records the pre-rental 4-angle condition photos (Front, Back,
+    /// Left, Right, Odometer/Fuel) for a scooter rental. Creates an
+    /// undeniable baseline for damage claims.
+    /// </summary>
+    [HttpPost("rentals/{rentalId:guid}/condition-photos")]
+    [ProducesResponseType(typeof(ConditionPhotosResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> RecordConditionPhotos(
+        Guid rentalId,
+        [FromBody] RecordConditionPhotosRequest request,
+        CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendor = await _context.Vendors.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        try
+        {
+            await _rentalDeposit.RecordConditionPhotosAsync(rentalId, vendor.Id, request.PhotosJson, cancellationToken);
+            return Ok(new ConditionPhotosResponse(rentalId, "Condition photos recorded. Baseline locked for damage claims."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    /// <summary>
+    /// Completes the rental return with optional late fees and damage
+    /// penalties. Calculates the total penalty and determines how much
+    /// to refund from the security deposit.
+    /// </summary>
+    [HttpPost("rentals/{rentalId:guid}/complete-return")]
+    [ProducesResponseType(typeof(RentalReturnResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> CompleteRentalReturn(
+        Guid rentalId,
+        [FromBody] CompleteRentalReturnRequest request,
+        CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendor = await _context.Vendors.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        try
+        {
+            var result = await _rentalDeposit.CompleteReturnAsync(
+                rentalId,
+                vendor.Id,
+                request.LateMinutes,
+                request.DamageAmount,
+                request.ReturnConditionPhotosJson,
+                cancellationToken);
+
+            return Ok(new RentalReturnResponse(
+                result.RentalId,
+                result.SecurityDeposit,
+                result.PenaltyDeducted,
+                result.DepositRefunded,
+                result.TotalAmount));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
     // ── Transit trip driver assignment (taxi operator vendors) ──
 
     /// <summary>
@@ -1210,6 +1374,15 @@ public sealed record ClaimCheckResponse(Guid ClaimCheckId, string CustomerName, 
 public sealed record ReceiveBagsResponse(Guid DropOffId, string Message, string? IntakeImageUrl);
 public sealed record CollectBagsRequest(string Pin);
 public sealed record CollectBagsResponse(Guid DropOffId, string Message);
+
+public sealed record ToggleBusyModeRequest(bool IsBusy);
+public sealed record BusyModeResponse(Guid VendorId, bool IsBusy, int PrepBufferMinutes);
+public sealed record SealedBagResponse(Guid OrderId, string Message);
+
+public sealed record RecordConditionPhotosRequest(string PhotosJson);
+public sealed record ConditionPhotosResponse(Guid RentalId, string Message);
+public sealed record CompleteRentalReturnRequest(int LateMinutes = 0, decimal DamageAmount = 0m, string? ReturnConditionPhotosJson = null);
+public sealed record RentalReturnResponse(Guid RentalId, decimal SecurityDeposit, decimal PenaltyDeducted, decimal DepositRefunded, decimal TotalAmount);
 
 public sealed record AssignTransitDriverRequest(string? DriverName, string? VehiclePlate);
 

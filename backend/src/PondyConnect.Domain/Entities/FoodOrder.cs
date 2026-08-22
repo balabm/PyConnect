@@ -55,6 +55,18 @@ public sealed class FoodOrder : BaseEntity
     /// </summary>
     public string? DeliveryProofUrl { get; private set; }
 
+    /// <summary>
+    /// Whether the captain has confirmed the sealed bag is intact
+    /// before departure. Transfers transit liability from the restaurant
+    /// to the logistics partner.
+    /// </summary>
+    public bool IsSealedBagConfirmed { get; private set; }
+
+    /// <summary>
+    /// Timestamp when the sealed bag was confirmed by the captain.
+    /// </summary>
+    public DateTimeOffset? SealedBagConfirmedAt { get; private set; }
+
     private readonly List<FoodOrderItem> _items = [];
     public IReadOnlyCollection<FoodOrderItem> Items => _items.AsReadOnly();
 
@@ -192,6 +204,21 @@ public sealed class FoodOrder : BaseEntity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(proofUrl);
         DeliveryProofUrl = proofUrl;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Captain confirms the sealed bag is intact before departure.
+    /// Transfers transit liability from the restaurant to the logistics
+    /// partner. If the customer reports transit spillage after this
+    /// confirmation, the financial liability is assigned to logistics.
+    /// </summary>
+    public void ConfirmSealedBag()
+    {
+        if (Status is not FoodOrderStatus.Preparing and not FoodOrderStatus.OutForDelivery)
+            throw new InvalidOperationException("Sealed bag can only be confirmed for preparing or outgoing orders.");
+        IsSealedBagConfirmed = true;
+        SealedBagConfirmedAt = DateTimeOffset.UtcNow;
         MarkUpdated();
     }
 

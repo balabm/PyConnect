@@ -22,6 +22,7 @@ public sealed class RideHailingController : ControllerBase
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
     private readonly IIdempotencyService _idempotency;
+    private readonly TripLifecycleService _tripLifecycle;
 
     public RideHailingController(
         IMediator mediator,
@@ -29,7 +30,8 @@ public sealed class RideHailingController : ControllerBase
         DispatchEngine dispatchEngine,
         IApplicationDbContext dbContext,
         ICurrentUserService currentUser,
-        IIdempotencyService idempotency)
+        IIdempotencyService idempotency,
+        TripLifecycleService tripLifecycle)
     {
         _mediator = mediator;
         _dispatchService = dispatchService;
@@ -37,6 +39,7 @@ public sealed class RideHailingController : ControllerBase
         _dbContext = dbContext;
         _currentUser = currentUser;
         _idempotency = idempotency;
+        _tripLifecycle = tripLifecycle;
     }
 
     [HttpPost("rides")]
@@ -458,6 +461,153 @@ public sealed class RideHailingController : ControllerBase
         await _mediator.Send(new ReassignRideCommand(id), ct);
         return NoContent();
     }
+
+    // === Edge-Case: Mid-Trip Breakdown Split & Re-Dispatch ===
+
+    /// <summary>
+    /// Handles a mid-trip vehicle breakdown. Splits the ride into two legs:
+    /// Leg 1 (pickup → breakdown) is completed with a prorated fare, and
+    /// Leg 2 (breakdown → original dropoff) is created as a new ride with
+    /// priority dispatch to nearby drivers.
+    /// </summary>
+    [HttpPost("rides/{id:guid}/breakdown")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(typeof(BreakdownSplitResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<BreakdownSplitResponse>> Breakdown(
+        Guid id,
+        [FromBody] BreakdownRequest request,
+        CancellationToken ct)
+    {
+        var driverId = await ResolveDriverIdAsync(ct);
+        if (driverId is null)
+            return Unauthorized(new { Message = "Driver profile not found." });
+
+        try
+        {
+            var result = await _tripLifecycle.HandleBreakdownAsync(id, driverId.Value, request.Latitude, request.Longitude, ct);
+
+            // Dispatch the split ride (Leg 2) to nearby drivers with high priority
+            _ = _dispatchService.BroadcastRideRequestAsync(result.SplitRideId, ct);
+
+            return Ok(new BreakdownSplitResponse(
+                result.OriginalRideId,
+                result.SplitRideId,
+                result.Leg1Fare,
+                result.Leg2Fare,
+                result.TraveledDistanceKm,
+                result.RemainingDistanceKm));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    // === Edge-Case: Rider No-Show Cancellation ===
+
+    /// <summary>
+    /// Declares a rider no-show at pickup. The captain must have arrived
+    /// and waited at least 5 minutes. The rider is charged a ₹50
+    /// cancellation fee credited to the captain's wallet.
+    /// </summary>
+    [HttpPost("rides/{id:guid}/rider-no-show")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(typeof(RiderNoShowResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<RiderNoShowResponse>> RiderNoShow(Guid id, CancellationToken ct)
+    {
+        var driverId = await ResolveDriverIdAsync(ct);
+        if (driverId is null)
+            return Unauthorized(new { Message = "Driver profile not found." });
+
+        try
+        {
+            var fee = await _tripLifecycle.HandleRiderNoShowAsync(id, driverId.Value, ct);
+            return Ok(new RiderNoShowResponse(id, fee, "Rider no-show declared. ₹50 credited to your wallet."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    // === Edge-Case: Route Deviation Fare Lock ===
+
+    /// <summary>
+    /// Locks the fare due to route deviation (>1.5km from suggested
+    /// polyline). Prevents inflated metered charges during safety review.
+    /// Alerts the admin SOS hub.
+    /// </summary>
+    [HttpPost("rides/{id:guid}/lock-fare")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> LockFare(Guid id, CancellationToken ct)
+    {
+        try
+        {
+            await _tripLifecycle.LockFareForDeviationAsync(id, ct);
+            return Ok(new { Message = "Fare locked due to route deviation. Admin alerted for safety review." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    // === Edge-Case: Toll & Parking Pass-Through ===
+
+    /// <summary>
+    /// Adds a toll/parking pass-through surcharge to the ride. The captain
+    /// enters the receipt amount before ending the trip. Zero platform
+    /// deduction — 100% goes to the driver.
+    /// </summary>
+    [HttpPost("rides/{id:guid}/toll-parking")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(typeof(TollParkingResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TollParkingResponse>> AddTollAndParking(
+        Guid id,
+        [FromBody] TollParkingRequest request,
+        CancellationToken ct)
+    {
+        var driverId = await ResolveDriverIdAsync(ct);
+        if (driverId is null)
+            return Unauthorized(new { Message = "Driver profile not found." });
+
+        try
+        {
+            await _tripLifecycle.AddTollAndParkingAsync(id, driverId.Value, request.Amount, request.ReceiptUrl, ct);
+            return Ok(new TollParkingResponse(id, request.Amount, "Toll/parking surcharge added."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    private async Task<Guid?> ResolveDriverIdAsync(CancellationToken ct)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null)
+            return null;
+        var driver = await _dbContext.Drivers.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.UserId == userId.Value, ct);
+        return driver?.Id;
+    }
 }
 
 public sealed record VerifyOtpRequest(string Otp);
@@ -490,3 +640,9 @@ public sealed record RequestRideRequest(
 public sealed record CancelRideRequest(string? Reason, bool WaiveFee = false);
 
 public sealed record CodReconcileRequest(decimal CollectedAmount, decimal OrderTotal);
+
+public sealed record BreakdownRequest(double Latitude, double Longitude);
+public sealed record BreakdownSplitResponse(Guid OriginalRideId, Guid SplitRideId, decimal Leg1Fare, decimal Leg2Fare, double TraveledDistanceKm, double RemainingDistanceKm);
+public sealed record RiderNoShowResponse(Guid RideId, decimal CancellationFee, string Message);
+public sealed record TollParkingRequest(decimal Amount, string? ReceiptUrl = null);
+public sealed record TollParkingResponse(Guid RideId, decimal Amount, string Message);

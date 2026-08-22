@@ -336,6 +336,99 @@ public sealed class HomestaysController : ControllerBase
 
         return Ok(new KycViewResponse(frontUrl, backUrl, kyc.IdType, kyc.UploadedAt));
     }
+
+    // ── Digital Police Guest Register (Form C Compliance) ──
+
+    /// <summary>
+    /// Exports a daily guest register for police compliance (Form C).
+    /// Generates a CSV containing guest names, ID numbers, check-in
+    /// timestamps, and homestay details. Only accessible to vendors
+    /// who own homestays.
+    /// </summary>
+    [HttpGet("guest-register/export")]
+    [Authorize(Roles = "Vendor")]
+    [ProducesResponseType(typeof(GuestRegisterExportResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<GuestRegisterExportResponse>> ExportGuestRegister(
+        [FromQuery] string? date = null,
+        CancellationToken ct = default)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendor = await _context.Vendors.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, ct);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        // Parse the target date (default: today)
+        DateOnly targetDate;
+        if (!DateOnly.TryParse(date, out targetDate))
+            targetDate = DateOnly.FromDateTime(DateTimeOffset.UtcNow.Date);
+
+        // Get all homestays owned by this vendor
+        var homestayIds = await _context.Homestays
+            .Where(h => h.HostId == vendor.Id)
+            .Select(h => h.Id)
+            .ToListAsync(ct);
+
+        if (homestayIds.Count == 0)
+            return Ok(new GuestRegisterExportResponse(targetDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), 0, []));
+
+        // Get all bookings with check-in on the target date
+        var bookings = await _context.ServiceBookings
+            .AsNoTracking()
+            .Where(b => b.ServiceType == ServiceType.Homestay
+                && b.HomestayId != null
+                && homestayIds.Contains(b.HomestayId.Value)
+                && b.CheckInDate == targetDate)
+            .ToListAsync(ct);
+
+        var bookingIds = bookings.Select(b => b.Id).ToList();
+
+        // Get KYC records for these bookings
+        var kycRecords = await _context.GuestKycs
+            .AsNoTracking()
+            .Where(k => bookingIds.Contains(k.BookingId))
+            .ToListAsync(ct);
+
+        // Get user info for guest names
+        var userIds = bookings.Select(b => b.UserId).Distinct().ToList();
+        var users = await _context.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Name, u.Phone })
+            .ToListAsync(ct);
+
+        // Get homestay names
+        var homestays = await _context.Homestays
+            .AsNoTracking()
+            .Where(h => homestayIds.Contains(h.Id))
+            .Select(h => new { h.Id, h.Name, h.LocationArea })
+            .ToListAsync(ct);
+
+        // Build the guest register entries
+        var entries = new List<GuestRegisterEntry>();
+        foreach (var booking in bookings)
+        {
+            var user = users.FirstOrDefault(u => u.Id == booking.UserId);
+            var kyc = kycRecords.FirstOrDefault(k => k.BookingId == booking.Id);
+            var homestay = homestays.FirstOrDefault(h => h.Id == booking.HomestayId);
+
+            entries.Add(new GuestRegisterEntry(
+                GuestName: user?.Name ?? "Unknown",
+                PhoneNumber: user?.Phone ?? "",
+                IdType: kyc?.IdType ?? "",
+                CheckInDate: booking.CheckInDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? "",
+                CheckOutDate: booking.CheckOutDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? "",
+                HomestayName: homestay?.Name ?? "",
+                LocationArea: homestay?.LocationArea ?? "",
+                Guests: booking.Items?.Sum(i => i.Quantity) ?? 1,
+                KycVerified: kyc?.IsUploaded ?? false));
+        }
+
+        return Ok(new GuestRegisterExportResponse(targetDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), entries.Count, entries));
+    }
 }
 
 public sealed record KycUploadResponse(Guid BookingId, bool IsUploaded, string Message);
@@ -347,3 +440,15 @@ public sealed record KycViewResponse(string FrontUrl, string? BackUrl, string? I
 public sealed record LockDatesRequest(string CheckIn, string CheckOut);
 
 public sealed record LockDatesResponse(bool Locked, string Message);
+
+public sealed record GuestRegisterExportResponse(string Date, int GuestCount, IReadOnlyList<GuestRegisterEntry> Entries);
+public sealed record GuestRegisterEntry(
+    string GuestName,
+    string PhoneNumber,
+    string IdType,
+    string CheckInDate,
+    string CheckOutDate,
+    string HomestayName,
+    string LocationArea,
+    int Guests,
+    bool KycVerified);
