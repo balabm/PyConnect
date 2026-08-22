@@ -73,12 +73,19 @@ builder.Services.AddScoped<PondyConnect.Application.Features.RideHailing.TripLif
 builder.Services.AddHostedService<KdsThrottlingWorker>();
 builder.Services.AddHostedService<MonthlyInvoiceWorker>();
 builder.Services.AddHostedService<SettlementWorker>();
+builder.Services.AddHostedService<PondyConnect.Application.Services.SubscriptionWorker>();
+builder.Services.AddHostedService<PondyConnect.Application.Services.RiskScoringWorker>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Rental.RentalDepositService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Referral.ReferralService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Invoicing.InvoiceService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Ledger.LedgerService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Settlement.SettlementService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Settlement.ChargebackService>();
+builder.Services.AddScoped<PondyConnect.Application.Features.DineIn.DineInService>();
+builder.Services.AddScoped<PondyConnect.Application.Features.Subscriptions.SubscriptionService>();
+builder.Services.AddScoped<PondyConnect.Application.Features.Fraud.RiskScoringService>();
+builder.Services.AddScoped<PondyConnect.Application.Features.Fraud.RiskInterceptor>();
+builder.Services.AddScoped<PondyConnect.Application.Features.CrossSell.CrossSellService>();
 
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SectionName));
 builder.Services.AddHttpClient<WhatsAppHttpClient>(client =>

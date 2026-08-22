@@ -67,6 +67,18 @@ public sealed class FoodOrder : BaseEntity
     /// </summary>
     public DateTimeOffset? SealedBagConfirmedAt { get; private set; }
 
+    /// <summary>
+    /// The type of order: Delivery, DineIn, or Takeaway.
+    /// Dine-in orders bypass captain dispatch and route directly to KDS.
+    /// </summary>
+    public OrderType OrderType { get; private set; } = OrderType.Delivery;
+
+    /// <summary>
+    /// Table number for dine-in orders (null for delivery/takeaway).
+    /// Set when a customer scans the QR code at their table.
+    /// </summary>
+    public int? TableId { get; private set; }
+
     private readonly List<FoodOrderItem> _items = [];
     public IReadOnlyCollection<FoodOrderItem> Items => _items.AsReadOnly();
 
@@ -116,6 +128,57 @@ public sealed class FoodOrder : BaseEntity
             Notes = notes
         };
     }
+
+    /// <summary>
+    /// Creates a dine-in order from a QR code scan.
+    /// Dine-in orders have no delivery address, no delivery fee,
+    /// and route directly to the KDS tablet without dispatch.
+    /// </summary>
+    public static FoodOrder CreateDineIn(
+        Guid userId,
+        Guid vendorId,
+        int tableId,
+        decimal subTotal,
+        decimal taxes,
+        PaymentMethod paymentMethod,
+        Guid? venueId = null,
+        string? notes = null)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User ID is required.", nameof(userId));
+        if (vendorId == Guid.Empty)
+            throw new ArgumentException("Vendor ID is required.", nameof(vendorId));
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(tableId, 0, nameof(tableId));
+        ArgumentOutOfRangeException.ThrowIfNegative(subTotal, nameof(subTotal));
+        ArgumentOutOfRangeException.ThrowIfNegative(taxes, nameof(taxes));
+
+        return new FoodOrder
+        {
+            UserId = userId,
+            VendorId = vendorId,
+            VenueId = venueId,
+            OrderType = OrderType.DineIn,
+            TableId = tableId,
+            DeliveryAddress = $"Dine-in Table {tableId}",
+            DeliveryLocation = new GeoLocation(0, 0),
+            SubTotal = subTotal,
+            VendorPayout = subTotal,
+            DeliveryFee = 0m,
+            LateNightDriverBonus = 0m,
+            PlatformFee = 2m,
+            Taxes = taxes,
+            TotalAmount = subTotal + 2m + taxes,
+            PaymentMethod = paymentMethod,
+            PlacedAt = DateTimeOffset.UtcNow,
+            Notes = notes
+        };
+    }
+
+    /// <summary>
+    /// Returns true if this order is a dine-in order that should
+    /// bypass captain dispatch and route directly to KDS.
+    /// </summary>
+    public bool IsDineIn => OrderType == OrderType.DineIn;
 
     public void AddItem(string name, int quantity, decimal unitPrice, string? specialInstructions = null)
     {

@@ -196,7 +196,8 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
 
         // Dispatch to nearby drivers when the order transitions to OutForDelivery
         // via the KDS advance flow. This mirrors the UpdateOrderStatus endpoint.
-        if (transitionsToOutForDelivery && _foodDispatch is not null)
+        // Dine-in orders bypass dispatch entirely — they're served at the table.
+        if (transitionsToOutForDelivery && _foodDispatch is not null && !order.IsDineIn)
         {
             await _foodDispatch.DispatchFoodOrderAsync(order.Id, cancellationToken);
         }

@@ -22,6 +22,28 @@ public sealed class User : BaseEntity
 
     public DateTimeOffset? ProMemberUntil { get; private set; }
 
+    /// <summary>
+    /// Trust score used by the fraud sentinel. Every user starts at 100.
+    /// Below 40: COD disabled. Below 20: shadow-banned (no drivers/restaurants found).
+    /// </summary>
+    public int TrustScore { get; private set; } = 100;
+
+    /// <summary>
+    /// When the trust score was last updated by the fraud engine.
+    /// </summary>
+    public DateTimeOffset? TrustScoreUpdatedAt { get; private set; }
+
+    /// <summary>
+    /// True when the user has been shadow-banned by the fraud engine.
+    /// The app loads normally but discovery feeds return empty results.
+    /// </summary>
+    public bool IsShadowBanned { get; private set; }
+
+    /// <summary>
+    /// True when COD has been disabled for this user due to low trust score.
+    /// </summary>
+    public bool IsCodDisabled { get; private set; }
+
     public bool IsVerifiedLocal { get; private set; }
 
     public string? AadhaarHash { get; private set; }
@@ -145,6 +167,36 @@ public sealed class User : BaseEntity
     {
         IsProMember = false;
         ProMemberUntil = null;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Adjusts the user's trust score by a delta (positive or negative).
+    /// Clamps to [0, 100]. Automatically updates COD/shadow-ban flags
+    /// based on the resulting score.
+    /// </summary>
+    public void AdjustTrustScore(int delta)
+    {
+        TrustScore = Math.Clamp(TrustScore + delta, 0, 100);
+        TrustScoreUpdatedAt = DateTimeOffset.UtcNow;
+
+        // Auto-update restriction flags based on thresholds
+        IsCodDisabled = TrustScore < 40;
+        IsShadowBanned = TrustScore < 20;
+
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Sets an absolute trust score value (clamped to [0, 100]).
+    /// Used by admin override or initial seeding.
+    /// </summary>
+    public void SetTrustScore(int score)
+    {
+        TrustScore = Math.Clamp(score, 0, 100);
+        TrustScoreUpdatedAt = DateTimeOffset.UtcNow;
+        IsCodDisabled = TrustScore < 40;
+        IsShadowBanned = TrustScore < 20;
         MarkUpdated();
     }
 

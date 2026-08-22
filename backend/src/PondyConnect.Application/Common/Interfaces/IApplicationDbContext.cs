@@ -73,6 +73,12 @@ public interface IApplicationDbContext
 
     DbSet<ChargebackDispute> ChargebackDisputes { get; }
 
+    DbSet<DineInSession> DineInSessions { get; }
+
+    DbSet<SubscriptionPlan> SubscriptionPlans { get; }
+
+    DbSet<UserSubscription> UserSubscriptions { get; }
+
     DbSet<PaymentSettlement> PaymentSettlements { get; }
 
     DbSet<DriverLedgerEntry> DriverLedgerEntries { get; }

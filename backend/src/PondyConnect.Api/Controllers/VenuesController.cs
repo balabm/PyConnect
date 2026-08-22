@@ -3,7 +3,9 @@ namespace PondyConnect.Api.Controllers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Bookings;
+using PondyConnect.Application.Features.Fraud;
 using PondyConnect.Application.Features.Venues;
 using PondyConnect.Domain.Enums;
 
@@ -12,10 +14,21 @@ using PondyConnect.Domain.Enums;
 public sealed class VenuesController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly RiskInterceptor? _riskInterceptor;
+    private readonly ICurrentUserService? _currentUser;
 
     public VenuesController(IMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    public VenuesController(
+        IMediator mediator,
+        RiskInterceptor riskInterceptor,
+        ICurrentUserService currentUser) : this(mediator)
+    {
+        _riskInterceptor = riskInterceptor;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -26,6 +39,13 @@ public sealed class VenuesController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        // Shadow-ban intercept: shadow-banned users see empty venue list
+        if (_riskInterceptor is not null && _currentUser is not null)
+        {
+            if (await _riskInterceptor.IsShadowBannedAsync(_currentUser.UserId, cancellationToken))
+                return Ok(Array.Empty<VenueFilterResponse>());
+        }
+
         int? categoryId = null;
         if (!string.IsNullOrWhiteSpace(category))
         {

@@ -23,7 +23,9 @@ public sealed record CreateFoodOrderCommand(
     IReadOnlyList<CreateFoodOrderItemRequest>? Items = null,
     string? RazorpayOrderId = null,
     string? RazorpayPaymentId = null,
-    string? RazorpaySignature = null) : IRequest<CheckoutResponse>;
+    string? RazorpaySignature = null,
+    int? TableId = null,
+    Guid? DineInSessionId = null) : IRequest<CheckoutResponse>;
 
 public sealed record CreateFoodOrderItemRequest(
     string Name,
@@ -48,10 +50,20 @@ public sealed class CreateFoodOrderValidator : AbstractValidator<CreateFoodOrder
     public CreateFoodOrderValidator()
     {
         RuleFor(x => x.VendorId).NotEmpty();
-        RuleFor(x => x.DeliveryAddress).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.DeliveryLatitude).InclusiveBetween(-90, 90);
-        RuleFor(x => x.DeliveryLongitude).InclusiveBetween(-180, 180);
         RuleFor(x => x.Items).NotEmpty().Must(items => items!.All(i => i.Quantity > 0 && i.UnitPrice > 0));
+
+        // Dine-in orders bypass delivery address/location validation
+        When(x => !x.TableId.HasValue, () =>
+        {
+            RuleFor(x => x.DeliveryAddress).NotEmpty().MaximumLength(500);
+            RuleFor(x => x.DeliveryLatitude).InclusiveBetween(-90, 90);
+            RuleFor(x => x.DeliveryLongitude).InclusiveBetween(-180, 180);
+        });
+
+        When(x => x.TableId.HasValue, () =>
+        {
+            RuleFor(x => x.TableId).GreaterThan(0);
+        });
     }
 }
 
@@ -97,8 +109,12 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
         var vendor = await _context.Vendors.FirstOrDefaultAsync(v => v.Id == request.VendorId && v.IsActive, cancellationToken)
             ?? throw new InvalidOperationException("Vendor not found or inactive.");
 
-        var deliveryLocation = GeoLocation.Create(request.DeliveryLatitude, request.DeliveryLongitude);
-        _serviceArea.EnsureWithinZone(deliveryLocation);
+        // Service area validation only applies to delivery orders, not dine-in
+        if (!request.TableId.HasValue)
+        {
+            var deliveryLocation = GeoLocation.Create(request.DeliveryLatitude, request.DeliveryLongitude);
+            _serviceArea.EnsureWithinZone(deliveryLocation);
+        }
 
         // Look up the user early so we can compute live pricing for conflict
         // responses and the final order in a single pass.
@@ -195,18 +211,46 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
         var subTotal = request.Items?.Sum(i => i.Quantity * i.UnitPrice) ?? 0m;
         var pricing = OrderPricingService.CalculatePricing(subTotal, isProMember, DateTimeOffset.UtcNow);
 
-        var order = FoodOrder.Create(
-            userId: userId,
-            vendorId: request.VendorId,
-            deliveryAddress: request.DeliveryAddress,
-            deliveryLocation: deliveryLocation,
-            subTotal: pricing.SubTotal,
-            deliveryFee: pricing.DeliveryFee,
-            lateNightDriverBonus: pricing.LateNightDriverBonus,
-            taxes: pricing.Taxes,
-            paymentMethod: request.PaymentMethod,
-            venueId: request.VenueId,
-            notes: request.Notes);
+        FoodOrder order;
+
+        // Dine-in orders bypass delivery address, delivery fee, and captain dispatch.
+        // They route directly to the KDS tablet.
+        if (request.TableId.HasValue)
+        {
+            // Dine-in: no delivery fee, no late-night bonus, no dispatch
+            var dineInTaxes = subTotal * OrderPricingService.GstRate;
+            order = FoodOrder.CreateDineIn(
+                userId: userId,
+                vendorId: request.VendorId,
+                tableId: request.TableId.Value,
+                subTotal: subTotal,
+                taxes: dineInTaxes,
+                paymentMethod: request.PaymentMethod,
+                venueId: request.VenueId,
+                notes: request.Notes);
+
+            _logger.LogInformation(
+                "Dine-in order created for table {TableId} at vendor {VendorId}, bypassing dispatch",
+                request.TableId.Value, request.VendorId);
+        }
+        else
+        {
+            var deliveryLocation = GeoLocation.Create(request.DeliveryLatitude, request.DeliveryLongitude);
+            _serviceArea.EnsureWithinZone(deliveryLocation);
+
+            order = FoodOrder.Create(
+                userId: userId,
+                vendorId: request.VendorId,
+                deliveryAddress: request.DeliveryAddress,
+                deliveryLocation: deliveryLocation,
+                subTotal: pricing.SubTotal,
+                deliveryFee: pricing.DeliveryFee,
+                lateNightDriverBonus: pricing.LateNightDriverBonus,
+                taxes: pricing.Taxes,
+                paymentMethod: request.PaymentMethod,
+                venueId: request.VenueId,
+                notes: request.Notes);
+        }
 
         if (request.Items != null)
         {
