@@ -1,15 +1,12 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Runtime configuration. Override the API base with:
 /// `flutter run --dart-define=API_BASE_URL=https://api.example.com`
 ///
-/// In release mode, defaults to the production backend at
-/// https://pyconnect.run.place. In debug mode, falls back to the
-/// local dev server (10.0.2.2:5000 on Android emulator, localhost:5000
-/// elsewhere) so local development works without --dart-define.
+/// Defaults to the production backend at https://pyconnect.run.place.
+/// For local development, run with:
+///   flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000
 class AppConfig {
   const AppConfig._();
 
@@ -17,11 +14,9 @@ class AppConfig {
 
   static String get apiBaseUrl {
     if (_envBaseUrl.isNotEmpty) return _envBaseUrl;
-    // Release builds default to production backend.
-    if (kReleaseMode) return 'https://pyconnect.run.place';
-    // Debug builds default to local dev server.
-    if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
+    // Default to production backend for both debug and release.
+    // Use --dart-define=API_BASE_URL=http://10.0.2.2:5000 for local dev.
+    return 'https://pyconnect.run.place';
   }
 }
 

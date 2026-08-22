@@ -1,18 +1,22 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
 
 /// A simple connectivity checker that pings the API health endpoint.
 /// Polling starts in [start] and must be stopped in [dispose].
+/// Requires [failureThreshold] consecutive failures before declaring
+/// offline, and a single success to declare back online.
 class ConnectivityChecker extends ChangeNotifier {
-  ConnectivityChecker();
+  ConnectivityChecker({this.failureThreshold = 3});
+
+  final int failureThreshold;
 
   Dio? _dio;
   bool _isOnline = true;
+  int _consecutiveFailures = 0;
   Timer? _timer;
   bool _started = false;
 
@@ -23,22 +27,27 @@ class ConnectivityChecker extends ChangeNotifier {
     _started = true;
     _dio = Dio(BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 5),
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
     ));
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => _check());
+    // Check immediately, then every 15 seconds.
+    _check();
+    _timer = Timer.periodic(const Duration(seconds: 15), (_) => _check());
   }
 
   Future<void> _check() async {
     try {
       final response = await _dio!.get('/health');
       final nowOnline = response.statusCode == 200;
+      _consecutiveFailures = 0;
+      if (!nowOnline) _consecutiveFailures++;
       if (nowOnline != _isOnline) {
         _isOnline = nowOnline;
         notifyListeners();
       }
     } on DioException catch (_) {
-      if (_isOnline) {
+      _consecutiveFailures++;
+      if (_consecutiveFailures >= failureThreshold && _isOnline) {
         _isOnline = false;
         notifyListeners();
       }
@@ -72,9 +81,9 @@ class _OfflineBannerState extends State<OfflineBanner> {
   @override
   void initState() {
     super.initState();
-    if (kReleaseMode) {
-      _checker.start();
-    }
+    // Start in both debug and release mode so the user always sees
+    // the real connectivity status.
+    _checker.start();
   }
 
   @override

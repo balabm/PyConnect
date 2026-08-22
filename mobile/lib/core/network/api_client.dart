@@ -157,7 +157,12 @@ class ApiClient {
       return ApiException('The request timed out. Please check your connection and try again.');
     }
     if (e.type == DioExceptionType.connectionError) {
-      return ApiException('Could not reach PY Connect. Please check your internet connection.');
+      final msg = e.error?.toString() ?? '';
+      if (msg.contains('SocketException') || msg.contains('Network is unreachable') ||
+          msg.contains('Failed host lookup') || msg.contains('Connection refused')) {
+        return ApiException('Could not reach PY Connect servers. Please try again.');
+      }
+      return ApiException('Could not reach PY Connect. Please try again.');
     }
     final status = e.response?.statusCode;
     if (status != null && status >= 500) {
