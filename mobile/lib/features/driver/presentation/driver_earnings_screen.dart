@@ -588,9 +588,7 @@ class _WalletCardState extends ConsumerState<_WalletCard> {
                         ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.payment),
                     label: Text(_settling ? 'Processing...' : 'Settle Dues \u20B9${settleAmount.toStringAsFixed(2)}'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.emerald,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),

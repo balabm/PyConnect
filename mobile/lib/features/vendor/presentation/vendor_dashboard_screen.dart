@@ -127,7 +127,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+              style: FilledButton.styleFrom(),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () {

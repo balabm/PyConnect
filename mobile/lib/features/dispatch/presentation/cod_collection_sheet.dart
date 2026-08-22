@@ -229,9 +229,7 @@ class _CodCollectionContentState extends ConsumerState<_CodCollectionContent> {
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.emerald,
-                  ),
+                  style: FilledButton.styleFrom(),
                   onPressed: _processing ? null : _reconcile,
                   child: _processing
                       ? const SizedBox(

@@ -76,8 +76,7 @@ class VendorMenuScreen extends ConsumerWidget {
           AppHaptics.light();
           _showAddItemSheet(context, ref);
         },
-        backgroundColor: AppTheme.emerald,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add),
       ),
       body: menuAsync.when(
         loading: () => const ShimmerList(withImage: false, count: 6),
@@ -218,15 +217,15 @@ class _MenuItemCard extends ConsumerWidget {
                   }
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'edit',
                     child: Row(children: [
                       Icon(Icons.edit, color: AppTheme.emerald, size: 20),
                       SizedBox(width: 12),
-                      Text('Edit Item', style: TextStyle(color: Colors.white)),
+                      Text('Edit Item', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                     ]),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'delete',
                     child: Row(children: [
                       Icon(Icons.delete, color: AppTheme.danger, size: 20),
@@ -279,10 +278,10 @@ class _MenuItemCard extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(ctx).colorScheme.surface,
-        title: const Text('Remove Item?', style: TextStyle(color: Colors.white)),
+        title: Text('Remove Item?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Mark "${item.name}" as unavailable? It will be hidden from customers.',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
@@ -290,7 +289,7 @@ class _MenuItemCard extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+            style: FilledButton.styleFrom(),
             onPressed: () {
               Navigator.pop(ctx);
               ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
@@ -374,7 +373,7 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -467,16 +466,14 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
                       _submit();
                     },
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.emerald,
-                disabledBackgroundColor: AppTheme.emerald.withValues(alpha: 0.3),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: _submitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20, width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Save Changes', style: TextStyle(fontSize: 16, color: Colors.white)),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
+                  : Text('Save Changes', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
             ),
           ),
         ],
@@ -567,7 +564,7 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -686,18 +683,16 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
                       _submit();
                     },
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.emerald,
-                disabledBackgroundColor: AppTheme.emerald.withValues(alpha: 0.3),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: _submitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                     )
-                  : const Text('Add Item', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  : Text('Add Item', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
             ),
           ),
         ],

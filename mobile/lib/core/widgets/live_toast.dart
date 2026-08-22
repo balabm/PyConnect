@@ -103,10 +103,10 @@ class _LiveToastState extends State<LiveToast>
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: widget.color.withOpacity(0.15),
+                          color: widget.color.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: widget.color.withOpacity(0.25),
+                            color: widget.color.withValues(alpha: 0.25),
                             width: 0.5,
                           ),
                         ),
@@ -152,7 +152,7 @@ class _LiveToastState extends State<LiveToast>
                                 value: widget.progress,
                                 minHeight: 3,
                                 backgroundColor:
-                                    widget.color.withOpacity(0.12),
+                                    widget.color.withValues(alpha: 0.12),
                                 valueColor: AlwaysStoppedAnimation(
                                   widget.color,
                                 ),

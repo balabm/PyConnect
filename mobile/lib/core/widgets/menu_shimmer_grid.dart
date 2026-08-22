@@ -19,9 +19,9 @@ class MenuShimmerGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade200;
+    final baseColor = isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade200;
     final highlightColor =
-        isDark ? Colors.white.withOpacity(0.10) : Colors.grey.shade100;
+        isDark ? Colors.white.withValues(alpha: 0.10) : Colors.grey.shade100;
 
     return Shimmer.fromColors(
       baseColor: baseColor,
@@ -103,9 +103,9 @@ class VenueShimmerList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade200;
+    final baseColor = isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade200;
     final highlightColor =
-        isDark ? Colors.white.withOpacity(0.10) : Colors.grey.shade100;
+        isDark ? Colors.white.withValues(alpha: 0.10) : Colors.grey.shade100;
 
     return Shimmer.fromColors(
       baseColor: baseColor,

@@ -97,10 +97,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
                     ],
                   ),
                 ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppTheme.emerald,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.qr_code),
+      floatingActionButton: FloatingActionButton.extended(icon: const Icon(Icons.qr_code),
         label: const Text('New Bag Drop'),
         onPressed: _showBagDropDialog,
       ),
@@ -148,7 +145,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+            style: FilledButton.styleFrom(),
             onPressed: () {
               final name = nameController.text.trim();
               final bagCount = int.tryParse(bagCountController.text) ?? 1;
@@ -224,7 +221,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
                     },
                   ),
                   FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+                    style: FilledButton.styleFrom(),
                     onPressed: () {
                       Navigator.pop(ctx);
                       _loadData();
@@ -312,7 +309,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+              style: FilledButton.styleFrom(),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () { setState(() => _loading = true); _loadData(); },

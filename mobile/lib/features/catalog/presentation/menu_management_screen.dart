@@ -89,8 +89,7 @@ class MenuManagementScreen extends ConsumerWidget {
           AppHaptics.light();
           _showAddItemSheet(context, ref);
         },
-        backgroundColor: AppTheme.emerald,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add),
       ),
       body: menuAsync.when(
         loading: () => const ShimmerList(withImage: false, count: 6),
@@ -303,7 +302,7 @@ class _MenuItemCard extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+            style: FilledButton.styleFrom(),
             onPressed: () {
               Navigator.pop(ctx);
               ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
@@ -489,7 +488,7 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -593,9 +592,7 @@ class _EditMenuItemSheetState extends ConsumerState<_EditMenuItemSheet> {
                       AppHaptics.medium();
                       _submit();
                     },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.emerald,
-                disabledBackgroundColor: AppTheme.emerald.withValues(alpha: 0.3),
+              style: FilledButton.styleFrom(disabledBackgroundColor: AppTheme.emerald.withValues(alpha: 0.3),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -684,7 +681,7 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -804,9 +801,7 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
                       AppHaptics.medium();
                       _submit();
                     },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.emerald,
-                disabledBackgroundColor: AppTheme.emerald.withValues(alpha: 0.3),
+              style: FilledButton.styleFrom(disabledBackgroundColor: AppTheme.emerald.withValues(alpha: 0.3),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 16),

@@ -32,7 +32,6 @@ class _ScheduledRidesScreenState extends ConsumerState<ScheduledRidesScreen> {
           AppHaptics.light();
           context.push('/rides/scheduled');
         },
-        backgroundColor: AppTheme.emerald,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),

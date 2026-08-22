@@ -120,15 +120,15 @@ class _FloatingCartPillState extends State<FloatingCartPill>
                         '${widget.itemCount} ${widget.itemCount == 1 ? "Item" : "Items"}',
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppTheme.slate,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       Text(
                         '₹${widget.subtotal.toStringAsFixed(0)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
-                          color: AppTheme.charcoal,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

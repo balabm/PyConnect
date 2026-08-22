@@ -19,10 +19,10 @@ class AppDecorations {
   static BoxDecoration glass(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
-      color: (isDark ? Colors.white : Colors.black).withOpacity(0.04),
+      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
       borderRadius: BorderRadius.circular(AppRadius.lg),
       border: Border.all(
-        color: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
         width: 0.5,
       ),
     );
@@ -32,15 +32,15 @@ class AppDecorations {
   static BoxDecoration glassStrong(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
-      color: (isDark ? AppTheme.darkSurface : Colors.white).withOpacity(0.85),
+      color: (isDark ? AppTheme.darkSurface : Colors.white).withValues(alpha: 0.85),
       borderRadius: BorderRadius.circular(AppRadius.xl),
       border: Border.all(
-        color: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
         width: 0.5,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.04),
+          color: Colors.black.withValues(alpha: 0.04),
           blurRadius: 24,
           offset: const Offset(0, 8),
         ),
@@ -57,14 +57,14 @@ class AppDecorations {
       color: isDark ? AppTheme.darkCard : AppTheme.cardBackground,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       border: Border.all(
-        color: (isDark ? Colors.white : Colors.black).withOpacity(
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 
           isDark ? 0.06 : 0.04,
         ),
         width: 0.5,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(isDark ? 0.20 : 0.04),
+          color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.04),
           blurRadius: 20,
           offset: const Offset(0, 6),
         ),
@@ -82,17 +82,17 @@ class AppDecorations {
       color: isDark ? AppTheme.darkCard : AppTheme.cardBackground,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       border: Border.all(
-        color: glowColor.withOpacity(0.15),
+        color: glowColor.withValues(alpha: 0.15),
         width: 0.5,
       ),
       boxShadow: [
         BoxShadow(
-          color: glowColor.withOpacity(0.08),
+          color: glowColor.withValues(alpha: 0.08),
           blurRadius: 24,
           offset: const Offset(0, 8),
         ),
         BoxShadow(
-          color: Colors.black.withOpacity(isDark ? 0.20 : 0.04),
+          color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.04),
           blurRadius: 20,
           offset: const Offset(0, 6),
         ),
@@ -106,15 +106,15 @@ class AppDecorations {
   static BoxDecoration floatingPill(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
-      color: (isDark ? AppTheme.darkSurface : Colors.white).withOpacity(0.90),
+      color: (isDark ? AppTheme.darkSurface : Colors.white).withValues(alpha: 0.90),
       borderRadius: BorderRadius.circular(AppRadius.pill),
       border: Border.all(
-        color: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
         width: 0.5,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(isDark ? 0.30 : 0.08),
+          color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.08),
           blurRadius: 24,
           offset: const Offset(0, 8),
         ),
@@ -127,21 +127,21 @@ class AppDecorations {
   /// Pill-shaped status badge with a subtle glow.
   static BoxDecoration statusBadge(BuildContext context, Color color) {
     return BoxDecoration(
-      color: color.withOpacity(0.12),
+      color: color.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(AppRadius.pill),
-      border: Border.all(color: color.withOpacity(0.25), width: 0.5),
+      border: Border.all(color: color.withValues(alpha: 0.25), width: 0.5),
     );
   }
 
   /// Glowing status badge with ambient shadow.
   static BoxDecoration glowingBadge(BuildContext context, Color color) {
     return BoxDecoration(
-      color: color.withOpacity(0.15),
+      color: color.withValues(alpha: 0.15),
       borderRadius: BorderRadius.circular(AppRadius.pill),
-      border: Border.all(color: color.withOpacity(0.30), width: 0.5),
+      border: Border.all(color: color.withValues(alpha: 0.30), width: 0.5),
       boxShadow: [
         BoxShadow(
-          color: color.withOpacity(0.20),
+          color: color.withValues(alpha: 0.20),
           blurRadius: 12,
           spreadRadius: 0,
         ),
@@ -156,7 +156,7 @@ class AppDecorations {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       BoxShadow(
-        color: Colors.black.withOpacity(isDark ? 0.30 : 0.06),
+        color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.06),
         blurRadius: 24,
         offset: const Offset(0, 8),
       ),
@@ -167,7 +167,7 @@ class AppDecorations {
   static List<BoxShadow> coloredGlow(Color color, {double opacity = 0.15}) {
     return [
       BoxShadow(
-        color: color.withOpacity(opacity),
+        color: color.withValues(alpha: opacity),
         blurRadius: 20,
         spreadRadius: 0,
       ),

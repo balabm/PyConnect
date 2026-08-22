@@ -185,7 +185,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                 border: Border.all(color: Colors.white, width: 3),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFF00D290).withOpacity(0.3),
+                    color: Color(0xFF00D290).withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -241,7 +241,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

@@ -93,10 +93,10 @@ class _SwipeToAcceptState extends State<SwipeToAccept>
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
-        color: widget.color.withOpacity(0.12),
+        color: widget.color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppRadius.pill),
         border: Border.all(
-          color: widget.color.withOpacity(0.25),
+          color: widget.color.withValues(alpha: 0.25),
           width: 1,
         ),
       ),
@@ -147,8 +147,8 @@ class _SwipeToAcceptState extends State<SwipeToAccept>
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          widget.color.withOpacity(0.3),
-                          widget.color.withOpacity(0.15),
+                          widget.color.withValues(alpha: 0.3),
+                          widget.color.withValues(alpha: 0.15),
                         ],
                       ),
                     ),
@@ -188,7 +188,7 @@ class _SwipeToAcceptState extends State<SwipeToAccept>
                       color: widget.color,
                       boxShadow: [
                         BoxShadow(
-                          color: widget.color.withOpacity(0.4),
+                          color: widget.color.withValues(alpha: 0.4),
                           blurRadius: 12,
                           spreadRadius: 1,
                         ),

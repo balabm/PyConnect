@@ -307,8 +307,6 @@ class _CoverChargeCard extends StatelessWidget {
                     icon: const Icon(Icons.check, size: 16),
                     label: const Text('Accept'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.emerald,
-                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),

@@ -48,7 +48,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
   Future<void> _save() async {
     if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Venue name is required'), backgroundColor: AppTheme.emerald),
+        const SnackBar(content: Text('Venue name is required'), backgroundColor: AppTheme.danger),
       );
       return;
     }
@@ -74,7 +74,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -102,7 +102,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
               const CircularProgressIndicator(color: AppTheme.emerald),
               const SizedBox(height: 16),
               Text('Loading venue...',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5))),
             ],
           ),
         ),
@@ -118,7 +118,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
                 const SizedBox(height: 24),
                 FilledButton.icon(
-                  style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+                  style: FilledButton.styleFrom(),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Retry'),
                   onPressed: () => ref.read(venueDetailProvider.notifier).load(),
@@ -143,7 +143,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
                     const SizedBox(height: 8),
                     Text('Contact admin to set up your venue profile.',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 13),
                         textAlign: TextAlign.center),
                   ],
                 ),
@@ -178,14 +178,13 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: _saving ? null : _save,
-                    style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: _saving
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 20, width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Save Changes', style: TextStyle(fontSize: 16, color: Colors.white)),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
+                          : Text('Save Changes', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
                     ),
                   ),
                 ),
@@ -233,7 +232,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
                 Text(
                   isActive ? 'Accepting orders from customers' : 'Not visible to customers',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.4),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     fontSize: 12,
                   ),
                 ),
@@ -279,10 +278,10 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.25)),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             filled: true,
             fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(

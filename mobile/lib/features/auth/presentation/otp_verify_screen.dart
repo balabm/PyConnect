@@ -354,9 +354,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
               const SizedBox(height: 28),
               // Verify button
               FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.emerald,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
                 ),
                 onPressed: _otp.length == 6 && !isVerifying ? () => _verify() : null,

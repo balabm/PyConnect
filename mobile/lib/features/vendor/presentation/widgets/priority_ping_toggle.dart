@@ -44,7 +44,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
             child: Text('Cancel', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5))),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+            style: FilledButton.styleFrom(),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Activate'),
           ),
@@ -69,7 +69,7 @@ class _PriorityPingToggleState extends State<PriorityPingToggle> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {

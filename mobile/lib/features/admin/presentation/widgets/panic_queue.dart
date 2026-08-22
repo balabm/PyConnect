@@ -157,7 +157,6 @@ class _PanicQueueState extends ConsumerState<PanicQueue>
                                           ref.read(criticalTicketsProvider.notifier).acknowledge(ticket.id);
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppTheme.emerald,
                                           foregroundColor: AdminColors.textPrimary,
                                           padding: const EdgeInsets.symmetric(horizontal: 12),
                                         ),

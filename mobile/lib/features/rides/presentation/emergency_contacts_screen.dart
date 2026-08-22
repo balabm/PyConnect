@@ -48,7 +48,6 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
       appBar: AppBar(title: const Text('Emergency Contacts')),
       floatingActionButton: FloatingActionButton(
         onPressed: _addContact,
-        backgroundColor: AppTheme.emerald,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),

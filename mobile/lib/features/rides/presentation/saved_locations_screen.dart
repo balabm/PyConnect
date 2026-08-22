@@ -63,7 +63,6 @@ class _SavedLocationsScreenState extends ConsumerState<SavedLocationsScreen> {
       appBar: AppBar(title: const Text('Saved Places')),
       floatingActionButton: FloatingActionButton(
         onPressed: _addLocation,
-        backgroundColor: AppTheme.emerald,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),

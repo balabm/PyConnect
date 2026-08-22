@@ -222,9 +222,7 @@ class PostTripSummarySheet extends StatelessWidget {
               },
               icon: const Icon(Icons.check_circle),
               label: const Text('Done'),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.emerald,
-                foregroundColor: Colors.white,
+              style: FilledButton.styleFrom(foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),

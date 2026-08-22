@@ -162,7 +162,7 @@ class _CreatePromotionFormState extends State<_CreatePromotionForm> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -242,16 +242,16 @@ class _CreatePromotionFormState extends State<_CreatePromotionForm> {
                 AppHaptics.medium();
                 _submit();
               },
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+              style: FilledButton.styleFrom(),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: _submitting
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                       )
-                    : const Text('Create Promotion', style: TextStyle(fontSize: 16, color: Colors.white)),
+                    : Text('Create Promotion', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
               ),
             ),
           ),
@@ -432,7 +432,7 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -502,8 +502,8 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text('Launch Flash Sale', style: TextStyle(fontSize: 16, color: Colors.white)),
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+                  : Text('', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
+              style: FilledButton.styleFrom(),
             ),
           ),
         ],

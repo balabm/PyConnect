@@ -68,15 +68,11 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
               ),
               const SizedBox(height: 16),
               FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.emerald,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: _isSendingOtp ? null : _sendOtp,
                 child: _isSendingOtp
-                    ? const SizedBox(
-                        height: 20, width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                     : const Text('Send OTP'),
               ),
             ] else ...[
@@ -94,15 +90,11 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
               ),
               const SizedBox(height: 16),
               FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.emerald,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: _isVerifying ? null : _verifyOtp,
                 child: _isVerifying
-                    ? const SizedBox(
-                        height: 20, width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                     : const Text('Verify & Update'),
               ),
               const SizedBox(height: 8),

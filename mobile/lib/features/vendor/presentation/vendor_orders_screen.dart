@@ -156,7 +156,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+              style: FilledButton.styleFrom(),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () => ref.read(vendorOrdersProvider.notifier).load(),
@@ -205,8 +205,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed: $e'),
-            backgroundColor: AppTheme.emerald,
-          ),
+            ),
         );
       }
     }

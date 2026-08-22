@@ -139,10 +139,10 @@ class _OrderStatusHeaderState extends State<OrderStatusHeader>
         // Status label
         Text(
           stage.label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: AppTheme.charcoal,
+            color: Theme.of(context).colorScheme.onSurface,
             letterSpacing: -0.3,
           ),
         ),
@@ -152,7 +152,7 @@ class _OrderStatusHeaderState extends State<OrderStatusHeader>
           stage.subtitle(widget.etaMinutes),
           style: TextStyle(
             fontSize: 14,
-            color: AppTheme.slate,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           textAlign: TextAlign.center,
         ),
@@ -184,7 +184,7 @@ class _OrderStatusHeaderState extends State<OrderStatusHeader>
       child: LinearProgressIndicator(
         value: stage.progress,
         minHeight: 6,
-        backgroundColor: AppTheme.slate.withOpacity(0.15),
+        backgroundColor: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
         valueColor: AlwaysStoppedAnimation(stage.color),
       ),
     );
@@ -408,7 +408,7 @@ class _PulsingIconState extends State<_PulsingIcon>
           scale: scale,
           child: Container(
             decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.1),
+              color: widget.color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -463,7 +463,7 @@ class _ScooterDrivingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // Dotted route line
     final linePaint = Paint()
-      ..color = AppTheme.emerald.withOpacity(0.3)
+      ..color = AppTheme.emerald.withValues(alpha: 0.3)
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
 

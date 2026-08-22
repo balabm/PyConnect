@@ -837,7 +837,7 @@ class _RideConfirmSheet extends StatelessWidget {
                 children: [
                   const Text('Total Fare', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   Text('\u20B9${fare.toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.charcoal)),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
                 ],
               ),
               const SizedBox(height: 20),
@@ -1411,12 +1411,12 @@ class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.slate,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
               ..._recentLocations.map((loc) => ListTile(
-                    leading: Icon(Icons.history, color: AppTheme.slate, size: 22),
+                    leading: Icon(Icons.history, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 22),
                     title: Text(
                       loc['address'] as String? ?? 'Recent location',
                       maxLines: 1,
@@ -1434,16 +1434,16 @@ class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.search, size: 48, color: AppTheme.slate.withValues(alpha: 0.5)),
+                      Icon(Icons.search, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                       const SizedBox(height: 12),
                       Text(
                         'Search for a destination',
-                        style: TextStyle(color: AppTheme.slate),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Try "Rock Beach", "Auroville", or "White Town"',
-                        style: TextStyle(fontSize: 12, color: AppTheme.slate.withValues(alpha: 0.7)),
+                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
                       ),
                     ],
                   ),

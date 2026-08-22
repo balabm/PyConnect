@@ -79,14 +79,14 @@ class _HeroHeader extends ConsumerWidget {
                         greeting,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.charcoal,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.slate,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                       ),
                       const SizedBox(height: 6),
@@ -308,7 +308,7 @@ class _CuratedCollectionsSection extends StatelessWidget {
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.charcoal,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
             ),
           ),

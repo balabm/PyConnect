@@ -249,14 +249,12 @@ class _ExperienceBookingSheetState extends ConsumerState<_ExperienceBookingSheet
             ),
           const SizedBox(height: 16),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.emerald,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+            style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
             ),
             onPressed: _submitting ? null : _submit,
             child: _submitting
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                 : const Text('Confirm booking', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           ),
         ],

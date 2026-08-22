@@ -132,7 +132,7 @@ class _RadarRingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0
       ..shader = RadialGradient(
-        colors: [color.withOpacity(0.8), color.withOpacity(0.0)],
+        colors: [color.withValues(alpha: 0.8), color.withValues(alpha: 0.0)],
         stops: const [0.7, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
 
@@ -140,7 +140,7 @@ class _RadarRingPainter extends CustomPainter {
 
     // Inner fill (very subtle)
     final fillPaint = Paint()
-      ..color = color.withOpacity(0.03)
+      ..color = color.withValues(alpha: 0.03)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius, fillPaint);
   }
@@ -227,7 +227,7 @@ class _DriverPinState extends State<_DriverPin>
             color: widget.color,
             boxShadow: [
               BoxShadow(
-                color: widget.color.withOpacity(glowOpacity),
+                color: widget.color.withValues(alpha: glowOpacity),
                 blurRadius: 12 + (_controller.value * 8),
                 spreadRadius: 2,
               ),

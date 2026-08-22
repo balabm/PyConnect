@@ -234,9 +234,7 @@ class _SearchBar extends StatelessWidget {
                   ),
                   const Spacer(),
                   FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.emerald,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
+                    style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
                     ),
                     onPressed: (checkIn != null && checkOut != null)
                         ? onSearch

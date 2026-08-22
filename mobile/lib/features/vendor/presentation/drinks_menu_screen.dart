@@ -119,12 +119,11 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.emerald,
         onPressed: () {
           AppHaptics.light();
           _showAddDrinkSheet(context, ref);
         },
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add),
       ),
       body: menuAsync.when(
         loading: () => ListView(
@@ -319,8 +318,8 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Empty', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
-              Text('Full', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
+              Text('Empty', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 11)),
+              Text('Full', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 11)),
             ],
           ),
         ],
@@ -382,7 +381,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-                Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
+                Text(subtitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 12)),
               ],
             ),
           ),
@@ -438,7 +437,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               child: Center(
                 child: Text(
                   'No guests on the list yet',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 13),
                 ),
               ),
             )
@@ -503,7 +502,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
                 ),
                 Text(
                   'Party of ${entry.partySize}',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 12),
                 ),
               ],
             ),
@@ -546,28 +545,28 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: const Text('Add to Guestlist', style: TextStyle(color: Colors.white)),
+        title: Text('Add to Guestlist', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Guest name',
-                labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-                prefixIcon: Icon(Icons.person, color: Colors.white.withValues(alpha: 0.4)),
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                prefixIcon: Icon(Icons.person, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: sizeController,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Party size',
-                labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-                prefixIcon: Icon(Icons.groups, color: Colors.white.withValues(alpha: 0.4)),
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                prefixIcon: Icon(Icons.groups, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
               ),
             ),
           ],
@@ -578,7 +577,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+            style: FilledButton.styleFrom(),
             onPressed: () {
               final name = nameController.text.trim();
               final size = int.tryParse(sizeController.text.trim()) ?? 1;
@@ -612,7 +611,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+              style: FilledButton.styleFrom(),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () => ref.read(vendorMenuProvider.notifier).load(),
@@ -717,7 +716,7 @@ class _DrinkCard extends StatelessWidget {
                   Text(
                     description!,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.4),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                     maxLines: 2,
@@ -745,7 +744,7 @@ class _DrinkCard extends StatelessWidget {
                       child: Text(
                         category,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                           fontSize: 10,
                         ),
                       ),
@@ -823,7 +822,7 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.emerald),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -857,10 +856,10 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
           const SizedBox(height: 12),
           // VIP toggle
           SwitchListTile(
-            title: const Text('VIP Menu Item', style: TextStyle(color: Colors.white)),
+            title: Text('VIP Menu Item', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
             subtitle: Text(
               'Mark as premium/VIP exclusive',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 12),
             ),
             value: _isVip,
             activeThumbColor: AppTheme.emerald,
@@ -875,13 +874,12 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.emerald,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: _submitting ? null : _submit,
               child: _submitting
-                  ? const SizedBox(width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? SizedBox(width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                   : const Text('Add Drink'),
             ),
           ),
@@ -896,11 +894,11 @@ class _AddDrinkSheetState extends ConsumerState<_AddDrinkSheet> {
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-        prefixIcon: Icon(icon, color: Colors.white.withValues(alpha: 0.4)),
+        labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+        prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
         filled: true,
         fillColor: Theme.of(context).scaffoldBackgroundColor,
         border: OutlineInputBorder(

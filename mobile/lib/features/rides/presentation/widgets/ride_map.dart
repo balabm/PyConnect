@@ -232,7 +232,7 @@ class _RideMapState extends State<RideMap> {
             polylines: [
               Polyline(
                 points: widget.driverRoutePoints!,
-                color: AppTheme.slate.withValues(alpha: 0.6),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 strokeWidth: 4,
                 pattern: StrokePattern.dashed(
                   segments: const [8, 8],

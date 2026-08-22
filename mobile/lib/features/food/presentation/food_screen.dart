@@ -1585,8 +1585,7 @@ class _CartSummarySheetState extends ConsumerState<_CartSummarySheet> {
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: AppTheme.emerald,
-                      ),
+                        ),
                       onPressed: () => Navigator.pop(context, {
                         'confirmed': true,
                         'paymentMethod': _paymentMethod,
@@ -1899,9 +1898,7 @@ class _ItemCustomizationSheetState extends State<_ItemCustomizationSheet> {
                     const Spacer(),
                     // Add to Cart button
                     FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.emerald,
-                        padding: const EdgeInsets.symmetric(
+                      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 14),
                       ),
                       onPressed: () {

@@ -128,7 +128,7 @@ class _TaxiRidesScreenState extends ConsumerState<TaxiRidesScreen> {
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 18)),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.emerald),
+              style: FilledButton.styleFrom(),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               onPressed: () { setState(() => _loading = true); _loadData(); },
