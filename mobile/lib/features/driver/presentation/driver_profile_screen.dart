@@ -6,6 +6,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/auth/application/auth_controller.dart';
+import '../../../features/auth/presentation/delete_account_sheet.dart';
 import '../application/driver_providers.dart';
 
 /// Captain profile hub with quick links to KYC, earnings, and sign-out.
@@ -56,6 +57,20 @@ class DriverProfileScreen extends ConsumerWidget {
             },
             icon: const Icon(Icons.logout),
             label: const Text('Sign out'),
+          ),
+          const SizedBox(height: 12),
+          // Right to be Forgotten: Delete Account & Data
+          // For drivers, this shreds all KYC documents from cloud storage
+          // (Aadhaar, DL, RC, Insurance, Selfie) before anonymizing PII.
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.danger,
+              side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.3)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            onPressed: () => DeleteAccountSheet.show(context, ref, isDriver: true),
+            icon: const Icon(Icons.delete_forever),
+            label: const Text('Delete Account & Data', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           ),
         ],
       ),

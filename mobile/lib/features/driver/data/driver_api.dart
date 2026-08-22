@@ -163,6 +163,14 @@ class DriverApi {
     }
   }
 
+  /// Deletes the driver's account, shreds all KYC documents from S3, and
+  /// anonymizes all PII. Called by the Captain app's "Delete Account & Data"
+  /// flow. After this call, the token is invalid and the driver must sign
+  /// out locally.
+  Future<void> deleteAccount() async {
+    await _api.post('api/driver/account/delete');
+  }
+
   /// Uploads all three KYC documents (Aadhaar, Driving License, RC) in a
   /// single multipart request. The backend routes these to the private
   /// storage bucket so they are never publicly accessible.

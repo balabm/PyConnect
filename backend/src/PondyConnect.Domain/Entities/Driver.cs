@@ -316,4 +316,49 @@ public sealed class Driver : BaseEntity
         FcmDeviceToken = null;
         MarkUpdated();
     }
+
+    /// <summary>
+    /// Returns all KYC document URLs associated with this driver. Used by
+    /// the account deletion flow to shred documents from S3/storage before
+    /// anonymizing the database record.
+    /// </summary>
+    public IReadOnlyList<string> GetKycDocumentUrls()
+    {
+        var urls = new List<string>();
+        if (!string.IsNullOrEmpty(AadhaarUrl)) urls.Add(AadhaarUrl);
+        if (!string.IsNullOrEmpty(DrivingLicenseUrl)) urls.Add(DrivingLicenseUrl);
+        if (!string.IsNullOrEmpty(RcUrl)) urls.Add(RcUrl);
+        if (!string.IsNullOrEmpty(InsuranceUrl)) urls.Add(InsuranceUrl);
+        if (!string.IsNullOrEmpty(SelfieUrl)) urls.Add(SelfieUrl);
+        return urls;
+    }
+
+    /// <summary>
+    /// Anonymizes the driver's PII for the "Right to be Forgotten" flow.
+    /// Clears all KYC document URLs, parsed license data, and personal
+    /// contact info. The driver record is kept (anonymized) so historical
+    /// ride/payment data remains intact for financial auditing.
+    /// Called AFTER the KYC documents have been shredded from S3.
+    /// </summary>
+    public void AnonymizeForDeletion()
+    {
+        AadhaarUrl = null;
+        DrivingLicenseUrl = null;
+        RcUrl = null;
+        InsuranceUrl = null;
+        SelfieUrl = null;
+        KycLicenseNumber = null;
+        KycParsedName = null;
+        KycVerificationReason = null;
+        KycAutoApproved = null;
+        KycConfidence = null;
+        KycExpiryDate = null;
+        IsKycUploaded = false;
+        EmergencyContactName = null;
+        EmergencyContactPhone = null;
+        FcmDeviceToken = null;
+        UpiId = null;
+        GoOffline();
+        MarkUpdated();
+    }
 }

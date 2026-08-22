@@ -35,4 +35,15 @@ public interface IStorageService
         string objectKey,
         int expiryMinutes = 60,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Permanently deletes a file from storage. Used by the "Right to be
+    /// Forgotten" flow to shred KYC documents (Aadhaar, Driving License, RC,
+    /// Insurance, Selfie) when a driver deletes their account.
+    /// </summary>
+    /// <param name="objectKeyOrUrl">The object key or URL returned by <see cref="UploadFileAsync"/>.</param>
+    /// <returns>True if the file was deleted (or did not exist); false if deletion failed.</returns>
+    Task<bool> DeleteFileAsync(
+        string objectKeyOrUrl,
+        CancellationToken cancellationToken = default);
 }

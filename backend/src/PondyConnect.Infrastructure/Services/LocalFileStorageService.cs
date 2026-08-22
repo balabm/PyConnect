@@ -67,4 +67,67 @@ public sealed class LocalFileStorageService : IStorageService
         var key = objectKey.StartsWith("uploads/", StringComparison.Ordinal) ? objectKey : $"uploads/private/{objectKey}";
         return Task.FromResult($"/{key}");
     }
+
+    private static readonly Action<ILogger, string, Exception?> s_deleteOk =
+        LoggerMessage.Define<string>(
+            LogLevel.Information,
+            new EventId(2, "FileDeleted"),
+            "Deleted local file -> {Path}");
+
+    private static readonly Action<ILogger, string, Exception?> s_deleteSkip =
+        LoggerMessage.Define<string>(
+            LogLevel.Information,
+            new EventId(3, "FileDeleteSkipped"),
+            "Local file not found (already deleted?) -> {Path}");
+
+    public Task<bool> DeleteFileAsync(
+        string objectKeyOrUrl,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(objectKeyOrUrl))
+            return Task.FromResult(true);
+
+        try
+        {
+            // Resolve the local filesystem path from the URL/key.
+            // URLs like "/uploads/xxx.jpg" or "uploads/private/xxx.jpg"
+            string relativePath;
+            if (objectKeyOrUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                // In local dev, full URLs shouldn't exist. Extract the path.
+                var uri = new Uri(objectKeyOrUrl);
+                relativePath = uri.AbsolutePath.TrimStart('/');
+            }
+            else if (objectKeyOrUrl.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+            {
+                relativePath = objectKeyOrUrl.TrimStart('/');
+            }
+            else if (objectKeyOrUrl.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
+            {
+                relativePath = objectKeyOrUrl;
+            }
+            else
+            {
+                // Raw object key — assume private uploads.
+                relativePath = $"uploads/private/{objectKeyOrUrl}";
+            }
+
+            var fullPath = Path.Combine(_webRootPath, relativePath);
+
+            if (!File.Exists(fullPath))
+            {
+                s_deleteSkip(_logger, fullPath, null);
+                return Task.FromResult(true); // Already deleted — treat as success.
+            }
+
+            File.Delete(fullPath);
+            s_deleteOk(_logger, fullPath, null);
+            return Task.FromResult(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete local file {Key}", objectKeyOrUrl);
+            return Task.FromResult(false);
+        }
+    }
 }

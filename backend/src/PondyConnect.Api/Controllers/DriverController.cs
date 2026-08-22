@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Auth;
 using PondyConnect.Application.Features.RideHailing;
 using PondyConnect.Domain.Enums;
 using PondyConnect.Api.Services;
@@ -24,6 +25,7 @@ public sealed class DriverController : ControllerBase
     private readonly ICurrentUserService _currentUser;
     private readonly IStorageService _storage;
     private readonly DispatchEngine _dispatchEngine;
+    private readonly AccountDeletionService _accountDeletion;
 
     public DriverController(
         IMediator mediator,
@@ -32,7 +34,8 @@ public sealed class DriverController : ControllerBase
         IApplicationDbContext dbContext,
         ICurrentUserService currentUser,
         IStorageService storage,
-        DispatchEngine dispatchEngine)
+        DispatchEngine dispatchEngine,
+        AccountDeletionService accountDeletion)
     {
         _mediator = mediator;
         _payoutService = payoutService;
@@ -41,6 +44,7 @@ public sealed class DriverController : ControllerBase
         _currentUser = currentUser;
         _storage = storage;
         _dispatchEngine = dispatchEngine;
+        _accountDeletion = accountDeletion;
     }
 
     /// <summary>
@@ -159,6 +163,41 @@ public sealed class DriverController : ControllerBase
         // tracks repeated offenses and can apply a shadow-ban flag.
         // For now, we log it via the existing fraud flag mechanism.
         return Ok(new { Message = "Mock location anomaly logged. Driver set offline." });
+    }
+
+    /// <summary>
+    /// Deletes the driver's account, shreds all KYC documents from S3
+    /// storage (Aadhaar, Driving License, RC, Insurance, Selfie), and
+    /// anonymizes all PII in the database. Financial ledgers (rides,
+    /// earnings, wallet transactions) remain intact for tax auditing but
+    /// are permanently severed from the driver's identity.
+    ///
+    /// This endpoint is called by the Captain app's "Delete Account & Data"
+    /// flow and satisfies DPDP Act "Right to be Forgotten" mandates.
+    /// </summary>
+    [HttpPost("account/delete")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(typeof(AccountDeletionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteDriverAccount(CancellationToken ct)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null)
+            return Unauthorized(new { Message = "Driver not authenticated." });
+
+        try
+        {
+            var result = await _accountDeletion.DeleteAccountAsync(userId.Value, ct);
+            return Ok(new AccountDeletionResponse(
+                "Driver account deleted. All KYC documents shredded and personal data anonymized.",
+                result.KycDocumentsShredded,
+                result.SavedLocationsDeleted));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
     }
 
     private async Task<Domain.Entities.Driver?> ResolveDriverAsync(CancellationToken ct)

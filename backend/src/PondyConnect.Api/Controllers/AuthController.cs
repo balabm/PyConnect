@@ -21,8 +21,9 @@ public sealed class AuthController : ControllerBase
     private readonly IOtpService _otpService;
     private readonly IJwtTokenFactory _jwtTokenFactory;
     private readonly IOtpRateLimiter _rateLimiter;
+    private readonly AccountDeletionService _accountDeletion;
 
-    public AuthController(IMediator mediator, ICurrentUserService currentUser, IApplicationDbContext dbContext, IOtpService otpService, IJwtTokenFactory jwtTokenFactory, IOtpRateLimiter rateLimiter)
+    public AuthController(IMediator mediator, ICurrentUserService currentUser, IApplicationDbContext dbContext, IOtpService otpService, IJwtTokenFactory jwtTokenFactory, IOtpRateLimiter rateLimiter, AccountDeletionService accountDeletion)
     {
         _mediator = mediator;
         _currentUser = currentUser;
@@ -30,6 +31,7 @@ public sealed class AuthController : ControllerBase
         _otpService = otpService;
         _jwtTokenFactory = jwtTokenFactory;
         _rateLimiter = rateLimiter;
+        _accountDeletion = accountDeletion;
     }
 
     [HttpGet("me")]
@@ -404,11 +406,13 @@ public sealed class AuthController : ControllerBase
     /// for financial auditing. All personally identifiable information is
     /// hard-deleted: Name, Phone, Email, DietaryPreference, FcmDeviceToken,
     /// GoogleId, PictureUrl, DrivingLicenseNumber, AadhaarHash, SavedLocations.
+    /// If the user is a driver, KYC documents are shredded from S3 first.
     /// The account is deactivated so it can never be logged into again.
     /// </summary>
     [HttpDelete("account")]
+    [HttpPost("account/delete")]
     [Authorize]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AccountDeletionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken)
@@ -417,32 +421,29 @@ public sealed class AuthController : ControllerBase
         if (userId is null)
             return Unauthorized(new { Message = "User not authenticated." });
 
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        if (user is null)
-            return NotFound(new { Message = "User not found." });
-
-        // Anonymize the user record (keeps it for financial auditing).
-        user.AnonymizeForDeletion();
-
-        // Hard-delete all saved locations (PII).
-        var savedLocations = await _dbContext.SavedLocations
-            .Where(l => l.UserId == userId)
-            .ToListAsync(cancellationToken);
-        if (savedLocations.Count > 0)
-            _dbContext.SavedLocations.RemoveRange(savedLocations);
-
-        // Deactivate any driver profile associated with this user.
-        var driver = await _dbContext.Drivers.FirstOrDefaultAsync(d => d.UserId == userId, cancellationToken);
-        if (driver is not null)
+        try
         {
-            driver.GoOffline();
+            var result = await _accountDeletion.DeleteAccountAsync(userId.Value, cancellationToken);
+            return Ok(new AccountDeletionResponse(
+                "Account deleted. All personal data has been anonymized.",
+                result.KycDocumentsShredded,
+                result.SavedLocationsDeleted));
         }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return Ok(new { Message = "Account deleted. All personal data has been anonymized." });
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
     }
 }
+
+/// <summary>
+/// Response body for the account deletion endpoint. Includes a summary of
+/// what was shredded/deleted so the client can confirm compliance.
+/// </summary>
+public sealed record AccountDeletionResponse(
+    string Message,
+    int KycDocumentsShredded,
+    int SavedLocationsDeleted);
 
 public sealed record UpdateProfileRequest(string? Name);
 public sealed record RequestPhoneChangeRequest(string? NewPhone);

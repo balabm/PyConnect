@@ -9,6 +9,7 @@ using PondyConnect.Api.Hubs;
 using PondyConnect.Api.Middleware;
 using PondyConnect.Api.Services;
 using PondyConnect.Application;
+using PondyConnect.Application.Features.Auth;
 using PondyConnect.Application.Features.GeoFence;
 using PondyConnect.Application.Features.FoodDelivery;
 using PondyConnect.Application.Features.Notifications;
@@ -61,6 +62,7 @@ builder.Services.AddHostedService<TripMonitoringWorker>();
 builder.Services.AddHostedService<OrderEscalationWorker>();
 builder.Services.AddScoped<DriverPayoutService>();
 builder.Services.AddScoped<WalletService>();
+builder.Services.AddScoped<AccountDeletionService>();
 
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SectionName));
 builder.Services.AddHttpClient<WhatsAppHttpClient>(client =>

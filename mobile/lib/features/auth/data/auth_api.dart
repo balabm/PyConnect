@@ -92,7 +92,7 @@ class AuthApi {
   /// hard-deleted. After this call, the token is invalid and the user must
   /// sign out locally.
   Future<void> deleteAccount() async {
-    await _api.delete('/api/auth/account');
+    await _api.post('/api/auth/account/delete');
   }
 }
 

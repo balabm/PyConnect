@@ -92,4 +92,79 @@ public sealed class AwsS3StorageService : IStorageService
         s_presignOk(_logger, objectKey, null);
         return url;
     }
+
+    private static readonly Action<ILogger, string, Exception?> s_deleteOk =
+        LoggerMessage.Define<string>(
+            LogLevel.Information,
+            new EventId(3, "FileDeleted"),
+            "Deleted S3 object -> {Key}");
+
+    private static readonly Action<ILogger, string, Exception?> s_deleteSkip =
+        LoggerMessage.Define<string>(
+            LogLevel.Information,
+            new EventId(4, "FileDeleteSkipped"),
+            "S3 object not found (already deleted?) -> {Key}");
+
+    public async Task<bool> DeleteFileAsync(
+        string objectKeyOrUrl,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(objectKeyOrUrl))
+            return true;
+
+        // Determine which bucket to delete from. Private KYC documents are
+        // stored as object keys (e.g. "uploads/private/xxx.jpg"); public
+        // files are stored as full URLs.
+        var (bucket, key) = ResolveBucketAndKey(objectKeyOrUrl);
+
+        try
+        {
+            // Check if the object exists first so we can log meaningfully.
+            try
+            {
+                await _client.GetObjectMetadataAsync(bucket, key, cancellationToken);
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                s_deleteSkip(_logger, key, null);
+                return true; // Already deleted — treat as success.
+            }
+
+            await _client.DeleteObjectAsync(bucket, key, cancellationToken);
+            s_deleteOk(_logger, key, null);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete S3 object {Key} from bucket {Bucket}", key, bucket);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Resolves which S3 bucket and object key to use for a given URL or key.
+    /// Private KYC documents are stored as relative paths (e.g.
+    /// "uploads/private/xxx.jpg"); public files are stored as full HTTPS URLs.
+    /// </summary>
+    private (string bucket, string key) ResolveBucketAndKey(string objectKeyOrUrl)
+    {
+        // If it's a full URL, extract the key after the bucket hostname.
+        if (objectKeyOrUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            var uri = new Uri(objectKeyOrUrl);
+            var key = uri.AbsolutePath.TrimStart('/');
+
+            // If the URL contains the private bucket name, use it.
+            if (uri.Host.StartsWith(_options.PrivateBucket, StringComparison.OrdinalIgnoreCase))
+                return (_options.PrivateBucket, key);
+
+            return (_options.PublicBucket, key);
+        }
+
+        // Relative path — assume private bucket for KYC docs.
+        // Strip any leading "uploads/private/" prefix to get the raw key.
+        var cleanKey = objectKeyOrUrl.Replace("uploads/private/", "", StringComparison.OrdinalIgnoreCase);
+        cleanKey = cleanKey.TrimStart('/');
+        return (_options.PrivateBucket, cleanKey);
+    }
 }
