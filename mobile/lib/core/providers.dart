@@ -8,6 +8,8 @@ import 'network/offline_mutation_queue.dart';
 import 'network/osm_geocoding_service.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'network/osrm_routing_service.dart';
+import 'services/gps_buffer_service.dart';
+import '../features/driver/application/driver_providers.dart';
 import 'network/signalr_client.dart';
 import 'network/location_service.dart';
 import 'network/razorpay_payment_service.dart';
@@ -237,4 +239,39 @@ final offlineMutationQueueProvider = Provider<OfflineMutationQueue>((ref) {
   // Watch the auth token — when it changes, try to flush the queue.
   ref.watch(authTokenProvider);
   return queue;
+});
+
+/// GPS buffer service for the Captain app. Buffers GPS pings in
+/// SharedPreferences when the device loses connectivity (cell handover,
+/// dead zones) and flushes them when 4G is restored.
+final gpsBufferServiceProvider = Provider<GpsBufferService>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider).maybeWhen(
+        data: (p) => p,
+        orElse: () => throw StateError('SharedPreferences not ready'),
+      );
+  final driverApi = ref.watch(driverApiProvider);
+
+  final buffer = GpsBufferService(
+    prefs,
+    (lat, lng, {double? heading}) async {
+      try {
+        await driverApi.updateLocation(lat, lng);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    },
+  );
+
+  // Flush the buffer when connection comes back online.
+  ref.listen<AsyncValue<InternetConnectionStatus>>(
+    internetConnectionCheckerProvider,
+    (previous, next) {
+      if (next.value == InternetConnectionStatus.connected) {
+        buffer.flush();
+      }
+    },
+  );
+
+  return buffer;
 });

@@ -1,0 +1,37 @@
+# PY Connect — Nightly database backup service
+#
+# Install:
+#   sudo cp deploy/pyconnect-backup.service /etc/systemd/system/
+#   sudo cp deploy/pyconnect-backup.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable pyconnect-backup.timer
+#   sudo systemctl start pyconnect-backup.timer
+#
+# Configuration:
+#   sudo mkdir -p /etc/pyconnect
+#   sudo cp deploy/backup.env.example /etc/pyconnect/backup.env
+#   sudo nano /etc/pyconnect/backup.env  # fill in secrets
+#   sudo chmod 600 /etc/pyconnect/backup.env
+
+[Unit]
+Description=PY Connect nightly PostgreSQL backup with GPG encryption
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/pyconnect/deploy/backup.sh
+User=ubuntu
+Group=ubuntu
+EnvironmentFile=/etc/pyconnect/backup.env
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/backups/pyconnect
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

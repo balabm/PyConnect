@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A single line item on an [OrderTicket].
@@ -62,9 +64,23 @@ class ThermalPrinterService {
 
   static const _prefKeyAddress = 'thermal_printer_address';
   static const _prefKeyName = 'thermal_printer_name';
+  static const _prefKeyPrintQueue = 'thermal_printer_queue';
 
   final BlueThermalPrinter _bluetooth;
   BluetoothDevice? _connectedDevice;
+
+  /// In-memory print queue for failed print jobs. Persisted to
+  /// SharedPreferences so jobs survive app kills. When the printer
+  /// reconnects, the queue is flushed automatically (bulk reprint).
+  final List<OrderTicket> _printQueue = [];
+  bool _isFlushingQueue = false;
+
+  /// Stream that emits the current queue size whenever it changes.
+  final _queueController = StreamController<int>.broadcast();
+  Stream<int> get queueSizeStream => _queueController.stream;
+
+  /// Current number of pending print jobs in the queue.
+  int get queueSize => _printQueue.length;
 
   // ──────────────────────────────────────────────────────────────
   //  Discovery
@@ -88,11 +104,16 @@ class ThermalPrinterService {
   // ──────────────────────────────────────────────────────────────
 
   /// Connects to [device]. Returns `true` on success.
+  ///
+  /// On successful connection, automatically flushes any queued print
+  /// jobs (bulk reprint) from a previous disconnection.
   Future<bool> connect(BluetoothDevice device) async {
     try {
       await _bluetooth.connect(device);
       _connectedDevice = device;
       await _savePrinter(device);
+      // Trigger bulk reprint of any queued tickets
+      _flushPrintQueue();
       return true;
     } catch (_) {
       _connectedDevice = null;
@@ -124,8 +145,13 @@ class ThermalPrinterService {
   /// a connection was (re)established.
   ///
   /// If already connected, returns `true` immediately without re-connecting.
+  /// On successful reconnection, flushes any queued print jobs.
   Future<bool> autoConnect() async {
-    if (await isConnected()) return true;
+    if (await isConnected()) {
+      // Already connected — flush any pending jobs
+      _flushPrintQueue();
+      return true;
+    }
 
     final prefs = await SharedPreferences.getInstance();
     final address = prefs.getString(_prefKeyAddress);
@@ -162,10 +188,16 @@ class ThermalPrinterService {
   /// Prints [ticket] to the connected printer. Returns `true` on success.
   ///
   /// If no printer is connected, attempts [autoConnect] first. If that
-  /// also fails, returns `false`.
+  /// also fails, the ticket is queued in the print queue (persisted to
+  /// SharedPreferences) and will be automatically reprinted when the
+  /// printer reconnects.
   Future<bool> printOrderTicket(OrderTicket ticket) async {
     if (!await isConnected()) {
-      if (!await autoConnect()) return false;
+      if (!await autoConnect()) {
+        // Printer unavailable — queue the ticket for bulk reprint
+        await _enqueuePrintJob(ticket);
+        return false;
+      }
     }
 
     try {
@@ -173,6 +205,8 @@ class ThermalPrinterService {
       await _bluetooth.writeBytes(Uint8List.fromList(bytes));
       return true;
     } catch (_) {
+      // Print failed (e.g. printer powered off mid-batch) — queue for reprint
+      await _enqueuePrintJob(ticket);
       return false;
     }
   }
@@ -316,4 +350,115 @@ class ThermalPrinterService {
     await prefs.setString(_prefKeyAddress, device.address ?? '');
     await prefs.setString(_prefKeyName, device.name ?? '');
   }
+
+  // ──────────────────────────────────────────────────────────────
+  //  Print Queue (reprint on reconnection)
+  // ──────────────────────────────────────────────────────────────
+
+  /// Enqueues a failed print job. The ticket is persisted to
+  /// SharedPreferences so it survives app kills. When the printer
+  /// reconnects, [_flushPrintQueue] reprints all queued tickets.
+  Future<void> _enqueuePrintJob(OrderTicket ticket) async {
+    _printQueue.add(ticket);
+    await _persistPrintQueue();
+  }
+
+  /// Persists the print queue to SharedPreferences as JSON.
+  Future<void> _persistPrintQueue() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = jsonEncode(_printQueue.map(_ticketToJson).toList());
+      await prefs.setString(_prefKeyPrintQueue, json);
+    } catch (_) {
+      // Storage write failed — queue is still in memory.
+    }
+    _queueController.add(_printQueue.length);
+  }
+
+  /// Loads the persisted print queue on startup.
+  Future<void> loadPrintQueue() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_prefKeyPrintQueue);
+      if (json != null && json.isNotEmpty) {
+        final list = jsonDecode(json) as List;
+        _printQueue.clear();
+        for (final e in list) {
+          _printQueue.add(_ticketFromJson(e as Map<String, dynamic>));
+        }
+        _queueController.add(_printQueue.length);
+      }
+    } catch (_) {
+      // Corrupted queue — start fresh.
+    }
+  }
+
+  /// Flushes all queued print jobs (bulk reprint). Called automatically
+  /// when the printer reconnects. Tickets are printed in order.
+  Future<void> _flushPrintQueue() async {
+    if (_isFlushingQueue || _printQueue.isEmpty) return;
+    _isFlushingQueue = true;
+
+    try {
+      while (_printQueue.isNotEmpty) {
+        final ticket = _printQueue.first;
+        try {
+          final bytes = await _buildTicketBytes(ticket);
+          await _bluetooth.writeBytes(Uint8List.fromList(bytes));
+          _printQueue.removeAt(0);
+          await _persistPrintQueue();
+        } catch (_) {
+          // Printer failed again — stop flushing, keep remaining jobs queued.
+          break;
+        }
+      }
+    } finally {
+      _isFlushingQueue = false;
+    }
+  }
+
+  /// Clears the print queue without reprinting. Used on sign-out.
+  Future<void> clearPrintQueue() async {
+    _printQueue.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKeyPrintQueue);
+    _queueController.add(0);
+  }
+
+  void dispose() {
+    _queueController.close();
+  }
+
+  // ── Ticket JSON serialization for queue persistence ──
+
+  static Map<String, dynamic> _ticketToJson(OrderTicket t) => {
+        'orderId': t.orderId,
+        'customerName': t.customerName,
+        'items': t.items
+            .map((i) => {
+                  'name': i.name,
+                  'quantity': i.quantity,
+                  'modifiers': i.modifiers,
+                })
+            .toList(),
+        'total': t.total,
+        'paymentType': t.paymentType.name,
+        'timestamp': t.timestamp.toIso8601String(),
+      };
+
+  static OrderTicket _ticketFromJson(Map<String, dynamic> j) => OrderTicket(
+        orderId: j['orderId'] as String,
+        customerName: j['customerName'] as String,
+        items: (j['items'] as List)
+            .map((i) => OrderTicketItem(
+                  name: (i as Map<String, dynamic>)['name'] as String,
+                  quantity: i['quantity'] as int,
+                  modifiers:
+                      (i['modifiers'] as List?)?.cast<String>() ?? const [],
+                ))
+            .toList(),
+        total: (j['total'] as num).toDouble(),
+        paymentType: TicketPaymentType.values.byName(j['paymentType'] as String),
+        timestamp: DateTime.parse(j['timestamp'] as String),
+      );
 }

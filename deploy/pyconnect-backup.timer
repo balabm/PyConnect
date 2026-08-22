@@ -1,0 +1,25 @@
+# PY Connect — Nightly backup timer
+#
+# Triggers pyconnect-backup.service at 02:00 IST (20:30 UTC) daily.
+# This runs after midnight to capture the full day's transactions.
+#
+# Install:
+#   sudo cp deploy/pyconnect-backup.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable pyconnect-backup.timer
+#   sudo systemctl start pyconnect-backup.timer
+#
+# Verify:
+#   systemctl list-timers pyconnect-backup.timer
+#   journalctl -u pyconnect-backup.service -f
+
+[Unit]
+Description=Nightly PY Connect database backup (02:00 IST)
+
+[Timer]
+OnCalendar=*-*-* 20:30:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

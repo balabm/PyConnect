@@ -8,6 +8,7 @@ import '../core/device/location_security.dart';
 import '../core/animations/haptic.dart';
 import '../core/theme/app_theme.dart';
 import '../core/network/offline_mutation_queue.dart';
+import '../core/services/gps_buffer_service.dart';
 import '../core/providers.dart';
 import '../features/driver/application/driver_providers.dart';
 import '../features/driver/application/driver_signalr_provider.dart';
@@ -88,6 +89,20 @@ class _DriverShellState extends ConsumerState<DriverShell> {
       final queue = ref.read(offlineMutationQueueProvider);
       if (queue.isNotEmpty) {
         queue.flush();
+      }
+    } catch (_) {
+      // SharedPreferences not ready yet — skip.
+    }
+  }
+
+  /// Flushes the GPS buffer if there are pending pings from an offline
+  /// period (cell handover, dead zone). Called after a successful
+  /// location update confirms connectivity is restored.
+  void _flushGpsBuffer(WidgetRef ref) {
+    try {
+      final buffer = ref.read(gpsBufferServiceProvider);
+      if (buffer.hasPending) {
+        buffer.flush();
       }
     } catch (_) {
       // SharedPreferences not ready yet — skip.
@@ -461,9 +476,20 @@ class _DriverShellState extends ConsumerState<DriverShell> {
               position.latitude,
               position.longitude,
             );
-        // GPS succeeded — reset the failure counter.
+        // GPS + network succeeded — reset the failure counter and flush
+        // any buffered pings from a previous offline period.
         _consecutiveGpsFailures = 0;
-      } catch (_) {
+        _flushGpsBuffer(ref);
+      } catch (e) {
+        // Network or GPS error — buffer the GPS ping so the trip trail
+        // remains complete when connectivity is restored.
+        try {
+          final buffer = ref.read(gpsBufferServiceProvider);
+          await buffer.enqueue(position.latitude, position.longitude);
+        } catch (_) {
+          // Buffer not ready — drop silently.
+        }
+
         // GPS error — track consecutive failures and warn the driver
         // after 3 in a row so they know to move to an open area.
         _consecutiveGpsFailures++;
