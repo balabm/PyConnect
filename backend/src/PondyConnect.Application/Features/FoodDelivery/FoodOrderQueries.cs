@@ -25,6 +25,7 @@ public sealed record FoodOrderDetailResponse(
     string PaymentMethod,
     DateTimeOffset PlacedAt,
     DateTimeOffset? DeliveredAt,
+    string? DeliveryProofUrl,
     IReadOnlyList<FoodOrderItemResponse> Items);
 
 public sealed record FoodOrderItemResponse(string Name, int Quantity, decimal UnitPrice, decimal LineTotal, string? SpecialInstructions);
@@ -78,6 +79,7 @@ public sealed class GetFoodOrderHandler : IRequestHandler<GetFoodOrderQuery, Foo
             PaymentMethod: order.PaymentMethod.ToString(),
             PlacedAt: order.PlacedAt,
             DeliveredAt: order.DeliveredAt,
+            DeliveryProofUrl: order.DeliveryProofUrl,
             Items: order.Items.Select(i => new FoodOrderItemResponse(i.Name, i.Quantity, i.UnitPrice, i.LineTotal, i.SpecialInstructions)).ToList());
     }
 }

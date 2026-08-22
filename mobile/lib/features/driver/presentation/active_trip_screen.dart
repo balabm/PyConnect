@@ -998,11 +998,16 @@ class _NavigationButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: () async {
           AppHaptics.light();
-          final url =
-              'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(address)}';
-          final uri = Uri.parse(url);
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          // Use the native google.navigation: URL scheme for turn-by-turn
+          // navigation. Falls back to the web URL if unavailable.
+          final nativeUrl = 'google.navigation:q=${Uri.encodeComponent(address)}&mode=d';
+          final webUrl = 'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(address)}';
+
+          final nativeUri = Uri.parse(nativeUrl);
+          if (await canLaunchUrl(nativeUri)) {
+            await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
+          } else {
+            await launchUrl(Uri.parse(webUrl), mode: LaunchMode.externalApplication);
           }
         },
         icon: const Icon(Icons.navigation),

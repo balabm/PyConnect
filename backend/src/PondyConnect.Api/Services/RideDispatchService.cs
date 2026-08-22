@@ -30,12 +30,23 @@ public sealed class RideDispatchService
     }
 
     /// <summary>
-    /// Dispatch a ride request to nearby drivers using the smart dispatch engine.
-    /// Replaces the old broadcast-all approach.
+    /// Dispatch a ride request to nearby drivers using the sequential
+    /// offer queue engine. Rings the closest driver first, gives them
+    /// 15 seconds to accept, then moves to the next. Expands radius by
+    /// 2km after 3 failed rings.
+    ///
+    /// The dispatch runs as a background task — this method returns
+    /// immediately after starting the sequential ringing.
     /// </summary>
     public async Task BroadcastRideRequestAsync(Guid rideId, CancellationToken cancellationToken = default)
     {
-        await _dispatchEngine.DispatchRideAsync(rideId, cancellationToken: cancellationToken);
+        // Fire-and-forget the sequential dispatch as a background task.
+        // The HTTP request returns immediately; the sequential ringing
+        // continues asynchronously until a driver accepts or the pool
+        // is exhausted.
+        _ = Task.Run(() => _dispatchEngine.DispatchRideSequentialAsync(rideId, cancellationToken: cancellationToken), cancellationToken);
+
+        await Task.CompletedTask;
     }
 
     /// <summary>

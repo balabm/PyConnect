@@ -25,6 +25,9 @@ public sealed class FoodDeliveryController : ControllerBase
     private readonly IIdempotencyService _idempotency;
     private readonly IHubContext<VendorHub> _hubContext;
     private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+    private readonly FoodCancellationService _cancellationService;
+    private readonly IStorageService _storage;
 
     public FoodDeliveryController(
         IMediator mediator,
@@ -32,7 +35,10 @@ public sealed class FoodDeliveryController : ControllerBase
         INotificationService notifications,
         IIdempotencyService idempotency,
         IHubContext<VendorHub> hubContext,
-        IApplicationDbContext context)
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        FoodCancellationService cancellationService,
+        IStorageService storage)
     {
         _mediator = mediator;
         _foodDispatch = foodDispatch;
@@ -40,6 +46,9 @@ public sealed class FoodDeliveryController : ControllerBase
         _idempotency = idempotency;
         _hubContext = hubContext;
         _context = context;
+        _currentUser = currentUser;
+        _cancellationService = cancellationService;
+        _storage = storage;
     }
 
     [HttpPost("orders/checkout")]
@@ -274,6 +283,134 @@ public sealed class FoodDeliveryController : ControllerBase
     {
         await _mediator.Send(new CancelFoodOrderCommand(id, request?.Reason), ct);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Vendor-initiated cancellation cascade. The restaurant cancels the
+    /// order (e.g. out of stock). Triggers:
+    /// 1. Instant Razorpay refund to the consumer.
+    /// 2. FCM push to consumer: "Order cancelled by restaurant. Full refund initiated."
+    /// 3. FCM push to assigned captain: "Trip cancelled. Returning to pool."
+    /// 4. Captain status set back to Online.
+    /// </summary>
+    [HttpPost("vendor/orders/{id:guid}/cancel")]
+    [Authorize(Roles = "Vendor")]
+    [ProducesResponseType(typeof(VendorCancellationResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> VendorCancelOrder(Guid id, [FromBody] CancelOrderRequest? request, CancellationToken ct)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Authenticated phone not found." });
+
+        var vendor = await _context.Vendors.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, ct);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        try
+        {
+            var result = await _cancellationService.CancelByVendorAsync(id, vendor.Id, request?.Reason, ct);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new { Message = "Only the restaurant that owns this order can cancel it." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Driver abandonment: the captain drops the order after accepting but
+    /// before pickup. Does NOT cancel the order — the food is still being
+    /// prepared. Emergency-releases the DispatchTask and re-dispatches to
+    /// the next nearest driver. Notifies the partner: "Assigning new Captain."
+    /// </summary>
+    [HttpPost("driver/orders/{id:guid}/abandon")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(typeof(DriverAbandonmentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DriverAbandonOrder(Guid id, [FromBody] CancelOrderRequest? request, CancellationToken ct)
+    {
+        var userId = _currentUser.UserId;
+        if (userId == Guid.Empty)
+            return Unauthorized(new { Message = "Driver not authenticated." });
+
+        var driver = await _context.Drivers.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.UserId == userId, ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        try
+        {
+            var result = await _cancellationService.HandleDriverAbandonmentAsync(id, driver.Id, request?.Reason, ct);
+
+            // Re-dispatch the order to find a new driver.
+            await _foodDispatch.DispatchFoodOrderAsync(id, ct);
+
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new { Message = "Only the assigned driver can abandon this task." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Uploads a proof-of-delivery photo for a food/essentials order.
+    /// Called by the Captain when tapping "Delivered" — they snap a photo
+    /// of the bag at the door. The photo is uploaded to S3 and attached
+    /// to the order record. It is displayed on the Consumer's receipt
+    /// screen to eliminate "I never got my food" disputes.
+    /// </summary>
+    [HttpPost("driver/orders/{id:guid}/delivery-proof")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadDeliveryProof(Guid id, IFormFile photo, CancellationToken ct)
+    {
+        var userId = _currentUser.UserId;
+        if (userId == Guid.Empty)
+            return Unauthorized(new { Message = "Driver not authenticated." });
+
+        // Validate the uploaded file is an image.
+        if (photo is null || photo.Length == 0)
+            return BadRequest(new { Message = "No photo provided." });
+
+        if (photo.Length > 10 * 1024 * 1024)
+            return BadRequest(new { Message = "Photo must be under 10MB." });
+
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowedTypes.Contains(photo.ContentType))
+            return BadRequest(new { Message = "Photo must be JPEG, PNG, or WebP." });
+
+        var order = await _context.FoodOrders.FirstOrDefaultAsync(o => o.Id == id, ct);
+        if (order is null)
+            return NotFound(new { Message = "Order not found." });
+
+        // Upload to S3 (public bucket so the consumer can view it).
+        using var stream = photo.OpenReadStream();
+        var proofUrl = await _storage.UploadFileAsync(
+            stream,
+            photo.FileName,
+            photo.ContentType,
+            isPrivate: false,
+            cancellationToken: ct);
+
+        order.RecordDeliveryProof(proofUrl);
+        await _context.SaveChangesAsync(ct);
+
+        return Ok(new { Message = "Delivery proof uploaded.", ProofUrl = proofUrl });
     }
 
     [HttpGet("vendor/menu")]

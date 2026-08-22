@@ -48,6 +48,13 @@ public sealed class FoodOrder : BaseEntity
 
     public string? Notes { get; private set; }
 
+    /// <summary>
+    /// URL of the proof-of-delivery photo uploaded by the captain when
+    /// leaving the order at a reception/door. Displayed on the consumer's
+    /// receipt screen to eliminate "I never got my food" disputes.
+    /// </summary>
+    public string? DeliveryProofUrl { get; private set; }
+
     private readonly List<FoodOrderItem> _items = [];
     public IReadOnlyCollection<FoodOrderItem> Items => _items.AsReadOnly();
 
@@ -172,6 +179,19 @@ public sealed class FoodOrder : BaseEntity
     public void RecordPayment(PaymentStatus status)
     {
         PaymentStatus = status;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Attaches a proof-of-delivery photo URL (uploaded to S3 by the
+    /// captain) to the order. Called when the captain taps "Delivered"
+    /// and snaps a photo of the bag at the door. The photo is displayed
+    /// on the consumer's receipt screen to eliminate disputes.
+    /// </summary>
+    public void RecordDeliveryProof(string proofUrl)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(proofUrl);
+        DeliveryProofUrl = proofUrl;
         MarkUpdated();
     }
 

@@ -15,14 +15,16 @@ public sealed record GetTicketQuery(Guid BookingId) : IRequest<TicketResponse>;
 
 public sealed record TicketResponse(
     Guid BookingId,
-    string PassToken,
+    string? PassToken,
     string ServiceType,
     string Status,
     decimal TotalAmount,
     int SeatCount,
     string VenueName,
     DateTimeOffset ScheduledFor,
-    string? Notes);
+    string? Notes,
+    bool KycRequired,
+    bool KycCompleted);
 
 public sealed class GetTicketQueryHandler : IRequestHandler<GetTicketQuery, TicketResponse>
 {
@@ -56,9 +58,26 @@ public sealed class GetTicketQueryHandler : IRequestHandler<GetTicketQuery, Tick
             venueName = venue?.Name;
         }
 
-        // Use the stored PassToken, or generate one if it doesn't exist yet.
-        var passToken = booking.PassToken ?? PassIssuer.IssueSigned(
-            booking.Id, booking.UserId, booking.TotalAmount, booking.ScheduledFor);
+        // For homestay/rental bookings, block the QR pass token until the
+        // consumer has uploaded their digital check-in KYC documents.
+        // Pondicherry regulations require IDs for hotel check-ins.
+        var isHomestay = booking.ServiceType == ServiceType.Homestay;
+        var kycCompleted = true; // Default: no KYC required
+        if (isHomestay)
+        {
+            var kyc = await _context.GuestKycs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(k => k.BookingId == booking.Id, cancellationToken);
+            kycCompleted = kyc?.IsUploaded ?? false;
+        }
+
+        // Only issue the pass token if KYC is completed (or not required).
+        string? passToken = null;
+        if (!isHomestay || kycCompleted)
+        {
+            passToken = booking.PassToken ?? PassIssuer.IssueSigned(
+                booking.Id, booking.UserId, booking.TotalAmount, booking.ScheduledFor);
+        }
 
         return new TicketResponse(
             booking.Id,
@@ -69,6 +88,8 @@ public sealed class GetTicketQueryHandler : IRequestHandler<GetTicketQuery, Tick
             booking.SeatCount,
             venueName ?? "Venue",
             booking.ScheduledFor,
-            booking.Notes);
+            booking.Notes,
+            KycRequired: isHomestay,
+            KycCompleted: kycCompleted);
     }
 }

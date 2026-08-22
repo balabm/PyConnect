@@ -441,9 +441,18 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
   }
 
   Future<void> _openNavigation(double lat, double lng) async {
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    // Use the native google.navigation: URL scheme for turn-by-turn
+    // navigation. This launches the Google Maps app directly in
+    // navigation mode, which drivers prefer over in-app maps.
+    // Falls back to the web URL if the native scheme is unavailable.
+    final nativeUrl = 'google.navigation:q=$lat,$lng&mode=d';
+    final webUrl = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving';
+
+    final nativeUri = Uri.parse(nativeUrl);
+    if (await canLaunchUrl(nativeUri)) {
+      await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
+    } else {
+      await launchUrl(Uri.parse(webUrl), mode: LaunchMode.externalApplication);
     }
   }
 

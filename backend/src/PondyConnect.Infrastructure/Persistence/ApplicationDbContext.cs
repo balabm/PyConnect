@@ -113,6 +113,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<ConsumerFlag> ConsumerFlags => Set<ConsumerFlag>();
 
+    public DbSet<GuestKyc> GuestKycs => Set<GuestKyc>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

@@ -237,6 +237,160 @@ public sealed class DispatchEngine
 
         return (0.6 * proximityScore) + (0.2 * ratingScore) + (0.2 * acceptanceScore);
     }
+
+    /// <summary>
+    /// Sequential dispatch: rings the absolute closest driver first, gives
+    /// them exactly 15 seconds to accept. If they ignore or reject, moves
+    /// to the 2nd closest, then the 3rd. If no one accepts after 3 rings,
+    /// expands the radius by 2km and repeats.
+    ///
+    /// This runs as a background task — the initial HTTP request starts the
+    /// dispatch and returns immediately. The sequential ringing continues
+    /// asynchronously until a driver accepts or the pool is exhausted.
+    /// </summary>
+    public async Task DispatchRideSequentialAsync(
+        Guid rideId,
+        double initialRadiusKm = 3.0,
+        CancellationToken cancellationToken = default)
+    {
+        var ride = await _context.RideRequests.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+        if (ride == null) return;
+
+        // Transition to Searching
+        var rideEntity = await _context.RideRequests
+            .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+        if (rideEntity == null) return;
+
+        if (rideEntity.Status == RideStatus.Requested)
+        {
+            rideEntity.StartSearching();
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        var radius = initialRadiusKm;
+        var maxRounds = 3; // 3 rounds of radius expansion before giving up
+
+        for (var round = 0; round < maxRounds; round++)
+        {
+            if (cancellationToken.IsCancellationRequested) return;
+
+            // Check if the ride was already accepted
+            var currentRide = await _context.RideRequests.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+            if (currentRide is null || currentRide.Status is not (RideStatus.Searching or RideStatus.Requested))
+                return; // Already assigned or cancelled
+
+            // Get nearby drivers, sorted by score
+            var nearby = _locationStore.GetNearby(
+                ride.PickupLocation,
+                radius,
+                vehicleTypeFilter: ride.VehicleType,
+                maxCount: 10);
+
+            if (nearby.Count == 0)
+            {
+                radius += 2.0; // Expand radius by 2km
+                continue;
+            }
+
+            var scored = nearby
+                .Select(d => new { Driver = d, Score = ScoreDriver(d.DistanceKm, d.Rating, d.AcceptanceRate) })
+                .OrderByDescending(x => x.Score)
+                .ToList();
+
+            // Ring up to 3 drivers sequentially, 15 seconds each
+            var driversToRing = scored.Take(3).ToList();
+
+            foreach (var candidate in driversToRing)
+            {
+                if (cancellationToken.IsCancellationRequested) return;
+
+                // Re-check ride status before each ring
+                var rideCheck = await _context.RideRequests.AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+                if (rideCheck is null || rideCheck.Status is not (RideStatus.Searching or RideStatus.Requested))
+                    return; // Already assigned
+
+                // Send offer to this specific driver only
+                await SendOfferToDriverAsync(ride, candidate.Driver.DriverId, cancellationToken);
+
+                // Wait 15 seconds for acceptance
+                await Task.Delay(AcceptanceWindow, cancellationToken);
+
+                // Check if the driver accepted
+                var rideAfterWait = await _context.RideRequests.AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+                if (rideAfterWait is null || rideAfterWait.Status is not (RideStatus.Searching or RideStatus.Requested))
+                    return; // Accepted by this driver
+            }
+
+            // No one accepted in this round — expand radius by 2km
+            radius += 2.0;
+        }
+
+        // No drivers accepted after all rounds
+        var finalRide = await _context.RideRequests
+            .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+        if (finalRide is not null && finalRide.Status is RideStatus.Searching or RideStatus.Requested)
+        {
+            finalRide.MarkNoDriversAvailable();
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Sends a ride offer to a single driver via SignalR + FCM.
+    /// </summary>
+    private async Task SendOfferToDriverAsync(
+        Domain.Entities.RideRequest ride,
+        Guid driverId,
+        CancellationToken cancellationToken)
+    {
+        var driverEarnings = ride.IsSos ? ride.SosDriverPayout : ride.Fare;
+
+        var offer = new RideOfferBroadcast(
+            RideId: ride.Id,
+            PickupAddress: ride.PickupAddress,
+            DropoffAddress: ride.DropoffAddress,
+            DistanceKm: ride.DistanceKm,
+            Fare: ride.Fare,
+            DriverEarnings: driverEarnings,
+            PaymentMethod: ride.PaymentMethod.ToString(),
+            VehicleType: ride.VehicleType.ToString(),
+            IsSos: ride.IsSos,
+            SurgeMultiplier: ride.SurgeMultiplier,
+            SurgeReason: ride.SurgeReason,
+            ExpiresIn: (int)AcceptanceWindow.TotalSeconds);
+
+        await _hubContext.Clients.Group($"driver:{driverId}")
+            .SendAsync("RideOffer", offer, cancellationToken);
+
+        var driverUserId = await _context.Drivers.AsNoTracking()
+            .Where(d => d.Id == driverId)
+            .Select(d => d.UserId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (driverUserId != Guid.Empty)
+        {
+            _ = _notificationService.SendHighPriorityPushAsync(
+                driverUserId,
+                ride.IsSos ? "SOS Ride Request" : "New Ride Request",
+                $"{ride.PickupAddress} → {ride.DropoffAddress} · \u20B9{driverEarnings.ToString("0", CultureInfo.InvariantCulture)}",
+                new Dictionary<string, string>
+                {
+                    { "type", "ride_request" },
+                    { "ride_id", ride.Id.ToString() },
+                    { "fare", ride.Fare.ToString("0", CultureInfo.InvariantCulture) },
+                    { "earnings", driverEarnings.ToString("0", CultureInfo.InvariantCulture) },
+                    { "pickup", ride.PickupAddress ?? "" },
+                    { "dropoff", ride.DropoffAddress ?? "" },
+                    { "is_sos", ride.IsSos.ToString().ToLowerInvariant() },
+                    { "expires_in", ((int)AcceptanceWindow.TotalSeconds).ToString(CultureInfo.InvariantCulture) },
+                },
+                cancellationToken);
+        }
+    }
 }
 
 /// <summary>

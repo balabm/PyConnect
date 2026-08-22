@@ -105,6 +105,8 @@ public interface IApplicationDbContext
 
     DbSet<ConsumerFlag> ConsumerFlags { get; }
 
+    DbSet<GuestKyc> GuestKycs { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
