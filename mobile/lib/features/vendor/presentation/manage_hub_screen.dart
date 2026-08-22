@@ -126,7 +126,7 @@ class ManageHubScreen extends ConsumerWidget {
                   icon: Icons.settings,
                   label: 'Settings',
                   subtitle: 'Venue & app settings (coming soon)',
-                  color: AppTheme.slate,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   onTap: null,
                 ),
               ],

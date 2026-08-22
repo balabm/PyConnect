@@ -54,10 +54,10 @@ class FloatingTripHud extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppTheme.emerald.withOpacity(0.15),
+                  color: AppTheme.emerald.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
-                    color: AppTheme.emerald.withOpacity(0.25),
+                    color: AppTheme.emerald.withValues(alpha: 0.25),
                     width: 0.5,
                   ),
                 ),
@@ -76,10 +76,10 @@ class FloatingTripHud extends StatelessWidget {
                   children: [
                     Text(
                       maneuverText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppTheme.charcoal,
+                        color: Theme.of(context).colorScheme.onSurface,
                         letterSpacing: -0.2,
                       ),
                       maxLines: 2,
@@ -91,7 +91,7 @@ class FloatingTripHud extends StatelessWidget {
                         destinationLabel!,
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppTheme.slate,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
@@ -107,7 +107,7 @@ class FloatingTripHud extends StatelessWidget {
           // Divider
           Container(
             height: 0.5,
-            color: Theme.of(context).dividerColor.withOpacity(0.12),
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.12),
           ),
           const SizedBox(height: 12),
           // ETA + distance row
@@ -120,15 +120,15 @@ class FloatingTripHud extends StatelessWidget {
                   Icon(
                     Icons.schedule_rounded,
                     size: 18,
-                    color: AppTheme.slate,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '$etaMinutes min',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.charcoal,
+                      color: Theme.of(context).colorScheme.onSurface,
                       letterSpacing: -0.3,
                     ),
                   ),
@@ -140,7 +140,7 @@ class FloatingTripHud extends StatelessWidget {
                   Icon(
                     Icons.straighten_rounded,
                     size: 18,
-                    color: AppTheme.slate,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -148,7 +148,7 @@ class FloatingTripHud extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.slate,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],

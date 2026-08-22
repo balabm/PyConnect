@@ -181,14 +181,14 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Claim Check QR',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
               ),
               const SizedBox(height: 8),
               Text(
                 'Customer: $customerName · $bagCount ${bagCount == 1 ? 'bag' : 'bags'}',
-                style: const TextStyle(fontSize: 13, color: AppTheme.slate),
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 20),
               QrImageView(
@@ -206,7 +206,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
                 ),
                 child: Text(
                   claimCheckId,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.charcoal),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                 ),
               ),
               const SizedBox(height: 20),

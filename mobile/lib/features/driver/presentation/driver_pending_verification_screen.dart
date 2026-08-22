@@ -52,12 +52,12 @@ class DriverPendingVerificationScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 'Verification in Progress',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.charcoal,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -171,14 +171,16 @@ class _StatusStep extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: isDone ? FontWeight.w600 : FontWeight.w400,
-              color: isDone ? AppTheme.charcoal : AppTheme.slate,
+              color: isDone
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const Spacer(),
           if (isDone)
             const Icon(Icons.check, size: 16, color: AppTheme.emerald)
           else
-            Icon(Icons.pending, size: 16, color: AppTheme.slate.withValues(alpha: 0.5)),
+            Icon(Icons.pending, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
         ],
       ),
     );

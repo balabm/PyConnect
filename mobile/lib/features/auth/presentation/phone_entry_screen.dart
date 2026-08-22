@@ -223,10 +223,9 @@ class PhoneEntryScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          // Get OTP button
+                          // Get OTP button — uses theme default (charcoal in light, light grey in dark)
                           FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppTheme.emerald,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
                             ),

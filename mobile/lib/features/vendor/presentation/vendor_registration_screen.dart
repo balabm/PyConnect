@@ -353,9 +353,9 @@ class _VendorRegistrationScreenState
             return DropdownMenuItem(
               value: c.$1,
               child: Row(children: [
-                Icon(c.$3, size: 20, color: Colors.white),
+                Icon(c.$3, size: 20, color: Theme.of(context).colorScheme.onSurface),
                 const SizedBox(width: 12),
-                Text(c.$2, style: const TextStyle(color: Colors.white)),
+                Text(c.$2, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               ]),
             );
           }).toList(),

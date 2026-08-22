@@ -221,7 +221,7 @@ class _DriverRegistrationScreenState
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppTheme.emerald),
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Text('Register as Captain'),
             ),

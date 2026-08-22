@@ -369,7 +369,7 @@ class _ReceiptDialogState extends ConsumerState<_ReceiptDialog> {
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text('Detailed receipt unavailable. Showing summary.', style: TextStyle(fontSize: 11, color: AppTheme.slate)),
+                      child: Text('Detailed receipt unavailable. Showing summary.', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ),
                 ],
               ),
@@ -405,7 +405,7 @@ class _ReceiptRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 80, child: Text(label, style: TextStyle(fontSize: 13, color: AppTheme.slate))),
+          SizedBox(width: 80, child: Text(label, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant))),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
         ],
       ),
@@ -424,7 +424,7 @@ class _ProfileInfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 70, child: Text(label, style: TextStyle(fontSize: 13, color: AppTheme.slate))),
+          SizedBox(width: 70, child: Text(label, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant))),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
         ],
       ),
@@ -506,10 +506,10 @@ class _WalletCardState extends ConsumerState<_WalletCard> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.wallet_outlined, color: AppTheme.slate),
+            Icon(Icons.wallet_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(width: 12),
             Expanded(
-              child: Text('Wallet unavailable', style: TextStyle(color: AppTheme.slate, fontSize: 13)),
+              child: Text('Wallet unavailable', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
             ),
           ],
         ),
@@ -838,7 +838,7 @@ class _WithdrawalSheetState extends State<_WithdrawalSheet> {
           const SizedBox(height: 12),
           Text(
             'Remaining balance: \u20B9${remaining.toStringAsFixed(2)}',
-            style: TextStyle(color: AppTheme.slate, fontSize: 13),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
           ),
           const SizedBox(height: 24),
           Row(
@@ -883,7 +883,7 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          SizedBox(width: 100, child: Text(label, style: TextStyle(fontSize: 13, color: AppTheme.slate))),
+          SizedBox(width: 100, child: Text(label, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant))),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
         ],
       ),
@@ -914,7 +914,7 @@ class _WalletTransactionTile extends StatelessWidget {
       ),
       subtitle: Text(
         '${txn.type} · ${_formatDate(txn.createdAt)}',
-        style: TextStyle(fontSize: 11, color: AppTheme.slate),
+        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       trailing: Text(
         '${isCredit ? '+' : ''}\u20B9${txn.amount.abs().toStringAsFixed(2)}',
@@ -990,7 +990,7 @@ class _WithdrawalHistoryTile extends StatelessWidget {
       ),
       subtitle: Text(
         '${withdrawal.status} · ${_formatDate(withdrawal.requestedAt)}',
-        style: TextStyle(fontSize: 11, color: AppTheme.slate),
+        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       trailing: Text(
         withdrawal.status,

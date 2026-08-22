@@ -169,20 +169,20 @@ class _TasksTab extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.offline_bolt, size: 64, color: AppTheme.slate.withValues(alpha: 0.5)),
+              Icon(Icons.offline_bolt, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
               const SizedBox(height: 16),
               Text(
                 'You are offline',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.slate,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Go online to receive ride and delivery offers',
-                style: TextStyle(color: AppTheme.slate.withValues(alpha: 0.7)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
                 textAlign: TextAlign.center,
               ),
             ],

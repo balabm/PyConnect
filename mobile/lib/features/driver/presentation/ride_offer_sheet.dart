@@ -218,7 +218,7 @@ class _RideOfferSheetState extends State<RideOfferSheet> with TickerProviderStat
           // Swipe-to-accept bar (premium, prevents accidental taps)
           SwipeToAccept(
             label: 'Swipe to Accept',
-            color: AppTheme.emerald,
+            color: Theme.of(context).colorScheme.primary,
             onAccept: () {
               _countdownTimer?.cancel();
               widget.onAccept();
