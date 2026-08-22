@@ -7,6 +7,7 @@ import '../features/auth/application/auth_controller.dart';
 import '../features/auth/presentation/otp_verify_screen.dart';
 import '../features/auth/presentation/phone_entry_screen.dart';
 import '../features/auth/presentation/profile_screen.dart';
+import '../features/wallet/presentation/consumer_wallet_screen.dart';
 import '../features/auth/presentation/change_phone_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/bookings/presentation/booking_screen.dart';
@@ -281,6 +282,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'profile',
             builder: (_, _) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: 'wallet',
+            builder: (_, _) => const ConsumerWalletScreen(),
           ),
           GoRoute(
             path: 'change-phone',

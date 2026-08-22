@@ -19,6 +19,8 @@ import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../checkout/cart_conflict_exception.dart';
 import '../../checkout/cart_controller.dart';
 import '../../checkout/presentation/floating_cart_pill.dart';
+import '../../checkout/presentation/slide_to_pay.dart';
+import '../../checkout/presentation/payment_success_overlay.dart';
 import '../data/food_api.dart';
 import 'widgets/item_customization_sheet.dart';
 import '../../../core/widgets/skeleton_loaders.dart';
@@ -642,10 +644,19 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         if (paymentMethod == 1) {
           // Cash on Delivery — order is confirmed, safe to clear the cart
           ref.read(cartProvider.notifier).clear();
-          showModalBottomSheet(
-            context: context,
-            isDismissible: false,
-            builder: (_) => _CheckoutResultSheet(result: result),
+          final foodOrderId = result['orderId'] as String? ?? '';
+          PaymentSuccessOverlay.show(
+            context,
+            amount: '₹${totalAmount.toStringAsFixed(0)}',
+            orderId: foodOrderId,
+            onComplete: () {
+              if (!mounted) return;
+              showModalBottomSheet(
+                context: context,
+                isDismissible: false,
+                builder: (_) => _CheckoutResultSheet(result: result),
+              );
+            },
           );
         } else {
           // Razorpay — keep the cart until the backend confirms payment.
@@ -817,10 +828,19 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
           if (verified && mounted) {
             // Backend confirmed the payment — now it's safe to clear the cart.
             ref.read(cartProvider.notifier).clear();
-            final foodOrderId = orderResult['orderId'] as String?;
-            if (foodOrderId != null && foodOrderId.isNotEmpty) {
-              context.push('/activity/food/$foodOrderId');
-            }
+            // Show the payment success overlay before navigating.
+            final foodOrderId = orderResult['orderId'] as String? ?? '';
+            PaymentSuccessOverlay.show(
+              context,
+              amount: '₹${orderResult['totalAmount']?.toStringAsFixed(0) ?? '0'}',
+              orderId: foodOrderId,
+              onComplete: () {
+                if (!mounted) return;
+                if (foodOrderId.isNotEmpty) {
+                  context.push('/activity/food/$foodOrderId');
+                }
+              },
+            );
           } else if (mounted) {
             _showPaymentCancelledSnackBar();
             if (_lastMenuItems != null) {
@@ -1486,25 +1506,36 @@ class _CartSummarySheetState extends ConsumerState<_CartSummarySheet> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                // Confirm button
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppTheme.emerald,
-                    ),
-                    onPressed: () => Navigator.pop(context, {
+                // Confirm button — SlideToPay for online, FilledButton for COD
+                if (_paymentMethod == 0)
+                  SlideToPay(
+                    amount: '₹${_total.toStringAsFixed(0)}',
+                    label: 'Slide to Pay',
+                    onPay: () => Navigator.pop(context, {
                       'confirmed': true,
                       'paymentMethod': _paymentMethod,
                       'deliveryAddress': _deliveryAddress,
                     }),
-                    child: Text(
-                      _paymentMethod == 0 ? 'Pay Now' : 'Confirm Order',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  )
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: AppTheme.emerald,
+                      ),
+                      onPressed: () => Navigator.pop(context, {
+                        'confirmed': true,
+                        'paymentMethod': _paymentMethod,
+                        'deliveryAddress': _deliveryAddress,
+                      }),
+                      child: const Text(
+                        'Confirm Order',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

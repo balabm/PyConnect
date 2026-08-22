@@ -104,16 +104,16 @@ class _SlideToPayState extends State<SlideToPay>
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: widget.color.withOpacity(0.12),
+        color: widget.color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppRadius.pill),
         border: Border.all(
-          color: widget.color.withOpacity(0.25),
+          color: widget.color.withValues(alpha: 0.25),
           width: 1,
         ),
         boxShadow: [
           // Heavy top shadow for sticky bar separation
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withValues(alpha: 0.12),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -179,8 +179,8 @@ class _SlideToPayState extends State<SlideToPay>
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              widget.color.withOpacity(0.35),
-                              widget.color.withOpacity(0.15),
+                              widget.color.withValues(alpha: 0.35),
+                              widget.color.withValues(alpha: 0.15),
                             ],
                           ),
                         ),
@@ -220,7 +220,7 @@ class _SlideToPayState extends State<SlideToPay>
                           color: widget.color,
                           boxShadow: [
                             BoxShadow(
-                              color: widget.color.withOpacity(0.4),
+                              color: widget.color.withValues(alpha: 0.4),
                               blurRadius: 12,
                               spreadRadius: 1,
                             ),

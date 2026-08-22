@@ -107,12 +107,12 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
             height: 48,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.gold, AppTheme.gold.withOpacity(0.7)],
+                colors: [AppTheme.gold, AppTheme.gold.withValues(alpha: 0.7)],
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.gold.withOpacity(0.3),
+                  color: AppTheme.gold.withValues(alpha: 0.3),
                   blurRadius: 12,
                 ),
               ],
@@ -196,7 +196,7 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
                   height: 44,
                   decoration: BoxDecoration(
                     color: (isCredit ? AppTheme.emerald : AppTheme.coral)
-                        .withOpacity(0.12),
+                        .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -324,10 +324,10 @@ class _QuickAction extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppTheme.emerald.withOpacity(0.1),
+              color: AppTheme.emerald.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppTheme.emerald.withOpacity(0.15),
+                color: AppTheme.emerald.withValues(alpha: 0.15),
                 width: 0.5,
               ),
             ),

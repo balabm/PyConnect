@@ -126,7 +126,7 @@ class _PaymentSuccessOverlayState extends State<PaymentSuccessOverlay>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.85),
+      backgroundColor: Colors.black.withValues(alpha: 0.85),
       body: Stack(
         children: [
           // Emerald background glow
@@ -140,8 +140,8 @@ class _PaymentSuccessOverlayState extends State<PaymentSuccessOverlay>
                       center: Alignment.center,
                       radius: 0.8,
                       colors: [
-                        AppTheme.emerald.withOpacity(_fadeAnimation.value * 0.3),
-                        Colors.black.withOpacity(0.85),
+                        AppTheme.emerald.withValues(alpha: _fadeAnimation.value * 0.3),
+                        Colors.black.withValues(alpha: 0.85),
                       ],
                     ),
                   ),
@@ -182,7 +182,7 @@ class _PaymentSuccessOverlayState extends State<PaymentSuccessOverlay>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.emerald.withOpacity(0.5),
+                          color: AppTheme.emerald.withValues(alpha: 0.5),
                           blurRadius: 30,
                           spreadRadius: 5,
                         ),
@@ -221,7 +221,7 @@ class _PaymentSuccessOverlayState extends State<PaymentSuccessOverlay>
                   Text(
                     'Order #${widget.orderId}',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 14,
                     ),
                   ),
@@ -268,7 +268,7 @@ class _ConfettiPainter extends CustomPainter {
       final rectSize = 6.0 + random.nextDouble() * 4;
 
       final paint = Paint()
-        ..color = color.withOpacity(opacity)
+        ..color = color.withValues(alpha: opacity)
         ..style = PaintingStyle.fill;
 
       // Rotated rectangle confetti

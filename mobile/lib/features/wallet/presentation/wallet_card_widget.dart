@@ -81,7 +81,7 @@ class _WalletCardState extends State<WalletCard> {
           gradient: widget.gradient,
           boxShadow: [
             BoxShadow(
-              color: AppTheme.emerald.withOpacity(0.3),
+              color: AppTheme.emerald.withValues(alpha: 0.3),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
@@ -115,14 +115,14 @@ class _WalletCardState extends State<WalletCard> {
                           children: [
                             Icon(
                               Icons.account_balance_wallet,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               size: 24,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'PY Wallet',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: 0.5,
@@ -133,7 +133,7 @@ class _WalletCardState extends State<WalletCard> {
                         // Contactless payment icon
                         Icon(
                           Icons.contactless,
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           size: 28,
                         ),
                       ],
@@ -145,7 +145,7 @@ class _WalletCardState extends State<WalletCard> {
                         Text(
                           'Available Balance',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -170,7 +170,7 @@ class _WalletCardState extends State<WalletCard> {
                         Text(
                           widget.cardNumber,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 2,
@@ -179,7 +179,7 @@ class _WalletCardState extends State<WalletCard> {
                         Text(
                           widget.cardHolder,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -218,8 +218,8 @@ class _HolographicOverlayPainter extends CustomPainter {
       ),
       radius: 0.8,
       colors: [
-        Colors.white.withOpacity(0.15),
-        Colors.white.withOpacity(0.05),
+        Colors.white.withValues(alpha: 0.15),
+        Colors.white.withValues(alpha: 0.05),
         Colors.transparent,
       ],
       stops: const [0.0, 0.3, 1.0],
@@ -249,7 +249,7 @@ class _HolographicOverlayPainter extends CustomPainter {
         ),
         colors: [
           Colors.transparent,
-          Colors.white.withOpacity(0.08),
+          Colors.white.withValues(alpha: 0.08),
           Colors.transparent,
         ],
         stops: const [0.4, 0.5, 0.6],

@@ -188,6 +188,18 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   FadeSlideIn(
                     child: _HistoryLink(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'PY Wallet',
+                      subtitle: 'Balance, PY Coins, and transactions',
+                      onTap: () {
+                        AppHaptics.light();
+                        context.push('/wallet');
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  FadeSlideIn(
+                    child: _HistoryLink(
                       icon: Icons.phone_android_outlined,
                       title: 'Change Phone Number',
                       subtitle: 'Verify a new number via OTP',
