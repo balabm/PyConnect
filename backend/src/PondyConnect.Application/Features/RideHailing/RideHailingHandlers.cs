@@ -1084,21 +1084,29 @@ public sealed class CompleteRideWithMetricsHandler : IRequestHandler<CompleteRid
     }
 }
 
-public sealed record CancelRideByRiderCommand(Guid RideId, string? Reason = null) : IRequest<CancelRideResponse>;
+public sealed record CancelRideByRiderCommand(Guid RideId, string? Reason = null, bool WaiveFee = false) : IRequest<CancelRideResponse>;
 
-public sealed record CancelRideResponse(decimal CancellationFee, string Status);
+public sealed record CancelRideResponse(decimal CancellationFee, string Status, bool FeeWaived = false);
 
 public sealed class CancelRideByRiderHandler : IRequestHandler<CancelRideByRiderCommand, CancelRideResponse>
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
     private readonly IFraudDetectionService? _fraudDetection;
+    private readonly IDriverLocationCache? _driverLocationCache;
+
+    /// <summary>
+    /// Stale-GPS threshold for fee waiver. If the driver's last GPS ping is
+    /// older than this, the cancellation fee is automatically waived.
+    /// </summary>
+    private static readonly TimeSpan StaleGpsThreshold = TimeSpan.FromMinutes(3);
 
     public CancelRideByRiderHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
         _fraudDetection = null;
+        _driverLocationCache = null;
     }
 
     public CancelRideByRiderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFraudDetectionService fraudDetection)
@@ -1106,6 +1114,19 @@ public sealed class CancelRideByRiderHandler : IRequestHandler<CancelRideByRider
         _context = context;
         _currentUser = currentUser;
         _fraudDetection = fraudDetection;
+        _driverLocationCache = null;
+    }
+
+    public CancelRideByRiderHandler(
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        IFraudDetectionService fraudDetection,
+        IDriverLocationCache driverLocationCache)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _fraudDetection = fraudDetection;
+        _driverLocationCache = driverLocationCache;
     }
 
     public async Task<CancelRideResponse> Handle(CancelRideByRiderCommand request, CancellationToken cancellationToken)
@@ -1118,9 +1139,22 @@ public sealed class CancelRideByRiderHandler : IRequestHandler<CancelRideByRider
         if (ride.UserId != userId)
             throw new UnauthorizedAccessException("Only the rider who booked this ride can cancel it.");
 
-        var fee = ride.CalculateCancellationFee();
+        // Determine whether the cancellation fee should be waived:
+        // 1. The client explicitly requests a waiver (driver GPS stale > 3 min)
+        // 2. The server independently confirms the driver's GPS is stale
+        var shouldWaive = request.WaiveFee;
+        if (!shouldWaive && ride.DriverId.HasValue && _driverLocationCache is not null)
+        {
+            shouldWaive = _driverLocationCache.IsStale(ride.DriverId.Value, StaleGpsThreshold);
+        }
+
+        var fee = shouldWaive ? 0m : ride.CalculateCancellationFee();
         var wasDriverAssigned = ride.DriverId.HasValue;
-        ride.CancelByRider(request.Reason);
+
+        if (shouldWaive)
+            ride.CancelByRiderWithWaiver(request.Reason);
+        else
+            ride.CancelByRider(request.Reason);
 
         // Free the driver if one was assigned
         if (ride.DriverId.HasValue)
@@ -1142,7 +1176,7 @@ public sealed class CancelRideByRiderHandler : IRequestHandler<CancelRideByRider
             await _fraudDetection.RecordCancellationAsync(userId.ToString(), ride.Id.ToString());
         }
 
-        return new CancelRideResponse(fee, ride.Status.ToString());
+        return new CancelRideResponse(fee, ride.Status.ToString(), FeeWaived: shouldWaive);
     }
 }
 
@@ -1595,5 +1629,98 @@ public sealed class GetRideReceiptHandler : IRequestHandler<GetRideReceiptQuery,
             ride.DropoffAddress,
             driver?.Name,
             ride.RatingByRider);
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  Edge 2.2: COD Exact-Change Reconciliation
+//  When a driver collects more cash than the order total (e.g. customer
+//  pays with a ₹500 note for a ₹130 order), the driver can reconcile the
+//  change by debiting their own ledger and crediting the consumer's PY
+//  Wallet instantly. Both parties walk away happy without needing exact
+//  change.
+// ──────────────────────────────────────────────────────────────────────────
+
+public sealed record CodReconcileCommand(
+    Guid RideId,
+    decimal CollectedAmount,
+    decimal OrderTotal) : IRequest<CodReconcileResponse>;
+
+public sealed record CodReconcileResponse(
+    decimal ChangeAmount,
+    string Message);
+
+public sealed class CodReconcileHandler : IRequestHandler<CodReconcileCommand, CodReconcileResponse>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+    private readonly WalletService _walletService;
+
+    public CodReconcileHandler(
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        WalletService walletService)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _walletService = walletService;
+    }
+
+    public async Task<CodReconcileResponse> Handle(CodReconcileCommand request, CancellationToken cancellationToken)
+    {
+        var driverId = _currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Driver not authenticated.");
+
+        var ride = await _context.RideRequests.FirstOrDefaultAsync(r => r.Id == request.RideId, cancellationToken)
+            ?? throw new InvalidOperationException("Ride not found.");
+
+        // Only the assigned driver can reconcile COD for this ride.
+        if (ride.DriverId is null)
+            throw new InvalidOperationException("This ride has no assigned driver.");
+
+        var driver = await _context.Drivers.FirstOrDefaultAsync(d => d.UserId == driverId, cancellationToken)
+            ?? throw new UnauthorizedAccessException("Driver profile not found.");
+
+        if (ride.DriverId != driver.Id)
+            throw new UnauthorizedAccessException("Only the assigned driver can reconcile COD for this ride.");
+
+        // Only COD rides can be reconciled.
+        if (ride.PaymentMethod != PaymentMethod.Cash)
+            throw new InvalidOperationException("COD reconciliation is only available for cash-on-delivery rides.");
+
+        // The collected amount must be >= the order total (driver can't
+        // reconcile a shortfall — that's a different problem).
+        if (request.CollectedAmount < request.OrderTotal)
+            throw new InvalidOperationException(
+                $"Collected amount (₹{request.CollectedAmount}) is less than the order total (₹{request.OrderTotal}). Cannot reconcile.");
+
+        var changeAmount = request.CollectedAmount - request.OrderTotal;
+        if (changeAmount <= 0)
+            return new CodReconcileResponse(0, "No change to reconcile — exact amount collected.");
+
+        // Debit the change from the driver's wallet ledger.
+        await _walletService.RecordCommissionAsync(
+            driver.Id,
+            changeAmount,
+            referenceId: $"cod-change-{ride.Id}",
+            description: $"COD change reconciliation for ride {ride.Id} (collected ₹{request.CollectedAmount}, total ₹{request.OrderTotal})",
+            cancellationToken);
+
+        // Credit the change to the consumer's PY Wallet (real balance).
+        var userWallet = await _context.UserWallets
+            .FirstOrDefaultAsync(w => w.UserId == ride.UserId, cancellationToken);
+
+        if (userWallet is null)
+        {
+            userWallet = UserWallet.Create(ride.UserId);
+            _context.UserWallets.Add(userWallet);
+        }
+
+        userWallet.CreditReal(changeAmount);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new CodReconcileResponse(
+            changeAmount,
+            $"₹{changeAmount} credited to the customer's PY Wallet. Your ledger has been debited.");
     }
 }

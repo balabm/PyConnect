@@ -47,6 +47,7 @@ public sealed class FoodDeliveryController : ControllerBase
     [Authorize]
     [EnableRateLimiting("OrderPolicy")]
     [ProducesResponseType(typeof(CheckoutResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CartPriceConflictResponse), StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -82,7 +83,23 @@ public sealed class FoodDeliveryController : ControllerBase
             request.RazorpayOrderId,
             request.RazorpayPaymentId,
             request.RazorpaySignature);
-        var result = await _mediator.Send(cmd, ct);
+
+        CheckoutResponse result;
+        try
+        {
+            result = await _mediator.Send(cmd, ct);
+        }
+        catch (CartPriceConflictException ex)
+        {
+            // Menu prices changed between cart creation and checkout.
+            // Return 409 with the live prices so the client can update the
+            // cart and prompt the user to review the new total.
+            return Conflict(new CartPriceConflictResponse(
+                ex.Message,
+                ex.LiveItemPrices.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                ex.LiveSubTotal,
+                ex.LiveTotalAmount));
+        }
 
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
@@ -336,6 +353,18 @@ public sealed class FoodDeliveryController : ControllerBase
         return NoContent();
     }
 }
+
+/// <summary>
+/// Response body for HTTP 409 Conflict when menu prices have changed
+/// between cart creation and checkout. The client should update the cart
+/// with <see cref="LiveItemPrices"/>, show the new total, and prompt the
+/// user to review before retrying checkout.
+/// </summary>
+public sealed record CartPriceConflictResponse(
+    string Message,
+    Dictionary<string, decimal> LiveItemPrices,
+    decimal LiveSubTotal,
+    decimal LiveTotalAmount);
 
 public sealed record CreateFoodOrderRequest(
     Guid VendorId,

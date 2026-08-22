@@ -121,6 +121,23 @@ class ApiClient {
           }
           throw ApiException(msg);
         }
+        // 409 — cart price conflict at checkout. Menu prices changed between
+        // cart creation and checkout. Extract the live prices and throw a
+        // typed exception so the UI can update the cart and prompt the user.
+        if (e.response?.statusCode == 409) {
+          final data = e.response?.data;
+          if (data is Map && data['liveItemPrices'] is Map) {
+            final livePrices = (data['liveItemPrices'] as Map).map(
+              (k, v) => MapEntry(k.toString(), (v as num).toDouble()),
+            );
+            throw CartPriceConflictException(
+              message: (data['message'] as String?) ?? 'Menu prices have changed.',
+              liveItemPrices: livePrices,
+              liveSubTotal: (data['liveSubTotal'] as num?)?.toDouble() ?? 0,
+              liveTotalAmount: (data['liveTotalAmount'] as num?)?.toDouble() ?? 0,
+            );
+          }
+        }
         attempt++;
         if (!_shouldRetry(e) || attempt > _maxRetries) {
           throw _friendlyException(e);
@@ -264,4 +281,27 @@ class AuthRequiredException implements Exception {
 class WaiverRequiredException implements Exception {
   @override
   String toString() => 'Liability waiver required';
+}
+
+/// Thrown when the backend returns 409 Conflict at checkout because menu
+/// prices have changed since the cart was built. Contains the live prices
+/// and recalculated total so the UI can update the cart and prompt the user.
+class CartPriceConflictException implements Exception {
+  CartPriceConflictException({
+    required this.message,
+    required this.liveItemPrices,
+    required this.liveSubTotal,
+    required this.liveTotalAmount,
+  });
+
+  final String message;
+
+  /// Live menu prices keyed by item name (as they currently exist in the DB).
+  final Map<String, double> liveItemPrices;
+
+  final double liveSubTotal;
+  final double liveTotalAmount;
+
+  @override
+  String toString() => message;
 }

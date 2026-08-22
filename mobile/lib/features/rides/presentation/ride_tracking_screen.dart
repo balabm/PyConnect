@@ -48,7 +48,19 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
   StreamSubscription? _completedSub;
   StreamSubscription? _cancelledSub;
   Timer? _refreshTimer;
+  Timer? _stalenessTimer;
   bool _completionSheetShown = false;
+
+  /// Tracks when the last driver GPS update was received (client-side UTC).
+  /// Used to detect the "Ghost Driver" scenario where the captain's phone
+  /// loses signal and the car icon stops moving.
+  DateTime? _lastGpsUpdateAt;
+
+  /// Whether the driver's GPS has been stale for more than 3 minutes.
+  bool _isDriverGpsStale = false;
+
+  /// Stale-GPS threshold for showing the warning banner and waiving fees.
+  static const _staleGpsThreshold = Duration(minutes: 3);
 
   @override
   void initState() {
@@ -56,6 +68,8 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     _setupSignalR();
     // Fallback polling in case SignalR fails
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _refreshRide());
+    // Staleness checker — runs every 15 seconds to detect Ghost Driver
+    _stalenessTimer = Timer.periodic(const Duration(seconds: 15), (_) => _checkGpsStaleness());
   }
 
   Future<void> _setupSignalR() async {
@@ -81,6 +95,14 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
             final lat = (data['latitude'] as num?)?.toDouble();
             final lng = (data['longitude'] as num?)?.toDouble();
             if (lat != null && lng != null) {
+              // Parse the server timestamp; fall back to client clock.
+              final serverTs = data['serverTimestamp'] as String?;
+              DateTime? ts;
+              if (serverTs != null) {
+                ts = DateTime.tryParse(serverTs);
+              }
+              ts ??= DateTime.now().toUtc();
+
               setState(() {
                 _driverLocation = DriverLocationUpdate(
                   latitude: lat,
@@ -88,7 +110,11 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
                   heading: (data['heading'] as num?)?.toDouble(),
                   distanceToPickupKm: (data['distanceToPickupKm'] as num?)?.toDouble(),
                   etaToPickupMin: (data['etaToPickupMin'] as num?)?.toInt(),
+                  serverTimestamp: ts,
                 );
+                _lastGpsUpdateAt = ts;
+                // Fresh update — clear stale flag.
+                _isDriverGpsStale = false;
               });
             }
           }
@@ -114,6 +140,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _stalenessTimer?.cancel();
     _driverAssignedSub?.cancel();
     _locationSub?.cancel();
     _arrivedSub?.cancel();
@@ -122,6 +149,18 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     _cancelledSub?.cancel();
     ref.read(rideSignalRProvider).leaveRide(widget.rideId);
     super.dispose();
+  }
+
+  /// Checks whether the driver's GPS has been stale for more than 3 minutes.
+  /// If so, sets the stale flag so the warning banner appears and the
+  /// cancellation fee is automatically waived.
+  void _checkGpsStaleness() {
+    if (_lastGpsUpdateAt == null) return;
+    final elapsed = DateTime.now().toUtc().difference(_lastGpsUpdateAt!);
+    final isStale = elapsed > _staleGpsThreshold;
+    if (isStale != _isDriverGpsStale && mounted) {
+      setState(() => _isDriverGpsStale = isStale);
+    }
   }
 
   Future<void> _refreshRide() async {
@@ -232,14 +271,23 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     setState(() => _cancelling = true);
     try {
       final api = ref.read(ridesApiProvider);
-      final result = await api.cancelByRider(widget.rideId);
+      // If the driver's GPS has been stale for > 3 minutes, request a fee
+      // waiver so the rider is not penalised for a driver-side issue.
+      final result = await api.cancelByRider(
+        widget.rideId,
+        reason: _isDriverGpsStale ? 'Driver GPS stale' : null,
+        waiveFee: _isDriverGpsStale,
+      );
       final fee = result['cancellationFee'];
+      final feeWaived = result['feeWaived'] == true;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(fee != null && fee > 0
-                ? 'Ride cancelled. Cancellation fee: \u20B9$fee'
-                : 'Ride cancelled'),
+            content: Text(feeWaived
+                ? 'Ride cancelled. Fee waived (driver network issue).'
+                : fee != null && fee > 0
+                    ? 'Ride cancelled. Cancellation fee: \u20B9$fee'
+                    : 'Ride cancelled'),
           ),
         );
         _refreshRide();
@@ -327,6 +375,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
             onSos: _triggerSos,
             routePoints: _routePoints,
             driverRoutePoints: _driverRoutePoints,
+            isDriverGpsStale: _isDriverGpsStale,
           );
         },
       ),
@@ -345,6 +394,7 @@ class _TrackingBody extends StatelessWidget {
     required this.onSos,
     required this.routePoints,
     this.driverRoutePoints,
+    this.isDriverGpsStale = false,
   });
 
   final Map<String, dynamic> ride;
@@ -356,6 +406,7 @@ class _TrackingBody extends StatelessWidget {
   final VoidCallback onSos;
   final List<LatLng>? routePoints;
   final List<LatLng>? driverRoutePoints;
+  final bool isDriverGpsStale;
 
   @override
   Widget build(BuildContext context) {
@@ -403,6 +454,47 @@ class _TrackingBody extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             RideStatusCard(status: status),
+            // Ghost Driver warning — persistent banner when GPS is stale > 3 min
+            if (isDriverGpsStale) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.warning.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4), width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.signal_wifi_off, color: AppTheme.warning, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Captain is experiencing network issues',
+                            style: TextStyle(
+                              color: AppTheme.warning,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Their GPS hasn\'t updated in a while. You can cancel without a fee.',
+                            style: TextStyle(
+                              color: AppTheme.warning.withValues(alpha: 0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             // OTP display for rider (show when driver assigned, before ride starts)
             if (status.toLowerCase() == 'driverassigned' || status.toLowerCase() == 'arrivedatpickup')

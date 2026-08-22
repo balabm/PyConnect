@@ -79,7 +79,7 @@ public sealed class RideDispatchService
         CancellationToken cancellationToken = default)
     {
         var update = new DriverLocationUpdate(
-            rideId, latitude, longitude, heading, distanceToPickupKm, etaToPickupMin);
+            rideId, latitude, longitude, heading, distanceToPickupKm, etaToPickupMin, DateTimeOffset.UtcNow);
 
         await _rideHub.Clients.Group($"ride:{rideId}")
             .SendAsync("DriverLocationUpdate", update, cancellationToken);
@@ -159,4 +159,5 @@ public sealed record DriverLocationUpdate(
     double Longitude,
     double? Heading,
     double? DistanceToPickupKm,
-    int? EtaToPickupMin);
+    int? EtaToPickupMin,
+    DateTimeOffset ServerTimestamp);

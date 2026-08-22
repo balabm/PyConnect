@@ -308,6 +308,24 @@ public sealed class RideRequest : BaseEntity
     }
 
     /// <summary>
+    /// Cancel the ride by the rider with a forced fee waiver. Used when the
+    /// captain's GPS has been stale for more than 3 minutes — the rider should
+    /// not be penalised for a driver-side connectivity issue.
+    /// </summary>
+    public void CancelByRiderWithWaiver(string? reason = null)
+    {
+        if (Status is RideStatus.Completed or RideStatus.Cancelled)
+            throw new InvalidOperationException("Ride already completed or cancelled.");
+
+        CancellationFee = 0m;
+        CancelledBy = Enums.CancelledBy.Rider;
+        CancelReason = reason ?? "Driver GPS stale — fee waived";
+        Status = RideStatus.Cancelled;
+        CancelledAt = DateTimeOffset.UtcNow;
+        MarkUpdated();
+    }
+
+    /// <summary>
     /// Cancel the ride by the driver (post-assignment). Triggers reassignment flow.
     /// Sets status to DriverCancelled so dispatch engine can re-dispatch.
     /// </summary>

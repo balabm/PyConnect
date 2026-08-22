@@ -618,6 +618,22 @@ public sealed class RideRequestStateMachineTests
     }
 
     [Fact]
+    public void CancelByRiderWithWaiver_AfterDriverAssigned_ZeroFee()
+    {
+        var ride = CreateDefaultRide();
+        ride.StartSearching();
+        ride.AssignDriver(Guid.NewGuid(), "123456");
+        // Normally a post-assignment cancellation would incur a ₹25 fee.
+        // With the waiver (stale GPS), the fee must be zero.
+        ride.CancelByRiderWithWaiver("Driver GPS stale");
+
+        ride.Status.Should().Be(RideStatus.Cancelled);
+        ride.CancelledBy.Should().Be(CancelledBy.Rider);
+        ride.CancellationFee.Should().Be(0m);
+        ride.CancelReason.Should().Contain("GPS stale");
+    }
+
+    [Fact]
     public void CancelByDriver_FromDriverAssigned_SetsDriverCancelled()
     {
         var ride = CreateDefaultRide();

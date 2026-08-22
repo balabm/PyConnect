@@ -58,6 +58,7 @@ class DriverLocationUpdate {
     this.heading,
     this.distanceToPickupKm,
     this.etaToPickupMin,
+    this.serverTimestamp,
   });
 
   final double latitude;
@@ -65,4 +66,9 @@ class DriverLocationUpdate {
   final double? heading;
   final double? distanceToPickupKm;
   final int? etaToPickupMin;
+
+  /// Server-side UTC timestamp of the last GPS ping. Used to detect stale
+  /// driver GPS (Ghost Driver scenario). When null, falls back to the time
+  /// the update was received on the client.
+  final DateTime? serverTimestamp;
 }

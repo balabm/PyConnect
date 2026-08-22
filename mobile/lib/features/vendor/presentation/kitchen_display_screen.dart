@@ -59,6 +59,12 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   /// Order IDs currently being printed (for the "Printing..." indicator).
   final Set<String> _printingOrderIds = {};
 
+  /// Order IDs whose printing failed (paper jam, out of paper, Bluetooth
+  /// disconnect, etc.). These are shown in a prominent yellow banner at the
+  /// top of the KDS with a manual [ Reprint ] button so the merchant can
+  /// retry once the paper is fixed.
+  final Set<String> _printerErrorOrderIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -236,7 +242,12 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
 
       if (success) {
         _printedOrderIds.add(order.id);
+        // Clear any previous printer error for this order on success.
+        if (mounted) setState(() => _printerErrorOrderIds.remove(order.id));
       } else if (mounted) {
+        // Mark this order as having a printer error so the yellow banner
+        // appears at the top of the KDS with a manual reprint button.
+        setState(() => _printerErrorOrderIds.add(order.id));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Print failed for order #${order.orderNumber}'),
@@ -252,6 +263,9 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
       }
     } catch (e) {
       if (mounted) {
+        // Mark this order as having a printer error so the yellow banner
+        // appears at the top of the KDS with a manual reprint button.
+        setState(() => _printerErrorOrderIds.add(order.id));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Print error: $e'),
@@ -513,25 +527,39 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
   Widget _buildBoard() {
     final activeOrders = _orders.where((o) => o.stage != KdsStage.completed).toList();
 
+    // Build the printer error banner if there are any failed prints.
+    // This is a prominent yellow banner at the top of the KDS so the
+    // merchant knows to fix the paper jam and reprint.
+    final printerErrorBanner = _printerErrorOrderIds.isNotEmpty
+        ? _buildPrinterErrorBanner()
+        : const SizedBox.shrink();
+
     if (activeOrders.isEmpty) {
       // No active orders — ensure any lingering chime is stopped.
       _stopChime();
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.kitchen, size: 64, color: Colors.white.withValues(alpha: 0.2)),
-            const SizedBox(height: 16),
-            Text('No active orders',
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Text('New orders will appear here automatically',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
-          ],
-        ),
+      return Column(
+        children: [
+          printerErrorBanner,
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.kitchen, size: 64, color: Colors.white.withValues(alpha: 0.2)),
+                  const SizedBox(height: 16),
+                  Text('No active orders',
+                      style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Text('New orders will appear here automatically',
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
+                ],
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -539,20 +567,81 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
     final preparing = activeOrders.where((o) => o.stage == KdsStage.preparing).toList();
     final ready = activeOrders.where((o) => o.stage == KdsStage.ready).toList();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(
-        width: MediaQuery.of(context).size.width < 900
-            ? MediaQuery.of(context).size.width
-            : 900,
-        child: Row(
+    return Column(
+      children: [
+        printerErrorBanner,
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width < 900
+                  ? MediaQuery.of(context).size.width
+                  : 900,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildColumn('New', incoming, AppTheme.info)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildColumn('Preparing', preparing, AppTheme.emerald)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildColumn('Ready / Waiting for Driver', ready, AppTheme.success, isDropTarget: true)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Builds the prominent yellow printer error banner shown at the top of
+  /// the KDS when one or more orders failed to print (paper jam, out of
+  /// paper, Bluetooth disconnect, etc.). Each failed order has a
+  /// [ Reprint ] button so the merchant can retry once the paper is fixed.
+  Widget _buildPrinterErrorBanner() {
+    final failedOrders = _orders.where((o) => _printerErrorOrderIds.contains(o.id)).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: AppTheme.warning,
+      child: SafeArea(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _buildColumn('New', incoming, AppTheme.info)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildColumn('Preparing', preparing, AppTheme.emerald)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildColumn('Ready / Waiting for Driver', ready, AppTheme.success, isDropTarget: true)),
+            Row(
+              children: [
+                const Icon(Icons.print_disabled, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Printer Error: ${failedOrders.length} order(s) could not be printed. Please check paper.',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: failedOrders.map((order) {
+                return ActionChip(
+                  label: Text(
+                    'Reprint #${order.orderNumber}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                  ),
+                  avatar: const Icon(Icons.print, size: 16, color: Colors.white),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                  onPressed: () => _printOrder(order),
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),

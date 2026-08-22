@@ -92,14 +92,13 @@ function loadTokens() {
 
 function saveTokens(tokens) {
   fs.writeFileSync(TOKEN_CACHE_FILE, JSON.stringify({
-    expiry: Date.now() + 45 * 60 * 1000, // 45 min cache
+    expiry: Date.now() + 50 * 60 * 1000,
     tokens
   }, null, 2));
 }
 
 async function loginUser(phone, isVendor = false, cachedTokens = {}) {
   if (cachedTokens[phone]) {
-    // Validate cached token with a lightweight ping
     const testRes = callApi('GET', '/api/venues', null, cachedTokens[phone].token);
     if (testRes.status === 200) {
       log(`  [Using cached token for ${phone}]`);
@@ -107,27 +106,14 @@ async function loginUser(phone, isVendor = false, cachedTokens = {}) {
     }
   }
 
-  let reqEndpoint = isVendor ? '/api/vendor/auth/otp/request' : '/api/auth/otp/request';
-  let verifyEndpoint = isVendor ? '/api/vendor/auth/otp/verify' : '/api/auth/otp/verify';
+  const reqEndpoint = isVendor ? '/api/vendor/auth/otp/request' : '/api/auth/otp/request';
+  const verifyEndpoint = isVendor ? '/api/vendor/auth/otp/verify' : '/api/auth/otp/verify';
   
   let reqRes = callApi('POST', reqEndpoint, { phone });
-  
-  // If rate limited, wait 15s and retry
   if (reqRes.status === 429) {
     log(`  [Rate limited for ${phone}, waiting 15s...]`);
     await sleep(15000);
     reqRes = callApi('POST', reqEndpoint, { phone });
-  }
-  
-  if (reqRes.status !== 200) {
-    reqEndpoint = '/api/auth/otp/request';
-    verifyEndpoint = '/api/auth/otp/verify';
-    reqRes = callApi('POST', reqEndpoint, { phone });
-    if (reqRes.status === 429) {
-      log(`  [Rate limited for ${phone}, waiting 15s...]`);
-      await sleep(15000);
-      reqRes = callApi('POST', reqEndpoint, { phone });
-    }
   }
 
   const peekRes = callApi('GET', `/api/auth/otp/peek?phone=${phone}`);
@@ -198,8 +184,6 @@ async function runLiveQa() {
     assert('Consumer Login (9000000099)', false, err.message);
   }
 
-  await sleep(1000);
-
   try {
     driver = await loginUser('9000000050', false, cachedTokens);
     assert('Captain/Driver Login (9000000050 - Suresh Kumar)', !!driver.token, `UserId: ${driver.userId}`);
@@ -207,16 +191,12 @@ async function runLiveQa() {
     assert('Captain/Driver Login (9000000050)', false, err.message);
   }
 
-  await sleep(1000);
-
   try {
     vendor = await loginUser('9000000001', true, cachedTokens);
     assert('Partner/Vendor Login (9000000001 - Fuoco Pizzeria)', !!vendor.token, `UserId: ${vendor.userId}`);
   } catch (err) {
     assert('Partner/Vendor Login (9000000001)', false, err.message);
   }
-
-  await sleep(1000);
 
   try {
     admin = await loginUser('9000000000', false, cachedTokens);
@@ -226,18 +206,33 @@ async function runLiveQa() {
   }
 
   // -----------------------------------------------------------------
-  // 3. Consumer Food Discovery & Transparent Pricing Checkout
+  // 3. Real-Time SignalR Hub Connectivity Check
   // -----------------------------------------------------------------
-  log('\n--- Step 3: Consumer Food Discovery & Checkout ---');
+  log('\n--- Step 3: Real-Time SignalR Hub Handshakes ---');
+  if (consumer?.token) {
+    const rideHubRes = callApi('POST', '/hubs/ride/negotiate?negotiateVersion=1', null, consumer.token);
+    assert('Consumer SignalR Ride Hub Negotiate returns HTTP 200', rideHubRes.status === 200, `ConnectionId: ${rideHubRes.body?.connectionId?.substring(0, 10)}...`);
+    assert('Ride Hub supports WebSockets transport', rideHubRes.body?.availableTransports?.some(t => t.transport === 'WebSockets'));
+  }
+
+  if (driver?.token) {
+    const driverHubRes = callApi('POST', '/hubs/driver/negotiate?negotiateVersion=1', null, driver.token);
+    assert('Captain SignalR Driver Hub Negotiate returns HTTP 200', driverHubRes.status === 200, `ConnectionId: ${driverHubRes.body?.connectionId?.substring(0, 10)}...`);
+  }
+
+  // -----------------------------------------------------------------
+  // 4. Consumer Food Discovery & Transparent Pricing Checkout
+  // -----------------------------------------------------------------
+  log('\n--- Step 4: Consumer Food Discovery & Checkout ---');
   const fuocoVendorId = '00000000-0000-0000-0000-000000000001';
   let createdOrderId = null;
 
   if (consumer?.token) {
-    // 3.1 Venues lookup
+    // 4.1 Venues lookup
     const venuesRes = callApi('GET', '/api/venues', null, consumer.token);
     assert('Get Venues Catalog returns HTTP 200', venuesRes.status === 200, `${venuesRes.body?.length || 0} venues available`);
 
-    // 3.2 Fetch Fuoco Menu
+    // 4.2 Fetch Fuoco Menu
     const menuRes = callApi('GET', `/api/vendors/${fuocoVendorId}/menu`, null, consumer.token);
     assert('Fetch Fuoco Pizzeria Menu returns HTTP 200', menuRes.status === 200, `${menuRes.body?.length || 0} menu items`);
     
@@ -251,7 +246,7 @@ async function runLiveQa() {
     assert('Menu contains Woodfired Margherita', !!margherita, `₹${margherita?.price}`);
     assert('Menu contains Chicken Shawarma', !!shawarma, `₹${shawarma?.price}`);
 
-    // 3.3 Consumer Order Checkout
+    // 4.3 Consumer Order Checkout (COD)
     const checkoutPayload = {
       vendorId: fuocoVendorId,
       deliveryAddress: '12 Rue Romain Rolland, White Town, Pondicherry',
@@ -273,7 +268,7 @@ async function runLiveQa() {
     };
 
     const orderRes = callApi('POST', '/api/orders/checkout', checkoutPayload, consumer.token);
-    assert('Food Order Checkout returns HTTP 200', orderRes.status === 200 || orderRes.status === 201, `Status: ${orderRes.status}`);
+    assert('Food Order Checkout returns HTTP 200/201', orderRes.status === 200 || orderRes.status === 201, `Status: ${orderRes.status}`);
     
     if (orderRes.body && orderRes.body.orderId) {
       createdOrderId = orderRes.body.orderId;
@@ -286,17 +281,17 @@ async function runLiveQa() {
   }
 
   // -----------------------------------------------------------------
-  // 4. Ride Hailing Lifecycle & State Machine
+  // 5. Ride Hailing Lifecycle & State Machine
   // -----------------------------------------------------------------
-  log('\n--- Step 4: Ride Hailing & Driver State Machine ---');
+  log('\n--- Step 5: Ride Hailing & Driver State Machine ---');
   let rideId = null;
 
   if (consumer?.token && driver?.token) {
-    // 4.1 Accept Liability Waiver first (Mandatory Guardrail)
+    // 5.1 Accept Liability Waiver first (Mandatory Guardrail)
     const waiverRes = callApi('POST', '/api/auth/waiver/accept', null, consumer.token);
     assert('Consumer Accepts Liability Waiver', waiverRes.status === 200 || waiverRes.status === 204);
 
-    // 4.2 Ride Request
+    // 5.2 Ride Request
     const rideReqPayload = {
       pickupLatitude: 11.9356,
       pickupLongitude: 79.8301,
@@ -309,14 +304,14 @@ async function runLiveQa() {
       paymentMethod: 1 // Cash
     };
     const rideReqRes = callApi('POST', '/api/rides/request', rideReqPayload, consumer.token);
-    assert('Ride Request Creation returns HTTP 200', rideReqRes.status === 200 || rideReqRes.status === 201, `Status: ${rideReqRes.status}`);
+    assert('Ride Request Creation returns HTTP 200/201', rideReqRes.status === 200 || rideReqRes.status === 201, `Status: ${rideReqRes.status}`);
     
     if (rideReqRes.body) {
       rideId = rideReqRes.body.id || rideReqRes.body.rideId;
       assert('Ride has valid ID', !!rideId, `RideId: ${rideId}`);
     }
 
-    // 4.3 Driver Go Online & Location Update
+    // 5.3 Driver Go Online & Location Update
     const onlineRes = callApi('POST', '/api/driver/go-online', null, driver.token);
     assert('Captain Toggles Online returns HTTP 200/204', onlineRes.status === 200 || onlineRes.status === 204);
 
@@ -327,34 +322,34 @@ async function runLiveQa() {
     const locRes = callApi('POST', '/api/driver/location', driverLocPayload, driver.token);
     assert('Captain GPS Location Ping returns HTTP 200/204', locRes.status === 200 || locRes.status === 204);
 
-    // 4.4 Driver Task / Ride Acceptance
+    // 5.4 Driver Task / Ride Acceptance
     if (rideId) {
       const acceptRes = callApi('POST', `/api/rides/${rideId}/accept`, null, driver.token);
       assert('Captain Accepts Ride', acceptRes.status === 200 || acceptRes.status === 204, `Status: ${acceptRes.status}`);
     }
 
-    // 4.5 Driver Wallet Query
+    // 5.5 Driver Wallet Query
     const walletRes = callApi('GET', '/api/driver/wallet', null, driver.token);
     assert('Captain Wallet Ledger accessible', walletRes.status === 200, `Balance: ₹${walletRes.body?.balance ?? 0}`);
   }
 
   // -----------------------------------------------------------------
-  // 5. Partner Operations, KDS & Physical Ticket Validation
+  // 6. Partner Operations, KDS & Physical Ticket Validation
   // -----------------------------------------------------------------
-  log('\n--- Step 5: Partner Operations & Ticket Validation ---');
+  log('\n--- Step 6: Partner Operations & Ticket Validation ---');
   if (vendor?.token) {
     const vendorMenuRes = callApi('GET', `/api/vendors/${fuocoVendorId}/menu`, null, vendor.token);
     assert('Partner accesses menu items', vendorMenuRes.status === 200, `${vendorMenuRes.body?.length || 0} items`);
 
     const validTicketPayload = { qrPayload: 'TICKET-TEST-PASS-001' };
     const scanRes = callApi('POST', '/api/vendor/validate-ticket', validTicketPayload, vendor.token);
-    assert('Physical Ticket QR Validation Endpoint accessible', scanRes.status === 200 || scanRes.status === 400 || scanRes.status === 404, `Status: ${scanRes.status}`);
+    assert('Physical Ticket QR Validation Endpoint returns HTTP 200', scanRes.status === 200 || scanRes.status === 400, `Status: ${scanRes.status}`);
   }
 
   // -----------------------------------------------------------------
-  // 6. Admin God Mode & Live Operations
+  // 7. Admin God Mode & Live Operations
   // -----------------------------------------------------------------
-  log('\n--- Step 6: Admin God Mode & Oversight ---');
+  log('\n--- Step 7: Admin God Mode & Oversight ---');
   if (admin?.token) {
     const driversListRes = callApi('GET', '/api/admin/drivers', null, admin.token);
     assert('Admin Drivers Directory Query returns HTTP 200', driversListRes.status === 200, `${driversListRes.body?.length ?? 0} drivers registered`);

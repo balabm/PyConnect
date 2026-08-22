@@ -150,6 +150,19 @@ class DriverApi {
     });
   }
 
+  /// Logs a mock/fake GPS location detection anomaly to the backend.
+  /// The driver is flagged for review and forced offline server-side.
+  Future<void> reportMockLocation(double latitude, double longitude) async {
+    try {
+      await _api.post('api/driver/mock-location-report', data: {
+        'latitude': latitude,
+        'longitude': longitude,
+      });
+    } catch (_) {
+      // Best-effort — the anomaly is handled client-side regardless.
+    }
+  }
+
   /// Uploads all three KYC documents (Aadhaar, Driving License, RC) in a
   /// single multipart request. The backend routes these to the private
   /// storage bucket so they are never publicly accessible.

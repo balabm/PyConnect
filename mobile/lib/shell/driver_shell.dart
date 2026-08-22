@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../core/device/location_security.dart';
+import '../core/animations/haptic.dart';
 import '../core/theme/app_theme.dart';
 import '../core/network/offline_mutation_queue.dart';
 import '../core/providers.dart';
@@ -32,6 +34,10 @@ class _DriverShellState extends ConsumerState<DriverShell> {
   StreamSubscription? _rideOfferSub;
   StreamSubscription? _foodOfferSub;
   int _consecutiveGpsFailures = 0;
+
+  /// Whether a mock/fake GPS app has been detected. When true, the driver
+  /// is forced offline and a permanent red warning screen is shown.
+  bool _mockLocationDetected = false;
 
   /// Whether the SignalR dispatch connection is currently reconnecting.
   /// When true, a yellow banner is shown at the top of the screen.
@@ -428,6 +434,15 @@ class _DriverShellState extends ConsumerState<DriverShell> {
             timeLimit: Duration(seconds: 5),
           ),
         );
+
+        // Anti-spoofing: check if the position is from a mock-location app.
+        // If so, drop the ping, force the driver offline, and show a
+        // permanent red warning screen. Log the anomaly to the backend.
+        if (LocationSecurity.isMocked(position)) {
+          _handleMockLocationDetected(ref);
+          return;
+        }
+
         await ref.read(driverApiProvider).updateLocation(
               position.latitude,
               position.longitude,
@@ -452,6 +467,34 @@ class _DriverShellState extends ConsumerState<DriverShell> {
     _isStartingLocation = false;
   }
 
+  /// Handles a detected mock/fake GPS location. Drops the ping, forces the
+  /// driver offline, stops location tracking, and shows a permanent red
+  /// warning screen. The anomaly is logged to the backend for review.
+  void _handleMockLocationDetected(WidgetRef ref) {
+    if (_mockLocationDetected) return; // Already handled
+
+    setState(() => _mockLocationDetected = true);
+
+    // Stop location tracking immediately.
+    _locationTimer?.cancel();
+    _locationTimer = null;
+    BackgroundLocationService.instance.stop();
+
+    // Force the driver offline.
+    ref.read(driverOnlineToggleRequestProvider.notifier).state = false;
+
+    // Best-effort: log the anomaly to the backend for fraud/suspension review.
+    try {
+      ref.read(driverApiProvider).reportMockLocation(0, 0);
+    } catch (_) {
+      // Ignore — the log is best-effort.
+    }
+
+    if (mounted) {
+      AppHaptics.error();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isOnline = ref.watch(driverOnlineStatusProvider);
@@ -464,6 +507,62 @@ class _DriverShellState extends ConsumerState<DriverShell> {
         _setOnline(next, ref);
       }
     });
+
+    // Mock location detected — show permanent red warning screen.
+    if (_mockLocationDetected) {
+      return Scaffold(
+        body: Container(
+          color: AppTheme.danger,
+          child: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.gps_off, size: 80, color: Colors.white),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Mock Location Detected',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Please disable fake GPS apps to go online.\n\n'
+                      'Your account has been flagged for review. Repeated attempts to spoof your location may result in suspension.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppTheme.danger,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('I\'ve Disabled Fake GPS'),
+                      onPressed: () {
+                        // Reset the mock flag and allow the driver to try again.
+                        setState(() => _mockLocationDetected = false);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

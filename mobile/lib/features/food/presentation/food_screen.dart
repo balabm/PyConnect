@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/network/razorpay_payment_service.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -667,12 +668,89 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
           );
         }
       }
+    } on CartPriceConflictException catch (e) {
+      // Menu prices changed between cart creation and checkout.
+      // Update the cart with live prices and prompt the user to review.
+      if (mounted) {
+        _handleCartPriceConflict(e, items, paymentMethod, deliveryAddress);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Handles a cart price conflict (HTTP 409) by updating the cart with the
+  /// live prices from the backend and showing a dialog prompting the user to
+  /// review the new total before retrying checkout.
+  Future<void> _handleCartPriceConflict(
+    CartPriceConflictException conflict,
+    List<dynamic> items,
+    int paymentMethod,
+    String? deliveryAddress,
+  ) async {
+    // Update the cart with the live prices from the backend.
+    final cart = ref.read(cartProvider.notifier);
+    final cartState = ref.read(cartProvider);
+    for (final item in cartState.items) {
+      final livePrice = conflict.liveItemPrices[item.name];
+      if (livePrice != null && livePrice != item.price) {
+        // Remove and re-add the item with the updated price.
+        cart.removeItem(item.id);
+        cart.addItem(
+          item: item.copyWith(price: livePrice),
+          vendorId: cartState.vendorId!,
+          vendorName: cartState.vendorName!,
+          category: cartState.category!,
+        );
+      }
+    }
+
+    // Show a dialog prompting the user to review the new total.
+    final shouldRetry = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Prices Updated'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Menu prices have been updated by the restaurant. Please review your new total before paying.',
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'New Total: \u20B9${conflict.liveTotalAmount.toStringAsFixed(0)}',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.emerald,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Review & Pay'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldRetry == true && mounted) {
+      // Retry checkout with the updated cart prices.
+      final newSubtotal = ref.read(cartProvider).subtotal;
+      _checkout(items, newSubtotal,
+          paymentMethod: paymentMethod, deliveryAddress: deliveryAddress);
     }
   }
 

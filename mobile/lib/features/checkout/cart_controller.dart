@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'cart_conflict_exception.dart';
@@ -109,6 +110,16 @@ class CartState {
   /// vendor-scoped — the fee comes from the vendor record).
   double grandTotal(double deliveryFee) =>
       subtotal + taxes + platformFee + deliveryFee;
+
+  /// A deterministic hash of item IDs, prices, and quantities. Used to
+  /// detect price mutations between cart creation and checkout. If the
+  /// merchant changes a price on their dashboard, this hash will differ
+  /// from the server-side recalculation, triggering a 409 Conflict.
+  String get cartHash {
+    final parts = items.map((i) => '${i.id}:${i.price}:${i.quantity}').toList()
+      ..sort();
+    return parts.join('|');
+  }
 }
 
 /// Riverpod [StateNotifier] that manages the universal, cross-category cart.

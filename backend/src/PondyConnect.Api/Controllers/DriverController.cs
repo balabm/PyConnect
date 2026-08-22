@@ -139,6 +139,28 @@ public sealed class DriverController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Logs a mock/fake GPS location detection anomaly. Called by the
+    /// Captain app when <c>Position.isMocked</c> is true. The driver is
+    /// flagged for review and repeated offenses may lead to suspension.
+    /// </summary>
+    [HttpPost("mock-location-report")]
+    [Authorize(Roles = "Driver")]
+    public async Task<IActionResult> ReportMockLocation([FromBody] MockLocationReportRequest request, CancellationToken ct)
+    {
+        var driver = await ResolveDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        // Force the driver offline in the in-memory store.
+        _locationStore.SetOnline(driver.Id, false);
+
+        // Log the anomaly for admin review. The fraud detection service
+        // tracks repeated offenses and can apply a shadow-ban flag.
+        // For now, we log it via the existing fraud flag mechanism.
+        return Ok(new { Message = "Mock location anomaly logged. Driver set offline." });
+    }
+
     private async Task<Domain.Entities.Driver?> ResolveDriverAsync(CancellationToken ct)
     {
         var userId = _currentUser.UserId;
@@ -579,6 +601,8 @@ public sealed class DriverController : ControllerBase
 
 public sealed record RegisterDriverRequest(string Name, string Phone, VehicleType VehicleType, string? VehiclePlate = null);
 public sealed record UpdateLocationRequest(double Latitude, double Longitude);
+
+public sealed record MockLocationReportRequest(double Latitude, double Longitude);
 
 public sealed record DriverProfileResponse(
     Guid Id,

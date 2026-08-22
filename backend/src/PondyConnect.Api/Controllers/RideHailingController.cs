@@ -246,7 +246,7 @@ public sealed class RideHailingController : ControllerBase
     [Authorize]
     public async Task<ActionResult<CancelRideResponse>> CancelByRider(Guid id, [FromBody] CancelRideRequest? request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new CancelRideByRiderCommand(id, request?.Reason), ct);
+        var result = await _mediator.Send(new CancelRideByRiderCommand(id, request?.Reason, request?.WaiveFee ?? false), ct);
         return Ok(result);
     }
 
@@ -256,6 +256,23 @@ public sealed class RideHailingController : ControllerBase
     {
         await _mediator.Send(new CancelRideByDriverCommand(id, request?.Reason), ct);
         return NoContent();
+    }
+
+    /// <summary>
+    /// COD exact-change reconciliation. When a driver collects more cash than
+    /// the order total, the change is debited from the driver's ledger and
+    /// credited to the consumer's PY Wallet instantly.
+    /// </summary>
+    [HttpPost("rides/{id:guid}/cod-reconcile")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(typeof(CodReconcileResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<CodReconcileResponse>> CodReconcile(Guid id, [FromBody] CodReconcileRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new CodReconcileCommand(id, request.CollectedAmount, request.OrderTotal), ct);
+        return Ok(result);
     }
 
     [HttpPost("rides/{id:guid}/rate")]
@@ -470,4 +487,6 @@ public sealed record RequestRideRequest(
     string? RazorpayPaymentId = null,
     string? RazorpaySignature = null);
 
-public sealed record CancelRideRequest(string? Reason);
+public sealed record CancelRideRequest(string? Reason, bool WaiveFee = false);
+
+public sealed record CodReconcileRequest(decimal CollectedAmount, decimal OrderTotal);

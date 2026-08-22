@@ -643,6 +643,35 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
   }
 
   Future<void> _requestRide() async {
+    // Fat-finger guard: compute straight-line distance before requesting.
+    // If the dropoff is more than 50km away for local bikes/autos, block the
+    // request to prevent accidental ₹10,000+ fares. Intercity cabs (index 2)
+    // are allowed longer distances.
+    if (_pickupLocation != null && _dropoffLocation != null) {
+      const distance = Distance();
+      final straightLineKm = distance.as(
+        LengthUnit.Kilometer,
+        _pickupLocation!,
+        _dropoffLocation!,
+      );
+      const maxLocalDistanceKm = 50.0;
+      final isLocalVehicle = _selectedVehicle < 2; // Bike (0) or Auto (1)
+      if (isLocalVehicle && straightLineKm > maxLocalDistanceKm) {
+        AppHaptics.error();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Dropoff location is outside our local service area. Please select an Intercity Cab for longer distances.'),
+              backgroundColor: AppTheme.danger,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     final route = ref
         .read(routeProvider((start: _pickupLocation!, end: _dropoffLocation!)))
         .valueOrNull;

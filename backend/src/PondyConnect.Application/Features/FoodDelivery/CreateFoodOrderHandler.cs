@@ -100,8 +100,16 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
         var deliveryLocation = GeoLocation.Create(request.DeliveryLatitude, request.DeliveryLongitude);
         _serviceArea.EnsureWithinZone(deliveryLocation);
 
+        // Look up the user early so we can compute live pricing for conflict
+        // responses and the final order in a single pass.
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        var isProMember = user?.IsProMember ?? false;
+
         // Validate that ordered items exist in the vendor's menu, match the
         // recorded price, and satisfy all modifier group constraints.
+        // If any price has changed since the client built the cart, throw a
+        // CartPriceConflictException (HTTP 409) with the live prices so the
+        // client can update the cart and prompt the user to review.
         if (request.Items != null && request.Items.Count > 0)
         {
             var menuItems = await _context.MenuItems.AsNoTracking()
@@ -112,6 +120,10 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
 
             var menuItemByExactName = menuItems.ToDictionary(
                 m => m.Name, m => m, StringComparer.OrdinalIgnoreCase);
+
+            // Collect live prices for all items in the request (for 409 response).
+            var liveItemPrices = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            var hasPriceConflict = false;
 
             foreach (var item in request.Items)
             {
@@ -163,14 +175,22 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
                         .Sum(id => allModifiers[id].Price);
                 }
 
-                if (matchingItem.Price != item.UnitPrice && expectedUnitPrice != item.UnitPrice)
-                    throw new InvalidOperationException(
-                        $"Price mismatch for item '{item.Name}'. Expected {expectedUnitPrice}, got {item.UnitPrice}.");
+                // Record the live price for this item (including modifiers).
+                liveItemPrices[item.Name] = expectedUnitPrice;
+
+                if (expectedUnitPrice != item.UnitPrice)
+                    hasPriceConflict = true;
+            }
+
+            // If any price has changed, return a 409 Conflict with the live
+            // prices and recalculated totals so the client can update the cart.
+            if (hasPriceConflict)
+            {
+                var liveSubTotal = request.Items.Sum(i => i.Quantity * liveItemPrices[i.Name]);
+                var livePricing = OrderPricingService.CalculatePricing(liveSubTotal, isProMember, DateTimeOffset.UtcNow);
+                throw new CartPriceConflictException(liveItemPrices, liveSubTotal, livePricing.TotalAmount);
             }
         }
-
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        var isProMember = user?.IsProMember ?? false;
 
         var subTotal = request.Items?.Sum(i => i.Quantity * i.UnitPrice) ?? 0m;
         var pricing = OrderPricingService.CalculatePricing(subTotal, isProMember, DateTimeOffset.UtcNow);

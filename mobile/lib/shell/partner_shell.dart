@@ -45,6 +45,9 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
   @override
   void initState() {
     super.initState();
+    // Wakelock is enabled conditionally after _loadVenueInfo determines
+    // the accepting-orders status. We enable it here as a safe default
+    // so the screen doesn't sleep before the profile loads.
     KeepAwakeService.enable();
     _loadVenueInfo();
   }
@@ -71,6 +74,15 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
         setState(() {
           _acceptingOrders = profile.isAcceptingOrders;
         });
+        // Sync the wakelock with the accepting-orders status.
+        // The tablet screen must NEVER dim or sleep while the restaurant
+        // is open and accepting orders. When paused, allow the screen to
+        // sleep normally to save battery.
+        if (profile.isAcceptingOrders) {
+          KeepAwakeService.enable();
+        } else {
+          KeepAwakeService.disable();
+        }
       }
       // Also load venue info for the dashboard screen.
       final venues = await api.getVenues();
@@ -95,6 +107,13 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           _acceptingOrders = isAccepting;
           _toggling = false;
         });
+        // Toggle the wakelock based on the new accepting-orders status.
+        // Screen stays awake while accepting orders; sleeps when paused.
+        if (isAccepting) {
+          KeepAwakeService.enable();
+        } else {
+          KeepAwakeService.disable();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

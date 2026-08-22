@@ -53,12 +53,28 @@ class RideHailingApi {
     await _api.post('/api/rides/$rideId/cancel', data: {'reason': reason});
   }
 
-  Future<Map<String, dynamic>> cancelByRider(String rideId, {String? reason}) async {
-    return await _api.post('/api/rides/$rideId/cancel-by-rider', data: {'reason': reason}) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> cancelByRider(String rideId, {String? reason, bool waiveFee = false}) async {
+    return await _api.post('/api/rides/$rideId/cancel-by-rider', data: {
+      'reason': reason,
+      'waiveFee': waiveFee,
+    }) as Map<String, dynamic>;
   }
 
   Future<void> cancelByDriver(String rideId, {String? reason}) async {
     await _api.post('/api/rides/$rideId/cancel-by-driver', data: {'reason': reason});
+  }
+
+  /// COD exact-change reconciliation. Debits the driver's ledger and credits
+  /// the consumer's PY Wallet with the change amount.
+  Future<Map<String, dynamic>> codReconcile(
+    String rideId,
+    double collectedAmount,
+    double orderTotal,
+  ) async {
+    return await _api.post('/api/rides/$rideId/cod-reconcile', data: {
+      'collectedAmount': collectedAmount,
+      'orderTotal': orderTotal,
+    }) as Map<String, dynamic>;
   }
 
   Future<void> rateRide(String rideId, int rating, {String? feedback, bool byDriver = false}) async {

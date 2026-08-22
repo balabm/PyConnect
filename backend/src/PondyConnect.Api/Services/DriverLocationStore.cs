@@ -1,5 +1,6 @@
 namespace PondyConnect.Api.Services;
 
+using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Domain.Enums;
 using PondyConnect.Domain.ValueObjects;
 
@@ -8,7 +9,7 @@ using PondyConnect.Domain.ValueObjects;
 /// lifetime of the API process. Drivers update via SignalR (DriverHub) every
 /// 3-5 seconds while online. Stale entries (>60s) are considered offline.
 /// </summary>
-public sealed class DriverLocationStore
+public sealed class DriverLocationStore : IDriverLocationCache
 {
     private readonly Dictionary<Guid, DriverLocationEntry> _entries = new();
     private readonly object _lock = new();
@@ -162,6 +163,28 @@ public sealed class DriverLocationStore
                 .Where(e => e.IsOnline && (now - e.UpdatedAt) <= _staleThreshold)
                 .ToList();
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  IDriverLocationCache — used by application handlers to check
+    //  GPS freshness for cancellation-fee waivers and trip monitoring.
+    // ──────────────────────────────────────────────────────────────
+
+    /// <inheritdoc/>
+    public DateTimeOffset? GetLastPingTime(Guid driverId)
+    {
+        lock (_lock)
+        {
+            return _entries.TryGetValue(driverId, out var entry) ? entry.UpdatedAt : null;
+        }
+    }
+
+    /// <inheritdoc/>
+    public bool IsStale(Guid driverId, TimeSpan threshold)
+    {
+        var lastPing = GetLastPingTime(driverId);
+        if (lastPing is null) return true;
+        return DateTimeOffset.UtcNow - lastPing.Value > threshold;
     }
 }
 

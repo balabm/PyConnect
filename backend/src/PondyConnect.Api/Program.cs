@@ -10,6 +10,7 @@ using PondyConnect.Api.Middleware;
 using PondyConnect.Api.Services;
 using PondyConnect.Application;
 using PondyConnect.Application.Features.GeoFence;
+using PondyConnect.Application.Features.FoodDelivery;
 using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Features.Payments;
 using PondyConnect.Application.Features.Dispatch;
@@ -42,6 +43,7 @@ builder.Services.AddScoped<PondyConnect.Application.Common.Interfaces.ICurrentUs
 builder.Services.Configure<ServiceAreaOptions>(builder.Configuration.GetSection("ServiceArea"));
 builder.Services.AddScoped<ServiceAreaValidator>();
 builder.Services.AddSingleton<DriverLocationStore>();
+builder.Services.AddSingleton<PondyConnect.Application.Common.Interfaces.IDriverLocationCache>(sp => sp.GetRequiredService<DriverLocationStore>());
 builder.Services.AddScoped<DispatchEngine>();
 builder.Services.AddScoped<RideDispatchService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.RideHailing.DispatchTaskService>();
@@ -55,6 +57,8 @@ builder.Services.AddHostedService<ScheduledPayoutWorker>();
 builder.Services.AddHostedService<TelemetryBatchProcessor>();
 builder.Services.AddHostedService<PaymentReconciliationWorker>();
 builder.Services.AddHostedService<FraudDetectionWorker>();
+builder.Services.AddHostedService<TripMonitoringWorker>();
+builder.Services.AddHostedService<OrderEscalationWorker>();
 builder.Services.AddScoped<DriverPayoutService>();
 builder.Services.AddScoped<WalletService>();
 
