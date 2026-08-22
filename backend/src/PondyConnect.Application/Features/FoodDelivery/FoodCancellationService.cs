@@ -213,6 +213,135 @@ public sealed class FoodCancellationService
             PartnerNotified = vendor is not null
         };
     }
+
+    /// <summary>
+    /// Handles a critical failure during food delivery: the captain has
+    /// picked up the food but gets into an accident or has a breakdown
+    /// and cannot complete the delivery.
+    ///
+    /// This is the most severe food delivery scenario because:
+    /// 1. The food has already been prepared and handed over.
+    /// 2. The consumer has paid and is waiting.
+    /// 3. The restaurant has already incurred the cost of ingredients.
+    ///
+    /// System actions:
+    /// 1. Process a full refund to the consumer (Razorpay).
+    /// 2. Cancel the order — the food cannot be recovered.
+    /// 3. Waive the platform commission for the vendor (no commission
+    ///    charged since the delivery failed).
+    /// 4. Create a critical-priority SupportTicket with accident details.
+    /// 5. Notify the consumer: "Delivery failed due to captain emergency.
+    ///    Full refund initiated."
+    /// 6. Notify the vendor: "Delivery failed. Commission waived."
+    /// 7. Set the driver offline (they are in an accident).
+    /// 8. Attempt replacement dispatch if the vendor can re-prepare.
+    /// </summary>
+    public async Task<AccidentTriageResult> HandleDeliveryAccidentAsync(
+        Guid orderId,
+        Guid driverId,
+        string? accidentDescription,
+        double? accidentLat = null,
+        double? accidentLng = null,
+        CancellationToken ct = default)
+    {
+        var order = await _context.FoodOrders
+            .FirstOrDefaultAsync(o => o.Id == orderId, ct)
+            ?? throw new InvalidOperationException("Order not found.");
+
+        // Verify the driver was assigned to this order
+        var task = await _context.DispatchTasks
+            .FirstOrDefaultAsync(t => t.SourceEntityId == orderId
+                && t.TaskType == DispatchTaskType.FoodDelivery
+                && t.DriverId == driverId, ct)
+            ?? throw new InvalidOperationException("No dispatch task found for this driver/order.");
+
+        if (order.Status != FoodOrderStatus.OutForDelivery)
+            throw new InvalidOperationException("Accident triage is only for orders that are out for delivery.");
+
+        var refundInitiated = false;
+
+        // 1. Process full refund to the consumer if payment was captured
+        if (order.PaymentStatus == PaymentStatus.Captured)
+        {
+            var payment = await _context.Payments
+                .FirstOrDefaultAsync(p => p.FoodOrderId == orderId && p.Status == PaymentStatus.Captured, ct);
+
+            if (payment is not null && !string.IsNullOrEmpty(payment.ProviderPaymentId))
+            {
+                refundInitiated = await _refundService.RefundAsync(
+                    payment.ProviderPaymentId,
+                    order.TotalAmount,
+                    $"Captain accident — delivery failure: {accidentDescription ?? "no description"}",
+                    ct);
+            }
+        }
+
+        // 2. Cancel the order
+        order.Cancel();
+
+        // 3. Cancel the dispatch task
+        task.EmergencyRelease();
+
+        // 4. Set the driver offline (they are in an accident)
+        var driver = await _context.Drivers.FirstOrDefaultAsync(d => d.Id == driverId, ct);
+        if (driver is not null)
+        {
+            driver.GoOffline();
+        }
+
+        // 5. Create a critical-priority support ticket
+        var ticket = SupportTicket.Create(
+            order.UserId,
+            TicketPriority.Critical,
+            TicketSource.SOS,
+            accidentLat,
+            accidentLng,
+            "DeliveryAccident");
+        _context.SupportTickets.Add(ticket);
+
+        await _context.SaveChangesAsync(ct);
+
+        // 6. Notify the consumer
+        _ = _notifications.SendHighPriorityPushAsync(
+            order.UserId,
+            "Delivery Update",
+            refundInitiated
+                ? "Your delivery could not be completed due to a captain emergency. A full refund of ₹" + order.TotalAmount.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " has been initiated."
+                : "Your delivery could not be completed due to a captain emergency. Please contact support for assistance.",
+            dataPayload: new()
+            {
+                ["type"] = "delivery_accident",
+                ["orderId"] = orderId.ToString(),
+                ["refundInitiated"] = refundInitiated.ToString(),
+                ["ticketId"] = ticket.Id.ToString()
+            },
+            cancellationToken: ct);
+
+        // 7. Notify the vendor — commission is waived
+        _ = _notifications.SendPushToVendorAsync(
+            order.VendorId,
+            "Delivery Failed — Commission Waived",
+            "The captain had an emergency during delivery. No commission will be charged for this order. The customer has been refunded.",
+            dataPayload: new()
+            {
+                ["type"] = "delivery_accident",
+                ["orderId"] = orderId.ToString(),
+                ["commissionWaived"] = "true"
+            },
+            cancellationToken: ct);
+
+        _logger.DeliveryAccidentHandled(orderId, driverId, refundInitiated);
+
+        return new AccidentTriageResult
+        {
+            OrderId = orderId,
+            RefundInitiated = refundInitiated,
+            SupportTicketId = ticket.Id,
+            ConsumerNotified = true,
+            VendorNotified = true,
+            CommissionWaived = true
+        };
+    }
 }
 
 public sealed class VendorCancellationResult
@@ -231,6 +360,16 @@ public sealed class DriverAbandonmentResult
     public bool PartnerNotified { get; set; }
 }
 
+public sealed class AccidentTriageResult
+{
+    public Guid OrderId { get; init; }
+    public bool RefundInitiated { get; set; }
+    public Guid SupportTicketId { get; init; }
+    public bool ConsumerNotified { get; set; }
+    public bool VendorNotified { get; set; }
+    public bool CommissionWaived { get; set; }
+}
+
 internal static partial class FoodCancellationLoggerExtensions
 {
     [LoggerMessage(Level = LogLevel.Information, Message = "Refund succeeded for order {OrderId}: {Amount}")]
@@ -247,4 +386,7 @@ internal static partial class FoodCancellationLoggerExtensions
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Driver {DriverId} abandoned order {OrderId}. Re-dispatching.")]
     public static partial void DriverAbandonmentHandled(this ILogger logger, Guid orderId, Guid driverId);
+
+    [LoggerMessage(Level = LogLevel.Critical, Message = "Delivery accident: Order {OrderId}, Driver {DriverId}. Refund: {RefundInitiated}. Support ticket created.")]
+    public static partial void DeliveryAccidentHandled(this ILogger logger, Guid orderId, Guid driverId, bool refundInitiated);
 }

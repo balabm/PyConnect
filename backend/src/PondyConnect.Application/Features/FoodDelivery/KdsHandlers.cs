@@ -4,7 +4,9 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Application.Features.Referral;
 using PondyConnect.Application.Features.Wallet;
+using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 
 // ── KDS Query ──
@@ -105,6 +107,7 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
     private readonly IFoodDeliveryDispatchService? _foodDispatch;
     private readonly INotificationService? _notifications;
     private readonly WalletService? _walletService;
+    private readonly ReferralService? _referralService;
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
@@ -113,6 +116,7 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         _foodDispatch = null;
         _notifications = null;
         _walletService = null;
+        _referralService = null;
     }
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch)
@@ -122,6 +126,7 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         _foodDispatch = foodDispatch;
         _notifications = null;
         _walletService = null;
+        _referralService = null;
     }
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch, INotificationService notifications)
@@ -131,6 +136,7 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         _foodDispatch = foodDispatch;
         _notifications = notifications;
         _walletService = null;
+        _referralService = null;
     }
 
     public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch, INotificationService notifications, WalletService walletService)
@@ -140,6 +146,17 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
         _foodDispatch = foodDispatch;
         _notifications = notifications;
         _walletService = walletService;
+        _referralService = null;
+    }
+
+    public AdvanceKdsOrderHandler(IApplicationDbContext context, ICurrentUserService currentUser, IFoodDeliveryDispatchService foodDispatch, INotificationService notifications, WalletService walletService, ReferralService referralService)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _foodDispatch = foodDispatch;
+        _notifications = notifications;
+        _walletService = walletService;
+        _referralService = referralService;
     }
 
     public async Task<KdsOrderResponse> Handle(AdvanceKdsOrderCommand request, CancellationToken cancellationToken)
@@ -212,10 +229,31 @@ public sealed class AdvanceKdsOrderHandler : IRequestHandler<AdvanceKdsOrderComm
             }
         }
 
+        // Record vendor ledger entry for GST invoicing when the order
+        // is delivered. The platform fee (₹2) is the commission base.
+        if (order.Status == FoodOrderStatus.Delivered && order.PlatformFee > 0m)
+        {
+            _context.VendorLedgerEntries.Add(
+                VendorLedgerEntry.Create(
+                    order.VendorId,
+                    order.Id,
+                    "FoodOrder",
+                    order.TotalAmount,
+                    order.PlatformFee));
+        }
+
         // Fire-and-forget push to the consumer on key state transitions.
         if (_notifications is not null)
         {
             _ = SendFoodOrderStatusPushAsync(order, previousStatus, cancellationToken);
+        }
+
+        // Process deferred referral payout when the order is delivered.
+        // This credits the referrer's wallet if this is the referred
+        // user's first completed paid order.
+        if (_referralService is not null && order.Status == FoodOrderStatus.Delivered)
+        {
+            _ = _referralService.ProcessOrderCompletionAsync(order.UserId, order.Id, cancellationToken);
         }
 
         var vendorName = await _context.Vendors.AsNoTracking()

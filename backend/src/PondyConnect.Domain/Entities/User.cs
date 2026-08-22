@@ -49,6 +49,18 @@ public sealed class User : BaseEntity
     public string? PictureUrl { get; private set; }
 
     /// <summary>
+    /// The user's unique referral code (e.g., "BALA50"). Generated on
+    /// first onboarding completion. Used in the viral referral engine.
+    /// </summary>
+    public string? ReferralCode { get; private set; }
+
+    /// <summary>
+    /// The referral code that this user used when signing up (if any).
+    /// Links back to the referrer for deferred payout tracking.
+    /// </summary>
+    public string? ReferredByCode { get; private set; }
+
+    /// <summary>
     /// Dietary preference: "veg", "non_veg", "vegan", "egg", or null (no preference).
     /// Used to personalize restaurant and food sorting.
     /// </summary>
@@ -214,7 +226,49 @@ public sealed class User : BaseEntity
     public void CompleteOnboarding()
     {
         HasCompletedOnboarding = true;
+        // Auto-generate a referral code from the user's name + phone suffix
+        // if one hasn't been set yet.
+        ReferralCode ??= GenerateReferralCode(Name, Phone);
         MarkUpdated();
+    }
+
+    /// <summary>
+    /// Sets the referral code that this user used when signing up.
+    /// Called during registration when the user provides an invite code.
+    /// </summary>
+    public void SetReferredByCode(string code)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        ReferredByCode = code;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Sets a custom referral code (admin override).
+    /// </summary>
+    public void SetReferralCode(string code)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        ReferralCode = code;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Generates a human-readable referral code from the user's name
+    /// and phone suffix (e.g., "BALA50" for "Bala" + phone ending "50").
+    /// </summary>
+    private static string GenerateReferralCode(string name, string phone)
+    {
+        var namePart = new string((name ?? "USER")
+            .Where(char.IsLetter)
+            .Take(4)
+            .Select(char.ToUpper)
+            .ToArray());
+        if (namePart.Length < 3)
+            namePart = "USER";
+
+        var phonePart = phone.Length >= 2 ? phone[^2..] : "00";
+        return $"{namePart}{phonePart}";
     }
 
     /// <summary>

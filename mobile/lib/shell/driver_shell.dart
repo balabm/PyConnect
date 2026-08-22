@@ -17,6 +17,7 @@ import '../features/driver/presentation/active_trip_screen.dart';
 import '../core/services/keep_awake_service.dart';
 import '../core/services/background_location_service.dart';
 import '../core/services/overlay_alert_service.dart';
+import '../core/services/tts_service.dart';
 import '../features/driver/data/driver_api.dart';
 import '../features/driver/presentation/ride_offer_sheet.dart';
 
@@ -106,6 +107,14 @@ class _DriverShellState extends ConsumerState<DriverShell> {
               body: 'Pickup: ${offer.pickupAddress}\nEarnings: ₹${offer.driverEarnings.toStringAsFixed(0)} (100%)',
               rideId: offer.rideId,
             );
+            // Voice-assisted dispatch: announce the ride in the driver's
+            // selected language so they don't have to look at the screen.
+            ref.read(ttsServiceProvider).announceRideOffer(
+                  pickupAddress: offer.pickupAddress,
+                  fare: offer.fare,
+                  vehicleType: offer.vehicleType,
+                  isSos: offer.isSos,
+                );
             // Also show the full-screen modal offer sheet when app is foregrounded.
             _showOfferSheet(offer);
           } catch (_) {}
@@ -138,6 +147,11 @@ class _DriverShellState extends ConsumerState<DriverShell> {
               body: 'Pickup: ${offer.pickupAddress}\nEarnings: ₹${offer.driverEarnings.toStringAsFixed(0)} (100%)',
               rideId: offer.rideId,
             );
+            // Voice-assisted dispatch for food delivery offers.
+            ref.read(ttsServiceProvider).announceFoodDeliveryOffer(
+                  storeName: offer.pickupAddress,
+                  earnings: offer.driverEarnings,
+                );
             _showOfferSheet(offer);
           } catch (_) {}
         }

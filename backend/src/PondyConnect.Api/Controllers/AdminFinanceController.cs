@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Invoicing;
 using PondyConnect.Domain.Enums;
 
 /// <summary>
@@ -17,10 +18,12 @@ using PondyConnect.Domain.Enums;
 public sealed class AdminFinanceController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly InvoiceService _invoiceService;
 
-    public AdminFinanceController(IApplicationDbContext context)
+    public AdminFinanceController(IApplicationDbContext context, InvoiceService invoiceService)
     {
         _context = context;
+        _invoiceService = invoiceService;
     }
 
     /// <summary>
@@ -77,6 +80,63 @@ public sealed class AdminFinanceController : ControllerBase
 
         return Ok(settlements);
     }
+
+    // ── GST Invoice Management ──
+
+    /// <summary>
+    /// Manually triggers GST invoice generation for a specific month.
+    /// Useful for testing or re-generating invoices if the cron job failed.
+    /// </summary>
+    [HttpPost("invoices/generate")]
+    [ProducesResponseType(typeof(GenerateInvoicesResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<GenerateInvoicesResponse>> GenerateInvoices(
+        [FromQuery] int year,
+        [FromQuery] int month,
+        CancellationToken cancellationToken)
+    {
+        if (month < 1 || month > 12)
+            return BadRequest(new { Message = "Month must be between 1 and 12." });
+
+        var invoices = await _invoiceService.GenerateMonthlyInvoicesAsync(year, month, cancellationToken);
+        return Ok(new GenerateInvoicesResponse(year, month, invoices.Count, invoices.Select(i => i.InvoiceNumber).ToList()));
+    }
+
+    /// <summary>
+    /// Lists all tax invoices, optionally filtered by vendor or month.
+    /// </summary>
+    [HttpGet("invoices")]
+    [ProducesResponseType(typeof(IReadOnlyList<TaxInvoiceResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<TaxInvoiceResponse>>> ListInvoices(
+        [FromQuery] Guid? vendorId = null,
+        [FromQuery] string? month = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.TaxInvoices.AsNoTracking();
+
+        if (vendorId is not null)
+            query = query.Where(i => i.VendorId == vendorId.Value);
+        if (!string.IsNullOrWhiteSpace(month))
+            query = query.Where(i => i.InvoiceMonth == month);
+
+        var invoices = await query
+            .OrderByDescending(i => i.GeneratedAt)
+            .Select(i => new TaxInvoiceResponse(
+                i.Id,
+                i.VendorId,
+                i.InvoiceNumber,
+                i.InvoiceMonth,
+                i.BaseCommission,
+                i.CgstAmount,
+                i.SgstAmount,
+                i.TotalAmount,
+                i.TransactionCount,
+                i.PdfUrl,
+                i.IsEmailed,
+                i.GeneratedAt))
+            .ToListAsync(cancellationToken);
+
+        return Ok(invoices);
+    }
 }
 
 public sealed record AdminFinanceSummaryResponse(
@@ -93,3 +153,18 @@ public sealed record SettlementLogResponse(
     string? ProviderOrderId,
     string? ProviderPaymentId,
     DateTimeOffset CapturedAt);
+
+public sealed record GenerateInvoicesResponse(int Year, int Month, int InvoiceCount, IReadOnlyList<string> InvoiceNumbers);
+public sealed record TaxInvoiceResponse(
+    Guid Id,
+    Guid VendorId,
+    string InvoiceNumber,
+    string InvoiceMonth,
+    decimal BaseCommission,
+    decimal CgstAmount,
+    decimal SgstAmount,
+    decimal TotalAmount,
+    int TransactionCount,
+    string? PdfUrl,
+    bool IsEmailed,
+    DateTimeOffset GeneratedAt);

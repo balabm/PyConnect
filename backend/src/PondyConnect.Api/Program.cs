@@ -71,7 +71,10 @@ builder.Services.AddHostedService<WalletMonitorWorker>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Admin.SystemConfigService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.RideHailing.TripLifecycleService>();
 builder.Services.AddHostedService<KdsThrottlingWorker>();
+builder.Services.AddHostedService<MonthlyInvoiceWorker>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Rental.RentalDepositService>();
+builder.Services.AddScoped<PondyConnect.Application.Features.Referral.ReferralService>();
+builder.Services.AddScoped<PondyConnect.Application.Features.Invoicing.InvoiceService>();
 
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SectionName));
 builder.Services.AddHttpClient<WhatsAppHttpClient>(client =>

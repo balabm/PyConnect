@@ -366,6 +366,65 @@ public sealed class FoodDeliveryController : ControllerBase
     }
 
     /// <summary>
+    /// Customer Support Triage: Captain accident during food delivery.
+    ///
+    /// This is the most critical food delivery failure scenario. The
+    /// captain has picked up the food but cannot complete the delivery
+    /// due to an accident or breakdown. The system:
+    /// 1. Processes a full refund to the consumer.
+    /// 2. Cancels the order (food cannot be recovered).
+    /// 3. Waives the vendor's platform commission.
+    /// 4. Creates a critical-priority support ticket.
+    /// 5. Notifies the consumer and vendor.
+    /// 6. Sets the driver offline.
+    /// </summary>
+    [HttpPost("driver/orders/{id:guid}/accident")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(typeof(AccidentTriageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DriverAccident(
+        Guid id,
+        [FromBody] DriverAccidentRequest request,
+        CancellationToken ct)
+    {
+        var userId = _currentUser.UserId;
+        if (userId == Guid.Empty)
+            return Unauthorized(new { Message = "Driver not authenticated." });
+
+        var driver = await _context.Drivers.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.UserId == userId, ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        try
+        {
+            var result = await _cancellationService.HandleDeliveryAccidentAsync(
+                id,
+                driver.Id,
+                request.Description,
+                request.Latitude,
+                request.Longitude,
+                ct);
+
+            return Ok(new AccidentTriageResponse(
+                result.OrderId,
+                result.RefundInitiated,
+                result.SupportTicketId,
+                result.CommissionWaived,
+                "Delivery cancelled. Consumer refunded. Vendor commission waived. Support ticket created."));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new { Message = "Only the assigned driver can report an accident." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Uploads a proof-of-delivery photo for a food/essentials order.
     /// Called by the Captain when tapping "Delivered" — they snap a photo
     /// of the bag at the door. The photo is uploaded to S3 and attached
@@ -554,3 +613,15 @@ public sealed record UpdateModifierRequest(
 public sealed record UpdateOrderStatusRequest(string NewStatus);
 
 public sealed record CancelOrderRequest(string? Reason = null);
+
+public sealed record DriverAccidentRequest(
+    string? Description = null,
+    double? Latitude = null,
+    double? Longitude = null);
+
+public sealed record AccidentTriageResponse(
+    Guid OrderId,
+    bool RefundInitiated,
+    Guid SupportTicketId,
+    bool CommissionWaived,
+    string Message);

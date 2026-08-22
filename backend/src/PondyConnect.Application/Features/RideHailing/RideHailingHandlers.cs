@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Notifications;
+using PondyConnect.Application.Features.Referral;
 using PondyConnect.Application.Services;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
@@ -410,6 +411,7 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
     private readonly ICurrentUserService _currentUser;
     private readonly INotificationService? _notifications;
     private readonly WalletService? _walletService;
+    private readonly ReferralService? _referralService;
 
     public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
@@ -417,6 +419,7 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
         _currentUser = currentUser;
         _notifications = null;
         _walletService = null;
+        _referralService = null;
     }
 
     public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications)
@@ -425,6 +428,7 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
         _currentUser = currentUser;
         _notifications = notifications;
         _walletService = null;
+        _referralService = null;
     }
 
     public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications, WalletService walletService)
@@ -433,6 +437,16 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
         _currentUser = currentUser;
         _notifications = notifications;
         _walletService = walletService;
+        _referralService = null;
+    }
+
+    public CompleteRideHandler(IApplicationDbContext context, ICurrentUserService currentUser, INotificationService notifications, WalletService walletService, ReferralService referralService)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = notifications;
+        _walletService = walletService;
+        _referralService = referralService;
     }
 
     public async Task<Unit> Handle(CompleteRideCommand request, CancellationToken cancellationToken)
@@ -482,6 +496,12 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
         if (_notifications is not null)
         {
             _ = SendRideCompletedPushAsync(ride, cancellationToken);
+        }
+
+        // Process deferred referral payout when the ride completes.
+        if (_referralService is not null)
+        {
+            _ = _referralService.ProcessOrderCompletionAsync(ride.UserId, ride.Id, cancellationToken);
         }
 
         return Unit.Value;

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
+import '../../../core/services/tts_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/auth/application/auth_controller.dart';
 import '../../../features/auth/presentation/delete_account_sheet.dart';
@@ -45,6 +46,52 @@ class DriverProfileScreen extends ConsumerWidget {
                   title: const Text('KYC Verification'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/kyc'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Voice Announcement Language Selector
+          _InfoCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.record_voice_over, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Voice Announcements', style: Theme.of(context).textTheme.titleSmall),
+                    ],
+                  ),
+                ),
+                Consumer(builder: (context, ref, _) {
+                  final language = ref.watch(driverLanguageProvider);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Wrap(
+                      spacing: 8,
+                      children: DriverLanguage.values.map((lang) {
+                        final selected = lang == language;
+                        return ChoiceChip(
+                          label: Text(lang.displayName),
+                          selected: selected,
+                          onSelected: (_) {
+                            AppHaptics.light();
+                            ref.read(driverLanguageProvider.notifier).setLanguage(lang);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  );
+                }),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    'Ride offers will be announced aloud in your selected language while driving.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ),
               ],
             ),
