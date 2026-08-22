@@ -604,7 +604,17 @@ class _BookingSuccessScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          // View QR Ticket — opens the anti-screenshot ticket screen
           FilledButton.icon(
+            onPressed: () {
+              AppHaptics.light();
+              context.push('/ticket/${result.bookingId}');
+            },
+            icon: const Icon(Icons.qr_code),
+            label: const Text('View QR Ticket'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
             onPressed: () {
               AppHaptics.light();
               context.go('/venues/${venue.id}');

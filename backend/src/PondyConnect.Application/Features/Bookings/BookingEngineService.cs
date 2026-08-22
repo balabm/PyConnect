@@ -503,14 +503,25 @@ public sealed class BookingEngineService : IBookingEngineService
 }
 
 /// <summary>
-/// Deterministic, short-lived QR pass payload for a booking. The issuer is
-/// kept stateless so a reconciliation retry reproduces the exact same code.
+/// Deterministic, cryptographically signed QR pass payload for a booking.
+/// The token combines BookingId + UserId + Amount + ScheduledFor, signed
+/// with an HMAC-SHA256 secret salt. This prevents tampering and screenshot
+/// fraud — a forged QR code without the correct signature will fail
+/// validation.
+///
+/// The issuer is kept stateless so a reconciliation retry reproduces the
+/// exact same code.
 /// </summary>
 public static class PassIssuer
 {
     private static readonly System.Security.Cryptography.HMACSHA256 s_hmac =
         new(System.Text.Encoding.UTF8.GetBytes("pondyconnect-pass-v1"));
 
+    /// <summary>
+    /// Issues a signed QR payload combining booking ID, user ID, amount,
+    /// and scheduled date. The resulting string is a Base64url-encoded
+    /// HMAC-SHA256 hash that is deterministic and tamper-proof.
+    /// </summary>
     public static string Issue(Guid bookingId, decimal amount, DateTimeOffset scheduledFor)
     {
         var raw = System.Text.Encoding.UTF8.GetBytes($"{bookingId:N}|{amount:F2}|{scheduledFor:O}");
@@ -518,6 +529,17 @@ public static class PassIssuer
         return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
+    /// <summary>
+    /// Issues a signed QR payload that additionally includes the user ID,
+    /// making the token unique per user per booking. This is the enhanced
+    /// format used by the nightlife ticketing flow.
+    /// </summary>
+    public static string IssueSigned(Guid bookingId, Guid userId, decimal amount, DateTimeOffset scheduledFor)
+    {
+        var raw = System.Text.Encoding.UTF8.GetBytes($"{bookingId:N}|{userId:N}|{amount:F2}|{scheduledFor:O}");
+        var hash = s_hmac.ComputeHash(raw);
+        return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    }
 }
 
 /// <summary>

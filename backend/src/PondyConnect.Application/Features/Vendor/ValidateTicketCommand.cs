@@ -14,7 +14,11 @@ public sealed record TicketValidationResponse(
     string UserName,
     string Message,
     bool IsDuplicate = false,
-    string? PreviousScanAt = null);
+    string? PreviousScanAt = null,
+    int GuestCount = 0,
+    decimal CoverChargeAmount = 0m,
+    decimal CreditUsed = 0m,
+    Guid? BookingId = null);
 
 public sealed class ValidateTicketHandler : IRequestHandler<ValidateTicketCommand, TicketValidationResponse>
 {
@@ -62,7 +66,14 @@ public sealed class ValidateTicketHandler : IRequestHandler<ValidateTicketComman
             await _context.SaveChangesAsync(cancellationToken);
 
             var userName = user?.Name ?? "Unknown";
-            return new TicketValidationResponse(true, booking.ServiceType.ToString(), userName, "Valid ticket.");
+            return new TicketValidationResponse(
+                true,
+                booking.ServiceType.ToString(),
+                userName,
+                "Valid ticket.",
+                GuestCount: booking.SeatCount,
+                CoverChargeAmount: booking.TotalAmount,
+                BookingId: booking.Id);
         }
 
         // Check BundleBooking passes (PassToken stored on entity)

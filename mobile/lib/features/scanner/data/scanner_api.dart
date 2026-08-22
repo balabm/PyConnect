@@ -8,6 +8,10 @@ class TicketValidationResult {
     required this.message,
     this.isDuplicate = false,
     this.previousScanAt,
+    this.guestCount = 0,
+    this.coverChargeAmount = 0,
+    this.creditUsed = 0,
+    this.bookingId,
   });
 
   factory TicketValidationResult.fromJson(Map<String, dynamic> json) =>
@@ -18,6 +22,10 @@ class TicketValidationResult {
         message: json['message'] as String? ?? '',
         isDuplicate: json['isDuplicate'] as bool? ?? false,
         previousScanAt: json['previousScanAt'] as String?,
+        guestCount: json['guestCount'] as int? ?? 0,
+        coverChargeAmount: (json['coverChargeAmount'] as num?)?.toDouble() ?? 0,
+        creditUsed: (json['creditUsed'] as num?)?.toDouble() ?? 0,
+        bookingId: json['bookingId'] as String?,
       );
 
   final bool isValid;
@@ -26,6 +34,10 @@ class TicketValidationResult {
   final String message;
   final bool isDuplicate;
   final String? previousScanAt;
+  final int guestCount;
+  final double coverChargeAmount;
+  final double creditUsed;
+  final String? bookingId;
 }
 
 class ScannerApi {

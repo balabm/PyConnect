@@ -513,6 +513,28 @@ public sealed class VendorController : ControllerBase
     }
 
     /// <summary>
+    /// Returns all checked-in bookings (live tables) for the authenticated
+    /// vendor. Each entry includes the guest name, guest count, cover charge
+    /// amount, and available credit. Used by the Partner app's "Live Tables"
+    /// tab so waitstaff can track prepaid cover charge against the final bill.
+    /// </summary>
+    [HttpGet("live-tables")]
+    [ProducesResponseType(typeof(List<LiveTableEntry>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<List<LiveTableEntry>>> GetLiveTables(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new GetLiveTablesQuery(), cancellationToken);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new { Message = "Vendor authentication required." });
+        }
+    }
+
+    /// <summary>
     /// Validates a QR ticket pass for a booking owned by the authenticated
     /// vendor. Returns success for valid, confirmed, paid passes and marks
     /// the booking as scanned. Returns 400 if the pass was already used.

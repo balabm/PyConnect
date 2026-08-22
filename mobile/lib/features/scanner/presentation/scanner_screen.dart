@@ -375,6 +375,28 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   ),
                   textAlign: TextAlign.center,
                 ),
+                // Cover charge credit info — shows the bouncer and waitstaff
+                // how many guests are covered and how much credit is available.
+                if (_result?.guestCount != null && _result!.guestCount > 0) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      'Valid Entry: ${_result!.guestCount} Guests. '
+                      'Cover Charge Paid: ₹${_result!.coverChargeAmount.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
                 if (_result?.message != null && _result!.message.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(

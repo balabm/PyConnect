@@ -15,6 +15,7 @@ import '../features/vendor/presentation/vendor_bookings_screen.dart';
 import '../features/vendor/presentation/kitchen_display_screen.dart';
 import '../features/vendor/presentation/manage_hub_screen.dart';
 import '../features/vendor/presentation/drinks_menu_screen.dart';
+import '../features/vendor/presentation/live_tables_screen.dart';
 import '../features/vendor/presentation/table_crowd_manager_screen.dart';
 import '../features/vendor/presentation/fleet_management_screen.dart';
 import '../features/vendor/presentation/active_rentals_screen.dart';
@@ -143,7 +144,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           ],
         VendorCategoryType.pubClub => const [
             VendorDashboardScreen(),
-            TableCrowdManagerScreen(),
+            LiveTablesScreen(),
             DrinksMenuScreen(),
             ScannerScreen(),
             ManageHubScreen(),
@@ -186,7 +187,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
       VendorCategoryType.pubClub => NavigationDestination(
           icon: Icon(Icons.table_restaurant_outlined, color: inactiveColor),
           selectedIcon: Icon(Icons.table_restaurant, color: selectedColor),
-          label: 'Table & Crowd Manager',
+          label: 'Live Tables',
         ),
       VendorCategoryType.scooterRental => NavigationDestination(
           icon: Icon(Icons.pedal_bike_outlined, color: inactiveColor),

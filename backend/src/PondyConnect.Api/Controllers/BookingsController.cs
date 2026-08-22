@@ -84,4 +84,31 @@ public sealed class BookingsController : ControllerBase
             return BadRequest(new { Message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Returns the signed QR pass token and booking details for the
+    /// consumer's ticket screen. The QR payload is cryptographically
+    /// signed and displayed with a live clock overlay to prevent
+    /// screenshot fraud.
+    /// </summary>
+    [HttpGet("{id:guid}/ticket")]
+    [ProducesResponseType(typeof(TicketResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TicketResponse>> GetTicket(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new GetTicketQuery(id), cancellationToken);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new { Message = "Authentication required." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
 }

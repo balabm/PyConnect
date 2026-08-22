@@ -10,6 +10,7 @@ import '../features/auth/presentation/profile_screen.dart';
 import '../features/auth/presentation/change_phone_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/bookings/presentation/booking_screen.dart';
+import '../features/tickets/presentation/ticket_screen.dart';
 import '../features/essentials/presentation/essentials_order_history_screen.dart';
 import '../features/essentials/presentation/essentials_screen.dart';
 import '../features/essentials/presentation/essentials_store_view.dart';
@@ -165,6 +166,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'transit',
             builder: (_, _) => const TransitScreen(),
+          ),
+          GoRoute(
+            path: 'ticket/:bookingId',
+            builder: (_, state) => TicketScreen(
+              bookingId: state.pathParameters['bookingId']!,
+            ),
           ),
           GoRoute(
             path: 'experiences',
