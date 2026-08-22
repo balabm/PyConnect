@@ -70,6 +70,7 @@ dependencies:
   internet_connection_checker: ^1.0.0+1
   flutter_tts: ^4.2.2
   lottie: ^3.2.0
+  sensors_plus: ^6.1.1
 
 dev_dependencies:
   flutter_test:

@@ -3,20 +3,35 @@ import 'package:shimmer/shimmer.dart';
 
 import '../theme/app_theme.dart';
 
-final Color _skeletonBase = Colors.grey.shade200;
-final Color _skeletonHighlight = Colors.grey.shade100;
+/// Returns theme-aware skeleton base color.
+/// Light mode: grey.shade200 | Dark mode: grey.shade900
+Color _skeletonBaseFor(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark
+      ? Colors.grey.shade900
+      : Colors.grey.shade200;
+}
 
-Widget _shimmer(Widget child) => Shimmer.fromColors(
-      baseColor: _skeletonBase,
-      highlightColor: _skeletonHighlight,
+/// Returns theme-aware skeleton highlight color.
+/// Light mode: grey.shade100 | Dark mode: grey.shade800
+Color _skeletonHighlightFor(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark
+      ? Colors.grey.shade800
+      : Colors.grey.shade100;
+}
+
+Widget _shimmer(BuildContext context, Widget child) => Shimmer.fromColors(
+      baseColor: _skeletonBaseFor(context),
+      highlightColor: _skeletonHighlightFor(context),
       child: child,
     );
 
-Widget _line(double height, double width, {double radius = 4}) => Container(
+Widget _line(BuildContext context, double height, double width,
+    {double radius = 4}) =>
+    Container(
       height: height,
       width: width,
       decoration: BoxDecoration(
-        color: _skeletonBase,
+        color: _skeletonBaseFor(context),
         borderRadius: BorderRadius.circular(radius),
       ),
     );
@@ -33,12 +48,11 @@ class VenueCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _shimmer(
-      Container(
+    return _shimmer(context,       Container(
         margin: margin,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: _skeletonBase.withValues(alpha: 0.4),
+          color: _skeletonBaseFor(context).withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
@@ -48,16 +62,16 @@ class VenueCardSkeleton extends StatelessWidget {
             Container(
               width: double.infinity,
               height: 180,
-              color: _skeletonBase,
+              color: _skeletonBaseFor(context),
             ),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _line(16, 140),
+                  _line(context, 16, 140),
                   const SizedBox(height: 8),
-                  _line(12, 200),
+                  _line(context, 12, 200),
                 ],
               ),
             ),
@@ -74,12 +88,11 @@ class MenuItemSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _shimmer(
-      Container(
+    return _shimmer(context,       Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _skeletonBase.withValues(alpha: 0.4),
+          color: _skeletonBaseFor(context).withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -90,11 +103,11 @@ class MenuItemSkeleton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _line(15, double.infinity),
+                  _line(context, 15, double.infinity),
                   const SizedBox(height: 8),
-                  _line(12, 120),
+                  _line(context, 12, 120),
                   const SizedBox(height: 8),
-                  _line(12, 80),
+                  _line(context, 12, 80),
                 ],
               ),
             ),
@@ -103,7 +116,7 @@ class MenuItemSkeleton extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: _skeletonBase,
+                color: _skeletonBaseFor(context),
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
@@ -120,12 +133,11 @@ class ActivityCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _shimmer(
-      Container(
+    return _shimmer(context,       Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _skeletonBase.withValues(alpha: 0.4),
+          color: _skeletonBaseFor(context).withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Row(
@@ -134,7 +146,7 @@ class ActivityCardSkeleton extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _skeletonBase,
+                color: _skeletonBaseFor(context),
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
@@ -144,9 +156,9 @@ class ActivityCardSkeleton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _line(15, double.infinity),
+                  _line(context, 15, double.infinity),
                   const SizedBox(height: 4),
-                  _line(12, 120),
+                  _line(context, 12, 120),
                 ],
               ),
             ),
@@ -155,9 +167,9 @@ class ActivityCardSkeleton extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _line(14, 70),
+                _line(context, 14, 70),
                 const SizedBox(height: 4),
-                _line(12, 40),
+                _line(context, 12, 40),
               ],
             ),
           ],
@@ -173,10 +185,9 @@ class QuickEssentialSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _shimmer(
-      Container(
+    return _shimmer(context,       Container(
         decoration: BoxDecoration(
-          color: _skeletonBase.withValues(alpha: 0.4),
+          color: _skeletonBaseFor(context).withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -188,7 +199,7 @@ class QuickEssentialSkeleton extends StatelessWidget {
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: _skeletonBase,
+                    color: _skeletonBaseFor(context),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -200,9 +211,9 @@ class QuickEssentialSkeleton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _line(13, double.infinity),
+                  _line(context, 13, double.infinity),
                   const SizedBox(height: 8),
-                  _line(15, 60),
+                  _line(context, 15, 60),
                 ],
               ),
             ),
@@ -219,12 +230,11 @@ class HomeVibeSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _shimmer(
-      Container(
+    return _shimmer(context,       Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: _skeletonBase.withValues(alpha: 0.4),
+          color: _skeletonBaseFor(context).withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
@@ -234,16 +244,16 @@ class HomeVibeSkeleton extends StatelessWidget {
             Container(
               width: double.infinity,
               height: 120,
-              color: _skeletonBase,
+              color: _skeletonBaseFor(context),
             ),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _line(16, 140),
+                  _line(context, 16, 140),
                   const SizedBox(height: 4),
-                  _line(12, 90),
+                  _line(context, 12, 90),
                 ],
               ),
             ),
@@ -260,12 +270,11 @@ class BookingCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _shimmer(
-      Container(
+    return _shimmer(context,       Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _skeletonBase.withValues(alpha: 0.4),
+          color: _skeletonBaseFor(context).withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Row(
@@ -275,7 +284,7 @@ class BookingCardSkeleton extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: _skeletonBase,
+                color: _skeletonBaseFor(context),
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
@@ -285,16 +294,16 @@ class BookingCardSkeleton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _line(15, double.infinity),
+                  _line(context, 15, double.infinity),
                   const SizedBox(height: 8),
-                  _line(12, 120),
+                  _line(context, 12, 120),
                   const SizedBox(height: 8),
-                  _line(12, 80),
+                  _line(context, 12, 80),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            _line(14, 60),
+            _line(context, 14, 60),
           ],
         ),
       ),

@@ -45,6 +45,24 @@ abstract final class AppTheme {
   static const darkTextPrimary = Color(0xFFFFFFFF);   // Pure White
   static const darkTextSecondary = Color(0xFF9CA3AF); // Light Slate
 
+  // --- Neon-tinted accents for OLED dark mode ---
+  // Desaturated, brighter versions of brand colors that glow
+  // against pure black without burning the user's eyes.
+  static const neonEmerald = Color(0xFF00FFB3);       // Brighter emerald for dark
+  static const neonEmeraldLight = Color(0xFF5EFFC8);  // Neon light emerald
+  static const neonCoral = Color(0xFFFF9A6B);         // Warm neon coral
+  static const neonSky = Color(0xFF6FB5FF);           // Soft neon blue
+  static const neonGold = Color(0xFFFFD966);          // Warm neon gold
+  static const neonDanger = Color(0xFFFF6B6B);        // Neon red
+  static const neonWarning = Color(0xFFFFD166);       // Neon amber
+
+  // OLED-optimized gradient for dark mode (uses neon-tinted emerald)
+  static const neonEmeraldGradient = LinearGradient(
+    colors: [Color(0xFF00FFB3), Color(0xFF00D290)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   // --- Gradient presets (subtle, used sparingly) ---
   static const emeraldGradient = LinearGradient(
     colors: [Color(0xFF00D290), Color(0xFF00B07D)],
