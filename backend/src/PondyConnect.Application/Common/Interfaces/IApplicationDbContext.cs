@@ -67,6 +67,12 @@ public interface IApplicationDbContext
 
     DbSet<TaxInvoice> TaxInvoices { get; }
 
+    DbSet<LedgerEntry> LedgerEntries { get; }
+
+    DbSet<PayoutRequest> PayoutRequests { get; }
+
+    DbSet<ChargebackDispute> ChargebackDisputes { get; }
+
     DbSet<PaymentSettlement> PaymentSettlements { get; }
 
     DbSet<DriverLedgerEntry> DriverLedgerEntries { get; }

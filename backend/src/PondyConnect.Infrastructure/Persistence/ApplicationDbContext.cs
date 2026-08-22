@@ -75,6 +75,12 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<TaxInvoice> TaxInvoices => Set<TaxInvoice>();
 
+    public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+
+    public DbSet<PayoutRequest> PayoutRequests => Set<PayoutRequest>();
+
+    public DbSet<ChargebackDispute> ChargebackDisputes => Set<ChargebackDispute>();
+
     public DbSet<PaymentSettlement> PaymentSettlements => Set<PaymentSettlement>();
 
     public DbSet<DriverLedgerEntry> DriverLedgerEntries => Set<DriverLedgerEntry>();

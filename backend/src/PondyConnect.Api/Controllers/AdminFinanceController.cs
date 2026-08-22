@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Invoicing;
+using PondyConnect.Application.Features.Settlement;
 using PondyConnect.Domain.Enums;
 
 /// <summary>
@@ -19,11 +20,19 @@ public sealed class AdminFinanceController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
     private readonly InvoiceService _invoiceService;
+    private readonly SettlementService _settlementService;
+    private readonly ChargebackService _chargebackService;
 
-    public AdminFinanceController(IApplicationDbContext context, InvoiceService invoiceService)
+    public AdminFinanceController(
+        IApplicationDbContext context,
+        InvoiceService invoiceService,
+        SettlementService settlementService,
+        ChargebackService chargebackService)
     {
         _context = context;
         _invoiceService = invoiceService;
+        _settlementService = settlementService;
+        _chargebackService = chargebackService;
     }
 
     /// <summary>
@@ -137,6 +146,117 @@ public sealed class AdminFinanceController : ControllerBase
 
         return Ok(invoices);
     }
+
+    // ── Settlement & Payout Management ──
+
+    /// <summary>
+    /// Manually triggers vendor and driver payout processing.
+    /// Useful for testing or when the daily cron job failed.
+    /// </summary>
+    [HttpPost("settlements/process")]
+    [ProducesResponseType(typeof(ProcessSettlementsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ProcessSettlementsResponse>> ProcessSettlements(
+        [FromQuery] string type = "all",
+        CancellationToken cancellationToken = default)
+    {
+        var vendorPayouts = 0;
+        var driverPayouts = 0;
+
+        if (type is "all" or "vendor")
+            vendorPayouts = await _settlementService.ProcessVendorPayoutsAsync(cancellationToken);
+        if (type is "all" or "driver")
+            driverPayouts = await _settlementService.ProcessDriverPayoutsAsync(cancellationToken);
+
+        return Ok(new ProcessSettlementsResponse(vendorPayouts, driverPayouts));
+    }
+
+    /// <summary>
+    /// Lists all payout requests with optional status filter.
+    /// </summary>
+    [HttpGet("payouts")]
+    [ProducesResponseType(typeof(IReadOnlyList<PayoutResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PayoutResponse>>> ListPayouts(
+        [FromQuery] string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.PayoutRequests.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PayoutStatus>(status, true, out var statusEnum))
+            query = query.Where(p => p.Status == statusEnum);
+
+        var payouts = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new PayoutResponse(
+                p.Id,
+                p.RecipientType.ToString(),
+                p.RecipientId,
+                p.Amount,
+                p.TdsDeducted,
+                p.NetAmount,
+                p.Status.ToString(),
+                p.ProviderPayoutId,
+                p.UtrNumber,
+                p.FailureReason,
+                p.ProcessedAt,
+                p.CreatedAt))
+            .ToListAsync(cancellationToken);
+
+        return Ok(payouts);
+    }
+
+    // ── Chargeback Management ──
+
+    /// <summary>
+    /// Lists all chargeback disputes for the admin dashboard.
+    /// </summary>
+    [HttpGet("chargebacks")]
+    [ProducesResponseType(typeof(IReadOnlyList<ChargebackResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<ChargebackResponse>>> ListChargebacks(
+        [FromQuery] string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        ChargebackStatus? statusFilter = null;
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ChargebackStatus>(status, true, out var statusEnum))
+            statusFilter = statusEnum;
+
+        var disputes = await _chargebackService.ListDisputesAsync(statusFilter, cancellationToken);
+
+        return Ok(disputes.Select(d => new ChargebackResponse(
+            d.Id,
+            d.PaymentId,
+            d.UserId,
+            d.OrderId,
+            d.OrderType,
+            d.ChargebackAmount,
+            d.Status.ToString(),
+            d.AccountFrozen,
+            d.EvidenceSummary,
+            d.ResolutionNote,
+            d.CreatedAt,
+            d.ResolvedAt)).ToList());
+    }
+
+    /// <summary>
+    /// Resolves a chargeback dispute (admin action).
+    /// </summary>
+    [HttpPost("chargebacks/{id:guid}/resolve")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResolveChargeback(
+        Guid id,
+        [FromBody] ResolveChargebackRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _chargebackService.ResolveDisputeAsync(id, request.Won, request.Note ?? "", cancellationToken);
+            return Ok(new { Message = "Chargeback resolved." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
 }
 
 public sealed record AdminFinanceSummaryResponse(
@@ -168,3 +288,32 @@ public sealed record TaxInvoiceResponse(
     string? PdfUrl,
     bool IsEmailed,
     DateTimeOffset GeneratedAt);
+
+public sealed record ProcessSettlementsResponse(int VendorPayouts, int DriverPayouts);
+public sealed record PayoutResponse(
+    Guid Id,
+    string RecipientType,
+    Guid RecipientId,
+    decimal Amount,
+    decimal TdsDeducted,
+    decimal NetAmount,
+    string Status,
+    string? ProviderPayoutId,
+    string? UtrNumber,
+    string? FailureReason,
+    DateTimeOffset? ProcessedAt,
+    DateTimeOffset CreatedAt);
+public sealed record ChargebackResponse(
+    Guid Id,
+    Guid PaymentId,
+    Guid UserId,
+    Guid? OrderId,
+    string? OrderType,
+    decimal ChargebackAmount,
+    string Status,
+    bool AccountFrozen,
+    string? EvidenceSummary,
+    string? ResolutionNote,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ResolvedAt);
+public sealed record ResolveChargebackRequest(bool Won, string? Note);

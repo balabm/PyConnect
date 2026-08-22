@@ -2,6 +2,7 @@ namespace PondyConnect.Application.Features.Bookings;
 
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
+using PondyConnect.Application.Features.Ledger;
 using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Features.Settlement;
 using PondyConnect.Domain.Entities;
@@ -32,6 +33,7 @@ public sealed class BookingEngineService : IBookingEngineService
     private readonly ISettlementCalculationService _settlementService;
     private readonly IWhatsAppSender? _whatsAppSender;
     private readonly INotificationService? _notifications;
+    private readonly LedgerService? _ledgerService;
 
     public BookingEngineService(
         IApplicationDbContext context,
@@ -45,6 +47,7 @@ public sealed class BookingEngineService : IBookingEngineService
         _settlementService = settlementService;
         _whatsAppSender = null;
         _notifications = null;
+        _ledgerService = null;
     }
 
     public BookingEngineService(
@@ -60,6 +63,7 @@ public sealed class BookingEngineService : IBookingEngineService
         _settlementService = settlementService;
         _whatsAppSender = whatsAppSender;
         _notifications = null;
+        _ledgerService = null;
     }
 
     public BookingEngineService(
@@ -76,6 +80,25 @@ public sealed class BookingEngineService : IBookingEngineService
         _settlementService = settlementService;
         _whatsAppSender = whatsAppSender;
         _notifications = notifications;
+        _ledgerService = null;
+    }
+
+    public BookingEngineService(
+        IApplicationDbContext context,
+        IDistributedLock distributedLock,
+        IAvailabilityCache availabilityCache,
+        ISettlementCalculationService settlementService,
+        IWhatsAppSender whatsAppSender,
+        INotificationService notifications,
+        LedgerService ledgerService)
+    {
+        _context = context;
+        _lock = distributedLock;
+        _availabilityCache = availabilityCache;
+        _settlementService = settlementService;
+        _whatsAppSender = whatsAppSender;
+        _notifications = notifications;
+        _ledgerService = ledgerService;
     }
 
     public async Task<VenueSlotReservationResult> ReserveVenueSlotAsync(
@@ -227,6 +250,61 @@ public sealed class BookingEngineService : IBookingEngineService
                 rideRequestId: settlement.RideRequestId,
                 scooterRentalId: settlement.ScooterRentalId);
             _context.PaymentSettlements.Add(settlementRecord);
+
+            // Record double-entry ledger entries for this transaction.
+            // GST on platform commission is 18% (9% CGST + 9% SGST).
+            if (_ledgerService is not null)
+            {
+                var gstOnFee = Math.Round(settlement.PlatformFee * 0.18m, 2, MidpointRounding.AwayFromZero);
+
+                // Determine vendor/driver IDs for the ledger
+                Guid? vendorId = null;
+                Guid? driverId = null;
+
+                if (settlement.FoodOrderId is not null)
+                {
+                    var foodOrder = await _context.FoodOrders.AsNoTracking()
+                        .FirstOrDefaultAsync(o => o.Id == settlement.FoodOrderId, cancellationToken);
+                    vendorId = foodOrder?.VendorId;
+                }
+                else if (settlement.RideRequestId is not null)
+                {
+                    var ride = await _context.RideRequests.AsNoTracking()
+                        .FirstOrDefaultAsync(r => r.Id == settlement.RideRequestId, cancellationToken);
+                    driverId = ride?.DriverId;
+                }
+                else if (settlement.ScooterRentalId is not null)
+                {
+                    var rental = await _context.ScooterRentals.AsNoTracking()
+                        .FirstOrDefaultAsync(r => r.Id == settlement.ScooterRentalId, cancellationToken);
+                    vendorId = rental?.VendorId;
+                }
+                else if (settlement.ServiceBookingId is not null)
+                {
+                    var booking = await _context.ServiceBookings.AsNoTracking()
+                        .FirstOrDefaultAsync(b => b.Id == settlement.ServiceBookingId, cancellationToken);
+                    vendorId = booking?.VendorId;
+                }
+
+                // Credit the vendor's wallet if they have a payout due
+                if (vendorId is not null && settlement.VendorPayout > 0)
+                {
+                    var vendor = await _context.Vendors.FirstOrDefaultAsync(v => v.Id == vendorId, cancellationToken);
+                    vendor?.CreditWallet(settlement.VendorPayout);
+                }
+
+                await _ledgerService.RecordFoodOrderPaymentAsync(
+                    paymentId: payment.Id,
+                    foodOrderId: settlement.FoodOrderId ?? settlement.RideRequestId ?? settlement.ScooterRentalId ?? settlement.ServiceBookingId ?? payment.Id,
+                    vendorId: vendorId ?? Guid.Empty,
+                    grossAmount: settlement.GrossAmount,
+                    vendorPayout: settlement.VendorPayout,
+                    driverPayout: settlement.DriverPayout,
+                    platformFee: settlement.PlatformFee,
+                    gstAmount: gstOnFee,
+                    driverId: driverId,
+                    ct: cancellationToken);
+            }
 
             // Backfill pass token on the booking if missing (inside transaction)
             var passToken = string.Empty;

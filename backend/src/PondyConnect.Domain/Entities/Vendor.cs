@@ -36,6 +36,24 @@ public sealed class Vendor : BaseEntity
 
     public decimal CreditBalance { get; private set; }
 
+    /// <summary>
+    /// Accumulated wallet balance from completed orders awaiting payout.
+    /// Increased when settlements are processed, decreased on payout.
+    /// </summary>
+    public decimal WalletBalance { get; private set; }
+
+    /// <summary>
+    /// RazorpayX Fund Account ID for payouts. Created via RazorpayX
+    /// Fund Account API after bank verification.
+    /// </summary>
+    public string? FundAccountId { get; private set; }
+
+    /// <summary>
+    /// Whether the vendor's bank account has been verified via
+    /// RazorpayX penny-drop verification.
+    /// </summary>
+    public bool IsBankVerified { get; private set; }
+
     // Restaurant-specific metadata (nullable — only set for food vendors)
     public string? CuisineType { get; private set; }
     public double? Rating { get; private set; }
@@ -234,6 +252,51 @@ public sealed class Vendor : BaseEntity
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount, nameof(amount));
         CreditBalance += amount;
+        MarkUpdated();
+    }
+
+    // ── Wallet & Bank Verification (for daily settlement payouts) ──
+
+    /// <summary>
+    /// Credits the vendor's wallet when a settlement is processed.
+    /// </summary>
+    public void CreditWallet(decimal amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount, nameof(amount));
+        WalletBalance += amount;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Debits the vendor's wallet when a payout is initiated.
+    /// </summary>
+    public void DebitWallet(decimal amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount, nameof(amount));
+        if (amount > WalletBalance)
+            throw new InvalidOperationException("Insufficient wallet balance for payout.");
+        WalletBalance -= amount;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Marks the vendor's bank account as verified via penny-drop.
+    /// </summary>
+    public void MarkBankVerified(string fundAccountId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fundAccountId);
+        IsBankVerified = true;
+        FundAccountId = fundAccountId;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Marks bank verification as failed (invalid account, closed, etc.).
+    /// </summary>
+    public void MarkBankVerificationFailed()
+    {
+        IsBankVerified = false;
+        FundAccountId = null;
         MarkUpdated();
     }
 

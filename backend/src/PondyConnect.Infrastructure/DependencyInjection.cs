@@ -149,6 +149,17 @@ public static class DependencyInjection
             return sp.GetRequiredService<RazorpayGateway>();
         });
 
+        // Payout service: toggle via Payments:UseMockPayouts (true = Mock, false = RazorpayX)
+        services.AddHttpClient<RazorpayPayoutService>();
+        services.AddScoped<MockPayoutService>();
+        var payoutsUseMock = configuration.GetValue("Payments:UseMockPayouts", true);
+        services.AddScoped<PondyConnect.Application.Services.IPayoutService>(sp =>
+        {
+            if (payoutsUseMock)
+                return sp.GetRequiredService<MockPayoutService>();
+            return sp.GetRequiredService<RazorpayPayoutService>();
+        });
+
         // Storage service: toggle via Storage:UseMock (true = Local, false = AWS S3)
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         var storageUseMock = configuration.GetValue("Storage:UseMock", true);
