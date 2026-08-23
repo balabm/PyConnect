@@ -71,82 +71,7 @@ class ManageHubScreen extends ConsumerWidget {
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               childAspectRatio: 1.1,
-              children: [
-                _ManageTile(
-                  icon: Icons.restaurant_menu,
-                  label: 'Menu',
-                  subtitle: 'Dishes & drinks',
-                  color: AppTheme.emerald,
-                  onTap: () {
-                    AppHaptics.light();
-                    context.push('/menu');
-                  },
-                ),
-                _ManageTile(
-                  icon: Icons.receipt_long,
-                  label: 'Orders',
-                  subtitle: 'Accept & track',
-                  color: AppTheme.info,
-                  onTap: () {
-                    AppHaptics.light();
-                    context.push('/orders');
-                  },
-                ),
-                _ManageTile(
-                  icon: Icons.kitchen,
-                  label: 'KDS',
-                  subtitle: 'Kitchen display',
-                  color: AppTheme.coral,
-                  onTap: () {
-                    AppHaptics.light();
-                    context.push('/kds');
-                  },
-                ),
-                _ManageTile(
-                  icon: Icons.print,
-                  label: 'Printer',
-                  subtitle: 'Thermal printer',
-                  color: AppTheme.info,
-                  onTap: () {
-                    AppHaptics.light();
-                    context.push('/printer-settings');
-                  },
-                ),
-                _ManageTile(
-                  icon: Icons.qr_code_scanner,
-                  label: 'Scanner',
-                  subtitle: 'Scan tickets & QR',
-                  color: AppTheme.gold,
-                  onTap: () {
-                    AppHaptics.light();
-                    context.push('/scanner');
-                  },
-                ),
-                _ManageTile(
-                  icon: Icons.trending_up,
-                  label: 'Analytics',
-                  subtitle: 'Reports (coming soon)',
-                  color: AppTheme.emerald,
-                  onTap: null,
-                ),
-                _ManageTile(
-                  icon: Icons.campaign,
-                  label: 'Marketing',
-                  subtitle: 'Promotions & flash sales',
-                  color: AppTheme.emerald,
-                  onTap: () {
-                    AppHaptics.light();
-                    context.push('/promotions');
-                  },
-                ),
-                _ManageTile(
-                  icon: Icons.settings,
-                  label: 'Settings',
-                  subtitle: 'Venue & app settings (coming soon)',
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  onTap: null,
-                ),
-              ],
+              children: _buildCategoryTiles(context, category),
             ),
             const SizedBox(height: 24),
             // Promoter / Affiliate Links (demo feature for pub owners)
@@ -192,6 +117,149 @@ class ManageHubScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Builds the operations grid tiles based on the vendor category.
+  /// Each category sees only the tiles relevant to its business type.
+  List<Widget> _buildCategoryTiles(BuildContext context, VendorCategoryType category) {
+    // Common tiles for ALL vendor types
+    final commonTiles = <_ManageTile>[
+      _ManageTile(
+        icon: Icons.qr_code_scanner,
+        label: 'Scanner',
+        subtitle: 'Scan tickets & QR',
+        color: AppTheme.gold,
+        onTap: () { AppHaptics.light(); context.push('/scanner'); },
+      ),
+      _ManageTile(
+        icon: Icons.account_balance_wallet,
+        label: 'Wallet',
+        subtitle: 'Balance & payouts',
+        color: AppTheme.emerald,
+        onTap: () { AppHaptics.light(); context.push('/wallet'); },
+      ),
+      _ManageTile(
+        icon: Icons.campaign,
+        label: 'Marketing',
+        subtitle: 'Promotions & flash sales',
+        color: AppTheme.emerald,
+        onTap: () { AppHaptics.light(); context.push('/promotions'); },
+      ),
+      _ManageTile(
+        icon: Icons.print,
+        label: 'Printer',
+        subtitle: 'Thermal printer setup',
+        color: AppTheme.info,
+        onTap: () { AppHaptics.light(); context.push('/printer-settings'); },
+      ),
+    ];
+
+    // Category-specific tiles
+    final categoryTiles = <_ManageTile>[];
+
+    switch (category) {
+      case VendorCategoryType.restaurant:
+      case VendorCategoryType.cafe:
+      case VendorCategoryType.pizzeria:
+        categoryTiles.addAll([
+          _ManageTile(
+            icon: Icons.restaurant_menu,
+            label: 'Menu',
+            subtitle: 'Dishes & pricing',
+            color: AppTheme.emerald,
+            onTap: () { AppHaptics.light(); context.push('/menu'); },
+          ),
+          _ManageTile(
+            icon: Icons.receipt_long,
+            label: 'Orders',
+            subtitle: 'Accept & track',
+            color: AppTheme.info,
+            onTap: () { AppHaptics.light(); context.push('/orders'); },
+          ),
+          _ManageTile(
+            icon: Icons.kitchen,
+            label: 'KDS',
+            subtitle: 'Kitchen display',
+            color: AppTheme.coral,
+            onTap: () { AppHaptics.light(); context.push('/kds'); },
+          ),
+        ]);
+        break;
+      case VendorCategoryType.pubClub:
+        categoryTiles.addAll([
+          _ManageTile(
+            icon: Icons.local_bar,
+            label: 'Drinks Menu',
+            subtitle: 'Drinks & VIP packages',
+            color: AppTheme.emerald,
+            onTap: () { AppHaptics.light(); context.push('/drinks-menu'); },
+          ),
+          _ManageTile(
+            icon: Icons.table_restaurant,
+            label: 'Live Tables',
+            subtitle: 'Cover charge tracking',
+            color: AppTheme.info,
+            onTap: () { AppHaptics.light(); context.push('/bookings'); },
+          ),
+        ]);
+        break;
+      case VendorCategoryType.scooterRental:
+        categoryTiles.addAll([
+          _ManageTile(
+            icon: Icons.pedal_bike,
+            label: 'Fleet',
+            subtitle: 'Scooters & pricing',
+            color: AppTheme.emerald,
+            onTap: () { AppHaptics.light(); context.push('/fleet'); },
+          ),
+          _ManageTile(
+            icon: Icons.assignment_return,
+            label: 'Active Rentals',
+            subtitle: 'Track rented scooters',
+            color: AppTheme.info,
+            onTap: () { AppHaptics.light(); context.push('/rentals'); },
+          ),
+        ]);
+        break;
+      case VendorCategoryType.taxiOperator:
+        categoryTiles.addAll([
+          _ManageTile(
+            icon: Icons.local_taxi,
+            label: 'Taxi Fleet',
+            subtitle: 'Vehicles & drivers',
+            color: AppTheme.emerald,
+            onTap: () { AppHaptics.light(); context.push('/taxi-fleet'); },
+          ),
+          _ManageTile(
+            icon: Icons.directions_car,
+            label: 'Live Rides',
+            subtitle: 'Track active rides',
+            color: AppTheme.info,
+            onTap: () { AppHaptics.light(); context.push('/rides'); },
+          ),
+        ]);
+        break;
+      case VendorCategoryType.luggageCloak:
+        categoryTiles.addAll([
+          _ManageTile(
+            icon: Icons.luggage,
+            label: 'Capacity',
+            subtitle: 'Stored bags & occupancy',
+            color: AppTheme.emerald,
+            onTap: () { AppHaptics.light(); context.push('/capacity'); },
+          ),
+          _ManageTile(
+            icon: Icons.event,
+            label: 'Bookings',
+            subtitle: 'Reservations & intake',
+            color: AppTheme.info,
+            onTap: () { AppHaptics.light(); context.push('/bookings'); },
+          ),
+        ]);
+        break;
+    }
+
+    return [...categoryTiles, ...commonTiles];
   }
 
   List<Widget> _buildCategoryQuickActions(BuildContext context, VendorCategoryType category) {
