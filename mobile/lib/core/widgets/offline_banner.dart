@@ -10,7 +10,7 @@ import '../config/app_config.dart';
 /// Requires [failureThreshold] consecutive failures before declaring
 /// offline, and a single success to declare back online.
 class ConnectivityChecker extends ChangeNotifier {
-  ConnectivityChecker({this.failureThreshold = 3});
+  ConnectivityChecker({this.failureThreshold = 10});
 
   final int failureThreshold;
 
@@ -27,12 +27,12 @@ class ConnectivityChecker extends ChangeNotifier {
     _started = true;
     _dio = Dio(BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
     ));
-    // Check immediately, then every 15 seconds.
+    // Check immediately, then every 30 seconds.
     _check();
-    _timer = Timer.periodic(const Duration(seconds: 15), (_) => _check());
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _check());
   }
 
   Future<void> _check() async {

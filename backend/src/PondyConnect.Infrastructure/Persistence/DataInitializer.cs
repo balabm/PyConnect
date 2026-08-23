@@ -160,7 +160,10 @@ public sealed class DataInitializer
                 GeoLocation.Create(11.9365, 79.8355),
                 maxCapacity: 70,
                 description: "Multi-cuisine garden restaurant with outdoor seating.",
-                address: "45, Rue Romain Rolland, White Town"),
+                address: "45, Rue Romain Rolland, White Town",
+                imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7ed8826398?w=400",
+                rating: 4.2,
+                reviewCount: 110),
             Venue.Create(
                 "Zero House Pub",
                 VenueCategory.Pub,
@@ -177,7 +180,10 @@ public sealed class DataInitializer
                 GeoLocation.Create(11.9375, 79.8342),
                 maxCapacity: 65,
                 description: "Family-friendly pizzeria with wood-fired ovens.",
-                address: "22, Rue Saint Gilles, White Town"),
+                address: "22, Rue Saint Gilles, White Town",
+                imageUrl: "https://images.unsplash.com/photo-1513104890138-746a492e0b31?w=400",
+                rating: 4.0,
+                reviewCount: 95),
             // ── Flagship nightlife venues (E2E testing) ──
             Venue.Create(
                 "Drunken Daddy",
@@ -290,7 +296,7 @@ public sealed class DataInitializer
                 merchantReference: "FUOCO-001",
                 cuisineType: "Italian",
                 rating: 4.5,
-                imageUrl: null,
+                imageUrl: "https://images.unsplash.com/photo-1513104890138-746a492e0b31?w=800",
                 description: "Wood-fired artisanal pizzeria in the heart of White Town.",
                 deliveryFee: 40m,
                 prepTimeMinutes: 25);
@@ -315,7 +321,10 @@ public sealed class DataInitializer
             maxCapacity: 80,
             vendorId: vendorId,
             description: "Wood-fired artisanal pizzeria in the heart of White Town.",
-            address: "Rue de la Marine, White Town, Puducherry");
+            address: "Rue de la Marine, White Town, Puducherry",
+            imageUrl: "https://images.unsplash.com/photo-1513104890138-746a492e0b31?w=800",
+            rating: 4.5,
+            reviewCount: 320);
 
         venue.AddAvailability(DayOfWeek.Monday, new TimeOnly(12, 0), new TimeOnly(23, 0));
         venue.AddAvailability(DayOfWeek.Tuesday, new TimeOnly(12, 0), new TimeOnly(23, 0));
@@ -345,13 +354,13 @@ public sealed class DataInitializer
 
         var menuItems = new[]
         {
-            MenuItem.Create(fuocoVendorId, "Woodfired Margherita", 450m, "Pizza", description: "San Marzano tomato, fresh buffalo mozzarella, basil, EVOO.", isLateNight: true),
-            MenuItem.Create(fuocoVendorId, "Truffle Fries", 250m, "Sides", description: "Hand-cut fries tossed in truffle oil and parmesan."),
-            MenuItem.Create(fuocoVendorId, "Pepperoni Pizza", 550m, "Pizza", description: "Double pepperoni, mozzarella, San Marzano sauce.", isLateNight: true),
-            MenuItem.Create(fuocoVendorId, "Garlic Bread", 150m, "Sides", description: "Toasted ciabatta with herb butter and parmesan."),
-            MenuItem.Create(fuocoVendorId, "Tiramisu", 220m, "Dessert", description: "Classic Italian coffee-soaked layers with mascarpone cream."),
-            MenuItem.Create(fuocoVendorId, "Chicken Wings (6 pc)", 280m, "Sides", description: "Buffalo-style hot wings with blue cheese dip.", isLateNight: true),
-            MenuItem.Create(fuocoVendorId, "Chicken Shawarma", 180m, "Shawarma", description: "Lebanese-style rolled shawarma with garlic sauce.", isLateNight: true)
+            MenuItem.Create(fuocoVendorId, "Woodfired Margherita", 450m, "Pizza", description: "San Marzano tomato, fresh buffalo mozzarella, basil, EVOO.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1604068549290-fa44e08c421a?w=400"),
+            MenuItem.Create(fuocoVendorId, "Truffle Fries", 250m, "Sides", description: "Hand-cut fries tossed in truffle oil and parmesan.", imageUrl: "https://images.unsplash.com/photo-1639024471283-03518883512d?w=400"),
+            MenuItem.Create(fuocoVendorId, "Pepperoni Pizza", 550m, "Pizza", description: "Double pepperoni, mozzarella, San Marzano sauce.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1621219309024-eb8f4b4b6b3b?w=400"),
+            MenuItem.Create(fuocoVendorId, "Garlic Bread", 150m, "Sides", description: "Toasted ciabatta with herb butter and parmesan.", imageUrl: "https://images.unsplash.com/photo-1573140246462-332f2d2b4c91?w=400"),
+            MenuItem.Create(fuocoVendorId, "Tiramisu", 220m, "Dessert", description: "Classic Italian coffee-soaked layers with mascarpone cream.", imageUrl: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=400"),
+            MenuItem.Create(fuocoVendorId, "Chicken Wings (6 pc)", 280m, "Sides", description: "Buffalo-style hot wings with blue cheese dip.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=400"),
+            MenuItem.Create(fuocoVendorId, "Chicken Shawarma", 180m, "Shawarma", description: "Lebanese-style rolled shawarma with garlic sauce.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1639024471283-03518883512d?w=400")
         };
 
         _context.MenuItems.AddRange(menuItems);
@@ -407,91 +416,91 @@ public sealed class DataInitializer
             {
                 "Satsanga Garden Kitchen" => new[]
                 {
-                    MenuItem.Create(s.Id, "Veg Thali", 220m, "Thali", description: "Assorted curries, rice, roti, dal, and dessert."),
-                    MenuItem.Create(s.Id, "Chicken Chettinad", 280m, "Mains", description: "Spicy Tamil-style chicken curry.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Paneer Butter Masala", 240m, "Mains", description: "Creamy tomato gravy with cottage cheese."),
-                    MenuItem.Create(s.Id, "Gulab Jamun (2 pc)", 80m, "Dessert", description: "Warm syrup-soaked dumplings."),
-                    MenuItem.Create(s.Id, "Masala Dosa", 120m, "South Indian", description: "Crispy rice crepe with potato filling.")
+                    MenuItem.Create(s.Id, "Veg Thali", 220m, "Thali", description: "Assorted curries, rice, roti, dal, and dessert.", imageUrl: "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=400"),
+                    MenuItem.Create(s.Id, "Chicken Chettinad", 280m, "Mains", description: "Spicy Tamil-style chicken curry.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1569058242253-92a9e75c47a9?w=400"),
+                    MenuItem.Create(s.Id, "Paneer Butter Masala", 240m, "Mains", description: "Creamy tomato gravy with cottage cheese.", imageUrl: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400"),
+                    MenuItem.Create(s.Id, "Gulab Jamun (2 pc)", 80m, "Dessert", description: "Warm syrup-soaked dumplings.", imageUrl: "https://images.unsplash.com/photo-1601304549427-2e9c8f4b4b1f?w=400"),
+                    MenuItem.Create(s.Id, "Masala Dosa", 120m, "South Indian", description: "Crispy rice crepe with potato filling.", imageUrl: "https://images.unsplash.com/photo-1668236970733-d2a5e4b7b8c3?w=400")
                 },
                 "La Maison Rose" => new[]
                 {
-                    MenuItem.Create(s.Id, "Coq au Vin", 450m, "Mains", description: "Braised chicken in red wine with mushrooms."),
-                    MenuItem.Create(s.Id, "Ratatouille", 320m, "Mains", description: "Provençal baked vegetables with herbs."),
-                    MenuItem.Create(s.Id, "French Onion Soup", 180m, "Starters", description: "Caramelized onions with croutons and cheese."),
-                    MenuItem.Create(s.Id, "Crème Brûlée", 200m, "Dessert", description: "Vanilla custard with caramelized sugar top."),
-                    MenuItem.Create(s.Id, "Quiche Lorraine", 220m, "Starters", description: "Savory tart with bacon and gruyère.")
+                    MenuItem.Create(s.Id, "Coq au Vin", 450m, "Mains", description: "Braised chicken in red wine with mushrooms.", imageUrl: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400"),
+                    MenuItem.Create(s.Id, "Ratatouille", 320m, "Mains", description: "Provençal baked vegetables with herbs.", imageUrl: "https://images.unsplash.com/photo-1574484284002-953d92462f60?w=400"),
+                    MenuItem.Create(s.Id, "French Onion Soup", 180m, "Starters", description: "Caramelized onions with croutons and cheese.", imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?w=400"),
+                    MenuItem.Create(s.Id, "Crème Brûlée", 200m, "Dessert", description: "Vanilla custard with caramelized sugar top.", imageUrl: "https://images.unsplash.com/photo-1470124182917-cc6e71b22944?w=400"),
+                    MenuItem.Create(s.Id, "Quiche Lorraine", 220m, "Starters", description: "Savory tart with bacon and gruyère.", imageUrl: "https://images.unsplash.com/photo-1631108306864-496a0f4a39c0?w=400")
                 },
                 "Baker Street Bistro" => new[]
                 {
-                    MenuItem.Create(s.Id, "Butter Croissant", 60m, "Bakery", description: "Flaky buttery croissant baked fresh daily."),
-                    MenuItem.Create(s.Id, "Chocolate Eclair", 90m, "Pastry", description: "Choux pastry filled with chocolate cream."),
-                    MenuItem.Create(s.Id, "Quiche Vegetarian", 150m, "Savory", description: "Spinach and cheese quiche."),
-                    MenuItem.Create(s.Id, "Cinnamon Roll", 80m, "Pastry", description: "Soft roll with cinnamon sugar glaze."),
-                    MenuItem.Create(s.Id, "Fresh Baguette", 50m, "Bakery", description: "Crusty French baguette, baked in-house.")
+                    MenuItem.Create(s.Id, "Butter Croissant", 60m, "Bakery", description: "Flaky buttery croissant baked fresh daily.", imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400"),
+                    MenuItem.Create(s.Id, "Chocolate Eclair", 90m, "Pastry", description: "Choux pastry filled with chocolate cream.", imageUrl: "https://images.unsplash.com/photo-1612203985729-70726954388c?w=400"),
+                    MenuItem.Create(s.Id, "Quiche Vegetarian", 150m, "Savory", description: "Spinach and cheese quiche.", imageUrl: "https://images.unsplash.com/photo-1631108306864-496a0f4a39c0?w=400"),
+                    MenuItem.Create(s.Id, "Cinnamon Roll", 80m, "Pastry", description: "Soft roll with cinnamon sugar glaze.", imageUrl: "https://images.unsplash.com/photo-1595435172879-2c8f4b4b8b3f?w=400"),
+                    MenuItem.Create(s.Id, "Fresh Baguette", 50m, "Bakery", description: "Crusty French baguette, baked in-house.", imageUrl: "https://images.unsplash.com/photo-1597079910443-6c15d4b9b4b2?w=400")
                 },
                 "Café des Arts" => new[]
                 {
-                    MenuItem.Create(s.Id, "Cappuccino", 90m, "Coffee", description: "Espresso with steamed milk and foam."),
-                    MenuItem.Create(s.Id, "Cold Brew", 120m, "Coffee", description: "12-hour steeped cold coffee.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Club Sandwich", 180m, "Sandwiches", description: "Triple-decker with chicken, egg, and veggies."),
-                    MenuItem.Create(s.Id, "Veg Wrap", 140m, "Sandwiches", description: "Grilled vegetables in a whole wheat wrap."),
-                    MenuItem.Create(s.Id, "Brownie with Ice Cream", 160m, "Dessert", description: "Warm fudge brownie with vanilla ice cream.")
+                    MenuItem.Create(s.Id, "Cappuccino", 90m, "Coffee", description: "Espresso with steamed milk and foam.", imageUrl: "https://images.unsplash.com/photo-1572442388796-11668a67e63d?w=400"),
+                    MenuItem.Create(s.Id, "Cold Brew", 120m, "Coffee", description: "12-hour steeped cold coffee.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400"),
+                    MenuItem.Create(s.Id, "Club Sandwich", 180m, "Sandwiches", description: "Triple-decker with chicken, egg, and veggies.", imageUrl: "https://images.unsplash.com/photo-1528740561666-dc2479dc08ab?w=400"),
+                    MenuItem.Create(s.Id, "Veg Wrap", 140m, "Sandwiches", description: "Grilled vegetables in a whole wheat wrap.", imageUrl: "https://images.unsplash.com/photo-1626700051175-6818013ad1a8?w=400"),
+                    MenuItem.Create(s.Id, "Brownie with Ice Cream", 160m, "Dessert", description: "Warm fudge brownie with vanilla ice cream.", imageUrl: "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400")
                 },
                 "The Turtles Cafe" => new[]
                 {
-                    MenuItem.Create(s.Id, "Full English Breakfast", 250m, "Breakfast", description: "Eggs, bacon, sausage, beans, toast, and hash browns."),
-                    MenuItem.Create(s.Id, "Pancake Stack", 180m, "Breakfast", description: "Fluffy pancakes with maple syrup and butter."),
-                    MenuItem.Create(s.Id, "Eggs Benedict", 220m, "Breakfast", description: "Poached eggs on English muffins with hollandaise."),
-                    MenuItem.Create(s.Id, "Filter Coffee", 60m, "Beverages", description: "South Indian style filter coffee."),
-                    MenuItem.Create(s.Id, "Avocado Toast", 160m, "Breakfast", description: "Smashed avocado on sourdough with chili flakes.")
+                    MenuItem.Create(s.Id, "Full English Breakfast", 250m, "Breakfast", description: "Eggs, bacon, sausage, beans, toast, and hash browns.", imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400"),
+                    MenuItem.Create(s.Id, "Pancake Stack", 180m, "Breakfast", description: "Fluffy pancakes with maple syrup and butter.", imageUrl: "https://images.unsplash.com/photo-1567620905720-1372c9c8c4ad?w=400"),
+                    MenuItem.Create(s.Id, "Eggs Benedict", 220m, "Breakfast", description: "Poached eggs on English muffins with hollandaise.", imageUrl: "https://images.unsplash.com/photo-1608039759621-1e5b1c3670a3?w=400"),
+                    MenuItem.Create(s.Id, "Filter Coffee", 60m, "Beverages", description: "South Indian style filter coffee.", imageUrl: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400"),
+                    MenuItem.Create(s.Id, "Avocado Toast", 160m, "Breakfast", description: "Smashed avocado on sourdough with chili flakes.", imageUrl: "https://images.unsplash.com/photo-1541519227354-08fa5a50a504?w=400")
                 },
                 "Pondy Pizzeria" => new[]
                 {
-                    MenuItem.Create(s.Id, "Margherita Pizza", 250m, "Pizza", description: "Classic tomato, mozzarella, and basil."),
-                    MenuItem.Create(s.Id, "Veg Supreme Pizza", 320m, "Pizza", description: "Bell peppers, onions, mushrooms, olives."),
-                    MenuItem.Create(s.Id, "Chicken Tikka Pizza", 380m, "Pizza", description: "Tandoori chicken with peppers and mint mayo.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Garlic Knots (6 pc)", 100m, "Sides", description: "Soft dough knots with garlic butter."),
-                    MenuItem.Create(s.Id, "Choco Lava Cake", 120m, "Dessert", description: "Warm chocolate cake with molten center.")
+                    MenuItem.Create(s.Id, "Margherita Pizza", 250m, "Pizza", description: "Classic tomato, mozzarella, and basil.", imageUrl: "https://images.unsplash.com/photo-1604068549290-fa44e08c421a?w=400"),
+                    MenuItem.Create(s.Id, "Veg Supreme Pizza", 320m, "Pizza", description: "Bell peppers, onions, mushrooms, olives.", imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80b25f?w=400"),
+                    MenuItem.Create(s.Id, "Chicken Tikka Pizza", 380m, "Pizza", description: "Tandoori chicken with peppers and mint mayo.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1593564705826-36b9403c0c66?w=400"),
+                    MenuItem.Create(s.Id, "Garlic Knots (6 pc)", 100m, "Sides", description: "Soft dough knots with garlic butter.", imageUrl: "https://images.unsplash.com/photo-1573140246462-332f2d2b4c91?w=400"),
+                    MenuItem.Create(s.Id, "Choco Lava Cake", 120m, "Dessert", description: "Warm chocolate cake with molten center.", imageUrl: "https://images.unsplash.com/photo-1606313562571-483c5b9c6c4c?w=400")
                 },
                 "Dragon Wok" => new[]
                 {
-                    MenuItem.Create(s.Id, "Kung Pao Chicken", 280m, "Mains", description: "Spicy stir-fried chicken with peanuts.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Veg Hakka Noodles", 180m, "Noodles", description: "Wok-tossed noodles with vegetables."),
-                    MenuItem.Create(s.Id, "Chilli Paneer", 240m, "Mains", description: "Indo-Chinese paneer in spicy sauce."),
-                    MenuItem.Create(s.Id, "Spring Rolls (4 pc)", 120m, "Starters", description: "Crispy rolls with veggie filling."),
-                    MenuItem.Create(s.Id, "Schezwan Fried Rice", 200m, "Rice", description: "Spicy fried rice with schezwan sauce.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Wonton Soup", 150m, "Soups", description: "Pork wontons in clear broth.")
+                    MenuItem.Create(s.Id, "Kung Pao Chicken", 280m, "Mains", description: "Spicy stir-fried chicken with peanuts.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1525755662778-989d4823f364?w=400"),
+                    MenuItem.Create(s.Id, "Veg Hakka Noodles", 180m, "Noodles", description: "Wok-tossed noodles with vegetables.", imageUrl: "https://images.unsplash.com/photo-1612929633738-8e90e9c3b9da?w=400"),
+                    MenuItem.Create(s.Id, "Chilli Paneer", 240m, "Mains", description: "Indo-Chinese paneer in spicy sauce.", imageUrl: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400"),
+                    MenuItem.Create(s.Id, "Spring Rolls (4 pc)", 120m, "Starters", description: "Crispy rolls with veggie filling.", imageUrl: "https://images.unsplash.com/photo-1606851090710-3c9b8b0b3b3b?w=400"),
+                    MenuItem.Create(s.Id, "Schezwan Fried Rice", 200m, "Rice", description: "Spicy fried rice with schezwan sauce.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400"),
+                    MenuItem.Create(s.Id, "Wonton Soup", 150m, "Soups", description: "Pork wontons in clear broth.", imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?w=400")
                 },
                 "Spice Route" => new[]
                 {
-                    MenuItem.Create(s.Id, "Chettinad Chicken Biryani", 300m, "Biryani", description: "Spicy Chettinad-style biryani with raita.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Mutton Pepper Fry", 350m, "Mains", description: "Dry mutton curry with black pepper."),
-                    MenuItem.Create(s.Id, "Fish Moilee", 320m, "Mains", description: "Kerala-style fish curry in coconut milk."),
-                    MenuItem.Create(s.Id, "Rasam", 60m, "Soups", description: "Tangy spiced tamarind soup."),
-                    MenuItem.Create(s.Id, "Payasam", 80m, "Dessert", description: "Traditional rice and milk pudding.")
+                    MenuItem.Create(s.Id, "Chettinad Chicken Biryani", 300m, "Biryani", description: "Spicy Chettinad-style biryani with raita.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400"),
+                    MenuItem.Create(s.Id, "Mutton Pepper Fry", 350m, "Mains", description: "Dry mutton curry with black pepper.", imageUrl: "https://images.unsplash.com/photo-1606491956687-8e76de41a91e?w=400"),
+                    MenuItem.Create(s.Id, "Fish Moilee", 320m, "Mains", description: "Kerala-style fish curry in coconut milk.", imageUrl: "https://images.unsplash.com/photo-1531750026848-8ada13a40d8a?w=400"),
+                    MenuItem.Create(s.Id, "Rasam", 60m, "Soups", description: "Tangy spiced tamarind soup.", imageUrl: "https://images.unsplash.com/photo-1606491956687-8e76de41a91e?w=400"),
+                    MenuItem.Create(s.Id, "Payasam", 80m, "Dessert", description: "Traditional rice and milk pudding.", imageUrl: "https://images.unsplash.com/photo-1601304549427-2e9c8f4b4b1f?w=400")
                 },
                 "Shawarma Junction" => new[]
                 {
-                    MenuItem.Create(s.Id, "Chicken Shawarma Roll", 120m, "Shawarma", description: "Rolled shawarma with garlic sauce.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Falafel Wrap", 100m, "Wraps", description: "Crispy falafel with hummus and veggies.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Chicken Shawarma Plate", 180m, "Plates", description: "Shawarma with rice, salad, and pita."),
-                    MenuItem.Create(s.Id, "Hummus & Pita", 80m, "Sides", description: "Creamy hummus with warm pita bread.")
+                    MenuItem.Create(s.Id, "Chicken Shawarma Roll", 120m, "Shawarma", description: "Rolled shawarma with garlic sauce.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1639024471283-03518883512d?w=400"),
+                    MenuItem.Create(s.Id, "Falafel Wrap", 100m, "Wraps", description: "Crispy falafel with hummus and veggies.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1626700051175-6818013ad1a8?w=400"),
+                    MenuItem.Create(s.Id, "Chicken Shawarma Plate", 180m, "Plates", description: "Shawarma with rice, salad, and pita.", imageUrl: "https://images.unsplash.com/photo-1595940814762-2c9c0b4b4b3f?w=400"),
+                    MenuItem.Create(s.Id, "Hummus & Pita", 80m, "Sides", description: "Creamy hummus with warm pita bread.", imageUrl: "https://images.unsplash.com/photo-1571197119282-8c4b4b4b4b4b?w=400")
                 },
                 "Brew & Bean" => new[]
                 {
-                    MenuItem.Create(s.Id, "Flat White", 100m, "Coffee", description: "Double shot ristretto with steamed milk."),
-                    MenuItem.Create(s.Id, "Iced Latte", 130m, "Coffee", description: "Chilled espresso with cold milk.", isLateNight: true),
-                    MenuItem.Create(s.Id, "Veg Puff", 40m, "Snacks", description: "Flaky pastry with spicy vegetable filling."),
-                    MenuItem.Create(s.Id, "Egg Puff", 50m, "Snacks", description: "Flaky pastry with spiced egg filling."),
-                    MenuItem.Create(s.Id, "Cold Coffee", 120m, "Coffee", description: "Blended iced coffee with ice cream.", isLateNight: true)
+                    MenuItem.Create(s.Id, "Flat White", 100m, "Coffee", description: "Double shot ristretto with steamed milk.", imageUrl: "https://images.unsplash.com/photo-1572442388796-11668a67e63d?w=400"),
+                    MenuItem.Create(s.Id, "Iced Latte", 130m, "Coffee", description: "Chilled espresso with cold milk.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400"),
+                    MenuItem.Create(s.Id, "Veg Puff", 40m, "Snacks", description: "Flaky pastry with spicy vegetable filling.", imageUrl: "https://images.unsplash.com/photo-1605278286492-3c8b4b4b4b4b?w=400"),
+                    MenuItem.Create(s.Id, "Egg Puff", 50m, "Snacks", description: "Flaky pastry with spiced egg filling.", imageUrl: "https://images.unsplash.com/photo-1605278286492-3c8b4b4b4b4b?w=400"),
+                    MenuItem.Create(s.Id, "Cold Coffee", 120m, "Coffee", description: "Blended iced coffee with ice cream.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400")
                 },
                 "Coastal Catch" => new[]
                 {
-                    MenuItem.Create(s.Id, "Grilled Sea Bass", 480m, "Grilled", description: "Whole sea bass grilled with herbs and lemon butter."),
-                    MenuItem.Create(s.Id, "Fish & Chips", 320m, "Fried", description: "Beer-battered fish with fries and tartar sauce."),
-                    MenuItem.Create(s.Id, "Prawn Curry", 380m, "Curry", description: "Fresh prawns in coconut masala."),
-                    MenuItem.Create(s.Id, "Calamari Rings", 220m, "Starters", description: "Crispy fried squid rings with dip."),
-                    MenuItem.Create(s.Id, "Crab Masala", 420m, "Curry", description: "Crab cooked in spicy Chettinad masala.")
+                    MenuItem.Create(s.Id, "Grilled Sea Bass", 480m, "Grilled", description: "Whole sea bass grilled with herbs and lemon butter.", imageUrl: "https://images.unsplash.com/photo-1535140728325-a4d3707eee84?w=400"),
+                    MenuItem.Create(s.Id, "Fish & Chips", 320m, "Fried", description: "Beer-battered fish with fries and tartar sauce.", imageUrl: "https://images.unsplash.com/photo-1535140728325-a4d3707eee84?w=400"),
+                    MenuItem.Create(s.Id, "Prawn Curry", 380m, "Curry", description: "Fresh prawns in coconut masala.", imageUrl: "https://images.unsplash.com/photo-1531750026848-8ada13a40d8a?w=400"),
+                    MenuItem.Create(s.Id, "Calamari Rings", 220m, "Starters", description: "Crispy fried squid rings with dip.", imageUrl: "https://images.unsplash.com/photo-1599909366516-6c4b4b4b4b4b?w=400"),
+                    MenuItem.Create(s.Id, "Crab Masala", 420m, "Curry", description: "Crab cooked in spicy Chettinad masala.", imageUrl: "https://images.unsplash.com/photo-1606491956687-8e76de41a91e?w=400")
                 },
                 _ => Array.Empty<MenuItem>()
             };

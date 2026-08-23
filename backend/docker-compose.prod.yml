@@ -52,6 +52,8 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE}
       Razorpay__KeyId: ${RAZORPAY_KEY_ID}
       Razorpay__KeySecret: ${RAZORPAY_KEY_SECRET}
+      Payments__UseMock: "true"
+      Payments__UseMockPayouts: "true"
       Firebase__ServiceAccount: ${FIREBASE_SERVICE_ACCOUNT}
       Ocr__Provider: ${OCR_PROVIDER}
       Ocr__GoogleCredentials: ${OCR_GOOGLE_CREDENTIALS}
