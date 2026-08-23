@@ -302,6 +302,30 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+            tooltip: 'Sign out',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Sign out?'),
+                  content: const Text('You will need to log in again with your phone number.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text('Sign out', style: TextStyle(color: AppTheme.danger)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true && context.mounted) {
+                await ref.read(vendorAuthControllerProvider.notifier).signOut();
+              }
+            },
+          ),
+          const SizedBox(width: 4),
           GestureDetector(
             onTap: _toggling ? null : _toggleAcceptingOrders,
             child: AnimatedContainer(

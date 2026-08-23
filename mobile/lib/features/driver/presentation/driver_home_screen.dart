@@ -195,10 +195,18 @@ class _TasksTab extends ConsumerWidget {
 
     return tasksAsync.when(
       loading: () => _buildShimmerList(),
-      error: (error, _) => _TasksFallback(ref: ref),
+      error: (error, _) => EmptyState(
+        icon: Icons.cloud_off,
+        title: 'Could not load tasks',
+        subtitle: error.toString(),
+      ),
       data: (tasks) {
         if (tasks.isEmpty) {
-          return _TasksFallback(ref: ref);
+          return const EmptyState(
+            icon: Icons.inbox,
+            title: 'No tasks available',
+            subtitle: 'Go online to receive ride offers',
+          );
         }
         return ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -252,63 +260,5 @@ class _TasksTab extends ConsumerWidget {
   }
 }
 
-class _TasksFallback extends ConsumerWidget {
-  const _TasksFallback({required this.ref});
-
-  final WidgetRef ref;
-
-  @override
-  Widget build(BuildContext context, WidgetRef widgetRef) {
-    final mockAsync = widgetRef.watch(mockTaskProvider);
-
-    return mockAsync.when(
-      loading: () => ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 4,
-        itemBuilder: (_, __) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: const ShimmerCard(height: 120, borderRadius: 16),
-        ),
-      ),
-      error: (_, _) => const EmptyState(
-        icon: Icons.inbox,
-        title: 'No tasks available',
-        subtitle: 'Go online to receive ride offers',
-      ),
-      data: (tasks) {
-        if (tasks.isEmpty) {
-          return const EmptyState(
-            icon: Icons.inbox,
-            title: 'No tasks available',
-            subtitle: 'Go online to receive ride offers',
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: tasks.length,
-          itemBuilder: (context, index) {
-            final task = tasks[index];
-            return FadeSlideIn(
-              delay: Duration(milliseconds: index * 80),
-              duration: const Duration(milliseconds: 350),
-              child: DispatchTaskCard(
-                task: task,
-                onAccept: task.status == 'Available'
-                    ? () => _acceptMockTask(context, task)
-                    : null,
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _acceptMockTask(BuildContext context, DispatchTaskModel task) {
-    AppHaptics.medium();
-    ref.read(activeTaskProvider.notifier).state = task;
-    ref.read(driverSelectedTabProvider.notifier).state = 1;
-  }
-}
 
 

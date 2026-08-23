@@ -147,12 +147,32 @@ builder.Services.AddRateLimiter(options =>
     // Apply GlobalPolicy as the default for all endpoints. Controllers with
     // a specific [EnableRateLimiting("AuthPolicy")] or ["OrderPolicy"] attribute
     // override this default.
+    //
+    // Partition key: authenticated users are limited per JWT subject (user ID),
+    // not per IP. This prevents multiple users behind the same NAT (office WiFi,
+    // mobile carrier CGNAT) from sharing a single rate limit bucket and hitting
+    // 429s unfairly. Anonymous requests (no JWT) fall back to IP-based limiting.
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
         httpContext =>
         {
+            // Try to extract the user ID from the JWT claims. If the request
+            // is authenticated, use the subject claim as the partition key.
+            var userId = httpContext.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                    $"user:{userId}",
+                    _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = rateLimitConfig.Global.PermitLimit,
+                        Window = TimeSpan.FromSeconds(rateLimitConfig.Global.WindowSeconds),
+                        QueueLimit = rateLimitConfig.Global.QueueLimit,
+                    });
+            }
+            // Anonymous: fall back to IP-based limiting.
             var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
-                ip,
+                $"ip:{ip}",
                 _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
                 {
                     PermitLimit = rateLimitConfig.Global.PermitLimit,

@@ -6,7 +6,6 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/application/vendor_auth_controller.dart';
 import '../application/vendor_providers.dart';
-import '../data/vendor_dashboard_api.dart';
 import '../domain/vendor_category_type.dart';
 
 class ManageHubScreen extends ConsumerWidget {
@@ -46,13 +45,13 @@ class ManageHubScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Venue status card — falls back to session data if venue API
-            // returns null so the card never shows "No venue set up" when
-            // the vendor is logged in.
+            // Venue status card — shows real API data or real error.
             venueAsync.when(
               loading: () => _buildShimmerCard(context),
-              error: (_, __) => _buildVenueCard(context, _fallbackVenue(session)),
-              data: (venue) => _buildVenueCard(context, venue ?? _fallbackVenue(session)),
+              error: (e, _) => _buildVenueError(context, e.toString()),
+              data: (venue) => venue == null
+                  ? _buildNoVenue(context)
+                  : _buildVenueCard(context, venue),
             ),
             const SizedBox(height: 16),
             // Management grid
@@ -408,16 +407,48 @@ class ManageHubScreen extends ConsumerWidget {
     );
   }
 
-  /// Builds a fallback venue detail from the vendor auth session when the
-  /// venue API returns null. This ensures the Manage tab always shows the
-  /// vendor's business name instead of "No venue set up".
-  VendorVenueDetail _fallbackVenue(VendorAuthSession? session) {
-    if (session == null) return VendorVenueDetail(venueId: '', name: '', category: '', isActive: false);
-    return VendorVenueDetail(
-      venueId: session.vendorId,
-      name: session.vendorName,
-      category: session.category,
-      isActive: session.isApproved,
+  Widget _buildVenueError(BuildContext context, String error) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: AppTheme.danger, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Could not load venue: $error',
+              style: TextStyle(color: AppTheme.danger, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoVenue(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.store_outlined, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No venue linked to your account. Contact admin to link your venue.',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

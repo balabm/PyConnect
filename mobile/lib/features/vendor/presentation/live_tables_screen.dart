@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -57,9 +56,7 @@ class _LiveTablesScreenState extends ConsumerState<LiveTablesScreen>
       final tables = await ref.read(vendorApiProvider).getLiveTables();
       if (mounted) {
         setState(() {
-          // In demo mode or when no live tables exist, show mock data
-          // so the screen never appears empty during a pitch.
-          _tables = tables.isNotEmpty ? tables : _demoTables;
+          _tables = tables;
           _loading = false;
           _error = null;
         });
@@ -67,53 +64,13 @@ class _LiveTablesScreenState extends ConsumerState<LiveTablesScreen>
     } catch (e) {
       if (mounted) {
         setState(() {
-          // On error, fall back to demo tables instead of showing an
-          // error screen. This keeps the demo flowing.
-          _tables = AppConfig.isDemoMode ? _demoTables : [];
+          _tables = [];
           _loading = false;
-          _error = AppConfig.isDemoMode ? null : e.toString();
+          _error = e.toString();
         });
       }
     }
   }
-
-  /// Mock demo tables for the Live Tables screen. Shows realistic data
-  /// that a pub owner would expect to see on a busy Saturday night.
-  List<LiveTableEntry> get _demoTables => [
-        LiveTableEntry(
-          bookingId: 'demo-t1',
-          guestName: 'Arjun Mehta',
-          guestCount: 4,
-          coverChargeAmount: 6000,
-          creditUsed: 1200,
-          creditAvailable: 4800,
-          serviceType: 'PubClub',
-          checkedInAt: DateTime.now().subtract(const Duration(minutes: 45)),
-          status: 'Seated',
-        ),
-        LiveTableEntry(
-          bookingId: 'demo-t2',
-          guestName: 'VIP Couch 1 — Priya & Guests',
-          guestCount: 6,
-          coverChargeAmount: 18000,
-          creditUsed: 4500,
-          creditAvailable: 13500,
-          serviceType: 'PubClub',
-          checkedInAt: DateTime.now().subtract(const Duration(minutes: 90)),
-          status: 'VIP',
-        ),
-        LiveTableEntry(
-          bookingId: 'demo-t3',
-          guestName: 'Karthik R',
-          guestCount: 2,
-          coverChargeAmount: 3000,
-          creditUsed: 800,
-          creditAvailable: 2200,
-          serviceType: 'PubClub',
-          checkedInAt: DateTime.now().subtract(const Duration(minutes: 20)),
-          status: 'Seated',
-        ),
-      ];
 
   @override
   Widget build(BuildContext context) {

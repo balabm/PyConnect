@@ -168,7 +168,7 @@ final driverWalletDetailProvider =
 });
 
 final dispatchTaskStreamProvider =
-    StreamProvider<List<DispatchTaskModel>>((ref) async* {
+    StreamProvider.autoDispose<List<DispatchTaskModel>>((ref) async* {
   final api = ref.read(driverApiProvider);
   final signalR = ref.read(driverSignalRProvider);
 
@@ -210,51 +210,6 @@ final dispatchTaskStreamProvider =
   });
 
   yield* controller.stream;
-});
-
-// Mock SignalR task provider for demo/testing purposes
-final mockTaskProvider = StreamProvider<List<DispatchTaskModel>>((ref) async* {
-  final mockTasks = [
-    DispatchTaskModel(
-      id: 'mock-1',
-      taskType: 'FoodDelivery',
-      pickupAddress: 'Fuoco Pizzeria, White Town',
-      dropoffAddress: 'Le Dupleix Hotel, White Town',
-      driverEarnings: 40,
-      status: 'Available',
-    ),
-    DispatchTaskModel(
-      id: 'mock-2',
-      taskType: 'Ride',
-      pickupAddress: 'Pondicherry Bus Stand',
-      dropoffAddress: 'Rock Beach',
-      driverEarnings: 85,
-      status: 'Available',
-    ),
-    DispatchTaskModel(
-      id: 'mock-3',
-      taskType: 'EssentialsDrop',
-      pickupAddress: '24x7 Store, Mission Street',
-      dropoffAddress: 'Aurobindo Ashram Guest House',
-      driverEarnings: 30,
-      status: 'Available',
-    ),
-  ];
-
-  yield mockTasks;
-
-  await Future.delayed(const Duration(seconds: 5));
-  yield [
-    ...mockTasks,
-    DispatchTaskModel(
-      id: 'mock-4',
-      taskType: 'Ride',
-      pickupAddress: 'Promenade Beach',
-      dropoffAddress: 'Pondicherry Airport',
-      driverEarnings: 120,
-      status: 'Available',
-    ),
-  ];
 });
 
 /// The task currently accepted by the driver that should be shown in the
