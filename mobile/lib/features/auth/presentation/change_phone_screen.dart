@@ -6,7 +6,6 @@ import '../../../core/network/api_client.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/auth_controller.dart';
-import '../data/auth_api.dart';
 
 /// Two-step phone number change screen.
 ///

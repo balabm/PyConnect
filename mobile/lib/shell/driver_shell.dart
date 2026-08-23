@@ -8,8 +8,6 @@ import '../core/device/location_security.dart';
 import '../core/animations/haptic.dart';
 import '../core/navigation/floating_nav_bar.dart';
 import '../core/theme/app_theme.dart';
-import '../core/network/offline_mutation_queue.dart';
-import '../core/services/gps_buffer_service.dart';
 import '../core/providers.dart';
 import '../features/driver/application/driver_providers.dart';
 import '../features/driver/application/driver_signalr_provider.dart';
@@ -20,7 +18,6 @@ import '../core/services/keep_awake_service.dart';
 import '../core/services/background_location_service.dart';
 import '../core/services/overlay_alert_service.dart';
 import '../core/services/tts_service.dart';
-import '../features/driver/data/driver_api.dart';
 import '../features/driver/presentation/ride_offer_sheet.dart';
 
 /// Root scaffold for the Driver app with bottom navigation.

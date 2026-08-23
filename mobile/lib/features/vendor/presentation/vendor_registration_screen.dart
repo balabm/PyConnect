@@ -9,7 +9,6 @@ import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/services/file_picker_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../data/vendor_onboarding_api.dart';
 
 /// Partner self-registration screen.
 ///

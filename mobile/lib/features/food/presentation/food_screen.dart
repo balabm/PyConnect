@@ -23,7 +23,6 @@ import '../../checkout/presentation/slide_to_pay.dart';
 import '../../checkout/presentation/payment_success_overlay.dart';
 import '../data/food_api.dart';
 import 'widgets/item_customization_sheet.dart';
-import '../../../core/widgets/skeleton_loaders.dart';
 import '../../../core/widgets/menu_shimmer_grid.dart';
 
 final menuProvider = FutureProvider.family<List<dynamic>, String>((ref, vendorId) async {

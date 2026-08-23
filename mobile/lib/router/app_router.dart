@@ -28,7 +28,6 @@ import '../features/rides/presentation/ride_history_screen.dart';
 import '../features/rides/presentation/ride_rating_screen.dart';
 import '../features/rides/presentation/ride_receipt_screen.dart';
 import '../features/rides/presentation/ride_tracking_screen.dart';
-import '../features/rides/presentation/rides_screen.dart';
 import '../features/rides/presentation/saved_locations_screen.dart';
 import '../features/rides/presentation/scheduled_rides_screen.dart';
 import '../features/rides/presentation/emergency_contacts_screen.dart';

@@ -13,7 +13,6 @@ import '../../../core/network/offline_mutation_queue.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/driver_providers.dart';
-import '../data/driver_api.dart';
 import '../domain/driver_models.dart';
 import 'driver_ride_screen.dart';
 import 'post_trip_summary_sheet.dart';

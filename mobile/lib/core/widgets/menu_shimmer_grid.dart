@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
-import '../theme/app_theme.dart';
-
 /// Pulsing skeleton cards that match the shape of incoming menu items.
 ///
 /// Replaces spinning loading circles with soft-grey skeleton tiles that

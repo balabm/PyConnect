@@ -16,7 +16,6 @@ import '../features/vendor/presentation/kitchen_display_screen.dart';
 import '../features/vendor/presentation/manage_hub_screen.dart';
 import '../features/vendor/presentation/drinks_menu_screen.dart';
 import '../features/vendor/presentation/live_tables_screen.dart';
-import '../features/vendor/presentation/table_crowd_manager_screen.dart';
 import '../features/vendor/presentation/fleet_management_screen.dart';
 import '../features/vendor/presentation/active_rentals_screen.dart';
 import '../features/vendor/presentation/taxi_fleet_screen.dart';

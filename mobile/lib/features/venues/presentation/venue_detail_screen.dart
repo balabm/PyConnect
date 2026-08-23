@@ -12,7 +12,6 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
-import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/menu_shimmer_grid.dart';
 import '../application/venue_controller.dart';

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
-import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/empty_state_view.dart';

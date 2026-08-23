@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../admin/application/admin_providers.dart';
-import '../../admin/data/admin_api.dart';
 import '../../support/data/support_api.dart';
 
 /// Admin dispute-ticket detail view with an issue-refund workflow.

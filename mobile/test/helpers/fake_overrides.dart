@@ -330,7 +330,7 @@ class _NullStorage implements FlutterSecureStorage {
 
 /// A fake DriverApi that returns canned data and can simulate network errors.
 class FakeDriverApi extends DriverApi {
-  FakeDriverApi(FakeApiClient client) : super(client);
+  FakeDriverApi(super.client);
 
   /// When true, the next call to markArrivedAtStore or markOutForDelivery
   /// throws a DioException with type connectionError.
@@ -387,7 +387,7 @@ class FakeDriverApi extends DriverApi {
 // ─────────────────────────────────────────────────────────────────────────
 
 class FakeVendorDashboardApi extends VendorDashboardApi {
-  FakeVendorDashboardApi(FakeApiClient client) : super(client);
+  FakeVendorDashboardApi(super.client);
 
   @override
   Future<List<MenuItemModel>> getMenu() async {
@@ -430,7 +430,7 @@ class FakeVendorDashboardApi extends VendorDashboardApi {
 // ─────────────────────────────────────────────────────────────────────────
 
 class FakeVendorMenuNotifier extends VendorMenuNotifier {
-  FakeVendorMenuNotifier(Ref ref, this._client) : super(ref);
+  FakeVendorMenuNotifier(super.ref, this._client);
 
   final FakeApiClient _client;
 

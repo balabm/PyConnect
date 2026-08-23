@@ -23,7 +23,6 @@ import 'package:pondyconnect/features/driver/domain/driver_models.dart';
 import 'package:pondyconnect/features/driver/presentation/active_trip_screen.dart';
 
 import '../helpers/test_helpers.dart';
-import '../helpers/fake_overrides.dart';
 
 /// Fixed-duration pump to avoid pumpAndSettle() hanging on
 /// continuous animations (shimmers, loading spinners, etc.).
