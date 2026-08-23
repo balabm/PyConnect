@@ -41,6 +41,8 @@ class _CrowdDashboardScreenState extends State<CrowdDashboardScreen>
   int _vipMembers = 23;
   int _firstTimers = 89;
   int _regulars = 53;
+  int _averageAge = 24;
+  int _liveRevenue = 29000;
 
   Timer? _liveTimer;
 
@@ -63,9 +65,11 @@ class _CrowdDashboardScreenState extends State<CrowdDashboardScreen>
         _coupleCount = _currentOccupancy - _maleCount - _femaleCount;
         if (_coupleCount < 20) _coupleCount = 20;
         _coverCollected += _randomInt(0, 2000);
+        _liveRevenue += _randomInt(500, 3000);
         _vipMembers = (_vipMembers + _randomInt(-1, 1)).clamp(15, 35);
         _firstTimers = (_firstTimers + _randomInt(-2, 3)).clamp(70, 110);
         _regulars = _currentOccupancy - _firstTimers;
+        _averageAge = (_averageAge + _randomInt(-1, 1)).clamp(21, 28);
       });
     });
   }
@@ -121,6 +125,32 @@ class _CrowdDashboardScreenState extends State<CrowdDashboardScreen>
                 cardColor: cardColor,
                 pulseController: _pulseController,
               ),
+              const SizedBox(height: 12),
+
+              // Quick stats row: Average Age + Live Revenue
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickStatCard(
+                      icon: Icons.cake_outlined,
+                      label: 'Avg Age',
+                      value: '$_averageAge',
+                      color: const Color(0xFF8B5CF6),
+                      cardColor: cardColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickStatCard(
+                      icon: Icons.trending_up,
+                      label: 'Live Revenue',
+                      value: '\u20B9${_formatK(_liveRevenue)}',
+                      color: AppTheme.emerald,
+                      cardColor: cardColor,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
 
               // Gender split donut chart
@@ -165,6 +195,66 @@ class _CrowdDashboardScreenState extends State<CrowdDashboardScreen>
       ),
     );
   }
+}
+
+class _QuickStatCard extends StatelessWidget {
+  const _QuickStatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.cardColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final Color cardColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  )),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: color,
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatK(int amount) {
+  if (amount >= 1000) {
+    final k = amount / 1000.0;
+    return k == k.roundToDouble() ? '${k.round()}K' : k.toStringAsFixed(1);
+  }
+  return amount.toString();
 }
 
 class _SectionTitle extends StatelessWidget {

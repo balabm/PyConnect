@@ -34,6 +34,9 @@ class _PromoSheetState extends State<PromoSheet>
   bool _broadcasting = false;
   bool _broadcastDone = false;
   int _reachedUsers = 0;
+  _PresetPromo? _selectedPromo;
+  double _durationMin = 30; // minutes
+  double _radiusKm = 2.0; // kilometers
 
   static const _presetPromos = [
     _PresetPromo(
@@ -77,8 +80,8 @@ class _PromoSheetState extends State<PromoSheet>
     super.dispose();
   }
 
-  Future<void> _broadcast(_PresetPromo promo) async {
-    if (_broadcasting) return;
+  Future<void> _broadcast() async {
+    if (_broadcasting || _selectedPromo == null) return;
     AppHaptics.medium();
     setState(() {
       _broadcasting = true;
@@ -95,7 +98,8 @@ class _PromoSheetState extends State<PromoSheet>
     setState(() {
       _broadcasting = false;
       _broadcastDone = true;
-      _reachedUsers = 1200 + (DateTime.now().millisecond % 400); // 1200-1600
+      // Simulate reached users based on radius (more radius = more users)
+      _reachedUsers = (400 * _radiusKm).round() + (DateTime.now().millisecond % 200);
     });
     AppHaptics.success();
   }
@@ -166,7 +170,7 @@ class _PromoSheetState extends State<PromoSheet>
                   color: Theme.of(context).colorScheme.onSurface,
                 )),
             const SizedBox(height: 4),
-            Text('Send an instant offer to users within 3km',
+            Text('Send an instant offer to nearby users',
                 style: TextStyle(
                   fontSize: 13,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -175,14 +179,57 @@ class _PromoSheetState extends State<PromoSheet>
 
             // Preset promo chips
             ..._presetPromos.map((promo) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: 10),
                   child: _PromoCard(
                     promo: promo,
-                    onTap: () => _broadcast(promo),
+                    isSelected: _selectedPromo == promo,
+                    onTap: () => setState(() => _selectedPromo = promo),
                   ),
                 )),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+
+            // Duration slider
+            if (_selectedPromo != null) ...[
+              _SliderRow(
+                icon: Icons.timer_outlined,
+                label: 'Duration',
+                value: '${_durationMin.round()} min',
+                slider: Slider(
+                  value: _durationMin,
+                  min: 15,
+                  max: 120,
+                  divisions: 7,
+                  activeColor: AppTheme.emerald,
+                  onChanged: (v) => setState(() => _durationMin = v),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Radius slider
+              _SliderRow(
+                icon: Icons.radio_button_checked,
+                label: 'Radius',
+                value: '${_radiusKm.toStringAsFixed(1)} km',
+                slider: Slider(
+                  value: _radiusKm,
+                  min: 1.0,
+                  max: 5.0,
+                  divisions: 8,
+                  activeColor: AppTheme.emerald,
+                  onChanged: (v) => setState(() => _radiusKm = v),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Slide-to-confirm broadcast button
+              _SlideToConfirm(
+                promo: _selectedPromo!,
+                onConfirm: _broadcast,
+              ),
+              const SizedBox(height: 12),
+            ],
+
             // Info note
             Container(
               padding: const EdgeInsets.all(12),
@@ -196,7 +243,7 @@ class _PromoSheetState extends State<PromoSheet>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Promotions auto-expire after 30 minutes. Users receive a push notification with your venue name and offer.',
+                      'Promotions auto-expire after the duration. Users within the radius receive a push notification with your venue name and offer.',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppTheme.emerald,
@@ -229,9 +276,10 @@ class _PresetPromo {
 }
 
 class _PromoCard extends StatelessWidget {
-  const _PromoCard({required this.promo, required this.onTap});
+  const _PromoCard({required this.promo, required this.onTap, this.isSelected = false});
   final _PresetPromo promo;
   final VoidCallback onTap;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -240,12 +288,16 @@ class _PromoCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: promo.color.withValues(alpha: 0.08),
+            color: promo.color.withValues(alpha: isSelected ? 0.12 : 0.08),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: promo.color.withValues(alpha: 0.2), width: 1),
+            border: Border.all(
+              color: promo.color.withValues(alpha: isSelected ? 0.5 : 0.2),
+              width: isSelected ? 2 : 1,
+            ),
           ),
           child: Row(
             children: [
@@ -277,11 +329,171 @@ class _PromoCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.send, size: 20, color: promo.color),
+              Icon(
+                isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 22,
+                color: promo.color,
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SliderRow extends StatelessWidget {
+  const _SliderRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.slider,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Widget slider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: AppTheme.emerald),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                )),
+            const Spacer(),
+            Text(value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.emerald,
+                )),
+          ],
+        ),
+        slider,
+      ],
+    );
+  }
+}
+
+/// Slide-to-confirm button to prevent accidental promo broadcasts.
+class _SlideToConfirm extends StatefulWidget {
+  const _SlideToConfirm({required this.promo, required this.onConfirm});
+  final _PresetPromo promo;
+  final VoidCallback onConfirm;
+
+  @override
+  State<_SlideToConfirm> createState() => _SlideToConfirmState();
+}
+
+class _SlideToConfirmState extends State<_SlideToConfirm>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  double _dragExtent = 0;
+  bool _confirmed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxDrag = constraints.maxWidth - 72; // thumb width
+        return GestureDetector(
+          onHorizontalDragUpdate: (details) {
+            if (_confirmed) return;
+            setState(() {
+              _dragExtent = (_dragExtent + details.delta.dx).clamp(0, maxDrag);
+            });
+          },
+          onHorizontalDragEnd: (details) {
+            if (_confirmed) return;
+            if (_dragExtent >= maxDrag * 0.85) {
+              setState(() => _confirmed = true);
+              AppHaptics.success();
+              widget.onConfirm();
+            } else {
+              // Snap back
+              _controller.reset();
+              setState(() => _dragExtent = 0);
+            }
+          },
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              color: widget.promo.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: widget.promo.color.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Label
+                Center(
+                  child: Text(
+                    _confirmed ? 'BROADCASTING...' : 'SLIDE TO BROADCAST',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: widget.promo.color,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+                // Sliding thumb
+                Positioned(
+                  left: _dragExtent,
+                  top: 4,
+                  bottom: 4,
+                  child: Container(
+                    width: 64,
+                    decoration: BoxDecoration(
+                      color: widget.promo.color,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.promo.color.withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      _confirmed ? Icons.check : Icons.arrow_forward,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

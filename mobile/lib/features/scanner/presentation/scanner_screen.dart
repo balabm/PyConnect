@@ -104,8 +104,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           _result = result;
         });
         _animationController.forward();
-        AppHaptics.heavy();
-        _playSuccessSound();
+        if (result.isVip) {
+          // Distinct double-pulse haptic for VIPs so the bouncer feels
+          // the VIP signal without looking closely at the screen.
+          AppHaptics.heavy();
+          Future.delayed(const Duration(milliseconds: 250), AppHaptics.heavy);
+          _playSuccessSound();
+        } else {
+          AppHaptics.heavy();
+          _playSuccessSound();
+        }
       } else if (result.isDuplicate) {
         setState(() {
           _state = ScannerState.duplicate;
@@ -322,106 +330,184 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   }
 
   Widget _buildSuccessOverlay() {
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
+    final isVip = _result?.isVip ?? false;
+
+    // VIP: Gold shimmer gradient. Standard: Emerald gradient.
+    final gradient = isVip
+        ? const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
+          )
+        : const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [AppTheme.emerald, AppTheme.emeraldDark],
-          ),
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100, height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check_circle, size: 80, color: Colors.white),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'VALID',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 4,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _friendlyPassType(_result?.serviceType ?? ''),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Customer: ${_result?.userName}',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                // Cover charge credit info — shows the bouncer and waitstaff
-                // how many guests are covered and how much credit is available.
-                if (_result?.guestCount != null && _result!.guestCount > 0) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
+          );
+
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(gradient: gradient),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // VIP crown or standard checkmark
+                    Container(
+                      width: 100, height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: isVip
+                          ? const Icon(Icons.emoji_events, size: 60, color: Colors.white)
+                          : const Icon(Icons.check_circle, size: 80, color: Colors.white),
                     ),
-                    child: Text(
-                      'Valid Entry: ${_result!.guestCount} Guests. '
-                      'Cover Charge Paid: ₹${_result!.coverChargeAmount.toStringAsFixed(0)}',
+                    const SizedBox(height: 24),
+                    if (isVip) ...[
+                      // VIP badge with stars
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('\u2605 ', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+                          Text(
+                            'VIP GUEST',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 40,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 4,
+                              shadows: [
+                                Shadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2)),
+                              ],
+                            ),
+                          ),
+                          const Text(' \u2605', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Top 5% Spender \u2022 LTV: \u20B9${(_result?.lifetimeValue ?? 0).toStringAsFixed(0)}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ] else ...[
+                      const Text(
+                        'VALID',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 4,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Text(
+                      _friendlyPassType(_result?.serviceType ?? ''),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 24,
                         fontWeight: FontWeight.w600,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                  ),
-                ],
-                if (_result?.message != null && _result!.message.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    _result!.message,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 13,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Customer: ${_result?.userName}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 16,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 32),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.emerald,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  ),
-                  onPressed: _resumeScanner,
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('[ Tap to Scan Next ]'),
+                    // Visits this month (VIP intel for bouncers)
+                    if (_result?.visitsThisMonth != null && _result!.visitsThisMonth > 0) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Visits this month: ${_result!.visitsThisMonth}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    // Cover charge credit info
+                    if (_result?.guestCount != null && _result!.guestCount > 0) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Text(
+                          'Valid Entry: ${_result!.guestCount} Guests. '
+                          'Cover Charge Paid: \u20B9${_result!.coverChargeAmount.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                    if (_result?.message != null && _result!.message.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _result!.message,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: isVip ? const Color(0xFFB8860B) : AppTheme.emerald,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      ),
+                      onPressed: _resumeScanner,
+                      icon: const Icon(Icons.qr_code_scanner),
+                      label: const Text('[ Tap to Scan Next ]'),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
+          // VIP shimmer overlay
+          if (isVip) _buildVipShimmer(),
+        ],
+      ),
+    );
+  }
+
+  /// Animated gold shimmer sweep across the screen for VIP scans.
+  Widget _buildVipShimmer() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (_, __) {
+            return CustomPaint(
+              painter: _GoldShimmerPainter(_animationController.value),
+            );
+          },
         ),
       ),
     );
@@ -687,4 +773,33 @@ class _ScannerOverlayPainter extends CustomPainter {
       oldDelegate.cutoutSize != cutoutSize ||
       oldDelegate.borderRadius != borderRadius ||
       oldDelegate.overlayColor != overlayColor;
+}
+
+/// Animated gold shimmer sweep for VIP scan results.
+/// Paints a diagonal translucent band that sweeps across the screen.
+class _GoldShimmerPainter extends CustomPainter {
+  _GoldShimmerPainter(this.progress);
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sweepWidth = size.width * 0.4;
+    final x = -sweepWidth + (size.width + sweepWidth * 2) * progress;
+    final band = Rect.fromLTWH(x, 0, sweepWidth, size.height);
+
+    final paint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          Colors.white.withValues(alpha: 0),
+          Colors.white.withValues(alpha: 0.15),
+          Colors.white.withValues(alpha: 0),
+        ],
+        stops: const [0, 0.5, 1],
+      ).createShader(band);
+
+    canvas.drawRect(band, paint);
+  }
+
+  @override
+  bool shouldRepaint(_GoldShimmerPainter old) => old.progress != progress;
 }
