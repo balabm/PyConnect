@@ -17,7 +17,7 @@ public sealed class OtpRateLimiter : IOtpRateLimiter
 
     public TimeSpan Window => TimeSpan.FromMinutes(15);
 
-    public int MaxRequests => 3;
+    public int MaxRequests => 20;
 
     public OtpRateLimiter(IDistributedCache cache)
     {

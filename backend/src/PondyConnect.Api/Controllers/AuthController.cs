@@ -76,7 +76,7 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<OtpRequestedResponse>> RequestOtp([FromBody] RequestOtpCommand command)
     {
-        // Enforce per-IP and per-phone OTP rate limiting (3 requests / 15 min).
+        // Enforce per-IP and per-phone OTP rate limiting (20 requests / 15 min).
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var phone = command.Phone ?? string.Empty;
 

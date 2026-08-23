@@ -200,7 +200,11 @@ class ApiClient {
     }
     if (e.response?.statusCode != null) {
       final status = e.response!.statusCode!;
-      return status >= 500 || status == 429; // Retry on 5xx and rate limit (429)
+      // Retry on 5xx server errors, but NOT on 429 rate limit — retrying
+      // a rate-limited request immediately makes the throttling worse.
+      // The backend rate limits are relaxed for normal usage; a 429 means
+      // something is genuinely over the limit and should surface to the user.
+      return status >= 500;
     }
     return false;
   }

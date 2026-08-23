@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'core/config/app_flavor.dart';
 import 'core/theme/app_theme.dart';
-import 'core/theme/theme_controller.dart';
 import 'core/widgets/error_boundary.dart';
 import 'core/widgets/offline_banner.dart';
 import 'features/driver/application/driver_providers.dart';
@@ -89,12 +88,9 @@ class _PondyConnectAppState extends ConsumerState<PondyConnectApp> {
       });
     }
 
-    final themeMode = ref.watch(themeControllerProvider.notifier).toMaterialMode();
-
-    // Driver app uses its own branded theme (no dark mode toggle).
-    // Partner app uses the global light/dark themes with system theme mode.
-    // Consumer app supports full light/dark mode switching, but Light Mode is default.
-    // Admin app uses a unified enterprise dark SaaS theme.
+    // All apps default to light mode. The consumer app retains an optional
+    // dark mode toggle in the profile screen, but the default is always light.
+    // Driver, Partner, and Admin apps are light-only.
     final ThemeData lightTheme;
     final ThemeData? darkTheme;
     switch (widget.flavor) {
@@ -103,7 +99,7 @@ class _PondyConnectAppState extends ConsumerState<PondyConnectApp> {
         darkTheme = null;
       case AppFlavor.partner:
         lightTheme = AppTheme.light;
-        darkTheme = AppTheme.dark;
+        darkTheme = null;
       case AppFlavor.admin:
         lightTheme = AppTheme.adminTheme;
         darkTheme = null;
@@ -117,7 +113,7 @@ class _PondyConnectAppState extends ConsumerState<PondyConnectApp> {
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
       darkTheme: darkTheme,
-      themeMode: darkTheme != null ? themeMode : ThemeMode.light,
+      themeMode: ThemeMode.light,
       routerConfig: router,
       builder: (context, child) {
         return OfflineBanner(
