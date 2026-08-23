@@ -1,33 +1,32 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/network/osm_geocoding_service.dart';
 import '../../../core/network/osrm_routing_service.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../auth/presentation/waiver_sheet.dart';
+import '../domain/nearby_driver.dart';
 import 'widgets/map_selection_mode_indicator.dart';
 import 'widgets/nearby_drivers_section.dart';
 import 'widgets/payment_method_selector.dart';
-import 'saved_locations_screen.dart';
 import 'widgets/ride_map.dart';
 import 'widgets/ride_result_card.dart';
 import 'widgets/route_info_bar.dart';
 import 'widgets/vehicle_selector.dart';
 
 final nearbyDriversProvider =
-    FutureProvider.family<List<dynamic>, ({double lat, double lng})>((ref, params) async {
+    FutureProvider.family<List<NearbyDriver>, ({double lat, double lng})>((ref, params) async {
   final api = ref.watch(ridesApiProvider);
-  return await api.nearbyDrivers(params.lat, params.lng);
+  final raw = await api.nearbyDrivers(params.lat, params.lng);
+  return NearbyDriver.fromJsonList(raw);
 });
 
 final routeProvider =
@@ -59,6 +58,21 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
   bool _locating = false;
   String? _inlineError;
 
+  /// Animated-camera focus target. Set after `_autoLocate` resolves the user's
+  /// GPS fix; bumping [_focusNonce] triggers `RideMap` to ease the camera here.
+  LatLng? _focusLocation;
+  int _focusNonce = 0;
+
+  /// True while the dropoff address search is active in-place. Used to dim/blur
+  /// the map behind the sheet so the user focuses on search results.
+  bool _searchActive = false;
+
+  /// Periodic nearby-driver poll. The `nearbyDriversProvider` is a
+  /// `FutureProvider.family` keyed by pickup coordinates, so to refresh the
+  /// marker list we invalidate the provider on a cadence and let the
+  /// `Consumer` rebuild with fresh data.
+  Timer? _nearbyPollTimer;
+
   static const _vehicles = [
     ('Bike', Icons.two_wheeler, 8.0, 15.0, 30.0, 2, 1, false),
     ('Auto', Icons.local_taxi, 12.0, 25.0, 50.0, 4, 3, false),
@@ -77,6 +91,25 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _autoLocate();
       ref.read(razorpayPaymentProvider).init();
+      _startNearbyPolling();
+    });
+  }
+
+  @override
+  void dispose() {
+    _nearbyPollTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Periodically refreshes the nearby-driver list so map markers glide as
+  /// drivers move. The provider is keyed by pickup coordinates, so we
+  /// invalidate it on a cadence to trigger a re-fetch.
+  void _startNearbyPolling() {
+    _nearbyPollTimer?.cancel();
+    _nearbyPollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (!mounted || _pickupLocation == null) return;
+      ref.invalidate(nearbyDriversProvider(
+          (lat: _pickupLocation!.latitude, lng: _pickupLocation!.longitude)));
     });
   }
 
@@ -93,9 +126,12 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
         setState(() {
           _pickupLocation = pos;
           _pickupAddress = address;
+          // Animate the map camera to the resolved GPS fix.
+          _focusLocation = pos;
+          _focusNonce += 1;
         });
       } else if (mounted) {
-        // GPS not available — keep default center but show generic label
+        // GPS not available â€” keep default center but show generic label
         setState(() {
           _pickupAddress = 'Pondicherry (tap map to set exact pickup)';
         });
@@ -223,25 +259,15 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
           Positioned.fill(
             child: Consumer(
               builder: (context, ref, _) {
-                // Fetch nearby drivers for map markers
-                List<LatLng>? driverMarkers;
+                // Fetch nearby drivers for map markers (rich model with
+                // coordinates + vehicle type, polled periodically).
+                List<NearbyDriver>? nearby;
                 if (_pickupLocation != null) {
                   final driversAsync = ref.watch(nearbyDriversProvider(
                       (lat: _pickupLocation!.latitude,
                       lng: _pickupLocation!.longitude)));
-                  driverMarkers = driversAsync.maybeWhen(
-                    data: (drivers) => drivers
-                        .whereType<Map<String, dynamic>>()
-                        .map((d) {
-                          final lat = (d['latitude'] as num?)?.toDouble() ??
-                              (d['lat'] as num?)?.toDouble();
-                          final lng = (d['longitude'] as num?)?.toDouble() ??
-                              (d['lng'] as num?)?.toDouble();
-                          if (lat == null || lng == null) return null;
-                          return LatLng(lat, lng);
-                        })
-                        .whereType<LatLng>()
-                        .toList(),
+                  nearby = driversAsync.maybeWhen(
+                    data: (drivers) => drivers,
                     orElse: () => null,
                   );
                 }
@@ -256,16 +282,29 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
                           .valueOrNull
                           ?.points
                       : null,
-                  nearbyDrivers: driverMarkers,
+                  nearbyDrivers: nearby,
                   zoom: 14.0,
                   onMapTap: _onMapTap,
                   fitRoute: hasRoute,
+                  focusLocation: _focusLocation,
+                  focusNonce: _focusNonce,
                 );
               },
             ),
           ),
 
-          // Floating selection mode indicator — positioned safely below AppBar
+          // Map dimming/blur while the dropoff search is active in-place.
+          if (_searchActive)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.25),
+                ),
+              ),
+            ),
+
+          // Floating selection mode indicator â€” positioned safely below AppBar
           Positioned(
             top: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
             left: 16,
@@ -288,7 +327,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
             ),
           ),
 
-          // My-location FAB — positioned above the collapsed sheet
+          // My-location FAB â€” positioned above the collapsed sheet
           Positioned(
             right: 16,
             bottom: screenHeight * 0.42 + 12,
@@ -313,7 +352,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
             ),
           ),
 
-          // Draggable bottom sheet — Uber/Swiggy style
+          // Draggable bottom sheet â€” Uber/Swiggy style
           DraggableScrollableSheet(
             initialChildSize: 0.5,
             minChildSize: 0.3,
@@ -561,22 +600,6 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
     );
   }
 
-  Future<void> _openDropoffSearchOverlay() async {
-    AppHaptics.light();
-    final result = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(
-        builder: (_) => const _DropoffSearchOverlay(),
-      ),
-    );
-    if (result != null && mounted) {
-      setState(() {
-        _dropoffLocation = result['location'] as LatLng;
-        _dropoffAddress = result['address'] as String;
-        _selectingPickup = false;
-      });
-    }
-  }
-
   Widget _buildAddressCard() {
     return Container(
       decoration: BoxDecoration(
@@ -612,7 +635,10 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
               color: Theme.of(context).dividerColor,
             ),
           ),
-          // Dropoff
+          // Dropoff â€” in-place search (no separate scaffold). Tapping the
+          // field focuses it and shows inline autocomplete suggestions; the
+          // map behind the sheet is dimmed/blurred while suggestions are
+          // visible so the user stays oriented to a single screen.
           _AddressRow(
             icon: Icons.location_on,
             iconColor: AppTheme.danger,
@@ -621,7 +647,8 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
               _dropoffLocation = location;
               _dropoffAddress = address;
             }),
-            onSearchTap: () => _openDropoffSearchOverlay(),
+            onSearchActiveChanged: (active) =>
+                setState(() => _searchActive = active),
           ),
         ],
       ),
@@ -644,7 +671,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
   Future<void> _requestRide() async {
     // Fat-finger guard: compute straight-line distance before requesting.
     // If the dropoff is more than 50km away for local bikes/autos, block the
-    // request to prevent accidental ₹10,000+ fares. Intercity cabs (index 2)
+    // request to prevent accidental â‚¹10,000+ fares. Intercity cabs (index 2)
     // are allowed longer distances.
     if (_pickupLocation != null && _dropoffLocation != null) {
       const distance = Distance();
@@ -676,7 +703,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
         .valueOrNull;
     if (route == null) return;
 
-    // Check auth — if not signed in, show QuickAuthSheet before proceeding
+    // Check auth â€” if not signed in, show QuickAuthSheet before proceeding
     final isAuthed = ref.read(authTokenProvider)?.isNotEmpty ?? false;
     if (!isAuthed) {
       final authenticated = await QuickAuthSheet.show(
@@ -924,7 +951,7 @@ class _AddressRow extends ConsumerStatefulWidget {
     required this.onSelected,
     this.initialText,
     this.initialLocation,
-    this.onSearchTap,
+    this.onSearchActiveChanged,
   });
 
   final IconData icon;
@@ -933,7 +960,11 @@ class _AddressRow extends ConsumerStatefulWidget {
   final void Function(String address, LatLng location) onSelected;
   final String? initialText;
   final LatLng? initialLocation;
-  final VoidCallback? onSearchTap;
+
+  /// Notified with `true` when the inline suggestion list becomes visible and
+  /// `false` when it is hidden. The ride screen uses this to dim/blur the map
+  /// behind the sheet so the user can focus on search results.
+  final void Function(bool active)? onSearchActiveChanged;
 
   @override
   ConsumerState<_AddressRow> createState() => _AddressRowState();
@@ -955,11 +986,11 @@ class _AddressRowState extends ConsumerState<_AddressRow> {
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
         Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) setState(() => _showSuggestions = false);
+          if (mounted) _setShowSuggestions(false);
         });
       } else if (_controller.text.isNotEmpty &&
           _controller.text != _selectedDisplayName) {
-        setState(() => _showSuggestions = true);
+        _setShowSuggestions(true);
       }
     });
   }
@@ -971,12 +1002,19 @@ class _AddressRowState extends ConsumerState<_AddressRow> {
     super.dispose();
   }
 
+  void _setShowSuggestions(bool value) {
+    if (_showSuggestions == value) return;
+    setState(() => _showSuggestions = value);
+    widget.onSearchActiveChanged?.call(value);
+  }
+
   void _onChanged(String value) {
     if (value == _selectedDisplayName) return;
     setState(() {
       _showSuggestions = true;
       _selectedDisplayName = null;
     });
+    widget.onSearchActiveChanged?.call(true);
     _debouncedSearch(value);
   }
 
@@ -1012,6 +1050,7 @@ class _AddressRowState extends ConsumerState<_AddressRow> {
       _showSuggestions = false;
       _suggestions = [];
     });
+    widget.onSearchActiveChanged?.call(false);
     widget.onSelected(displayName, location);
   }
 
@@ -1178,282 +1217,6 @@ class _MapActionButtonIcon extends StatelessWidget {
         icon,
         size: 22,
         color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
-      ),
-    );
-  }
-}
-
-/// Full-screen search overlay for selecting a dropoff location.
-/// Shows autocomplete search results, saved places, and recent locations.
-class _DropoffSearchOverlay extends ConsumerStatefulWidget {
-  const _DropoffSearchOverlay();
-
-  @override
-  ConsumerState<_DropoffSearchOverlay> createState() => _DropoffSearchOverlayState();
-}
-
-class _DropoffSearchOverlayState extends ConsumerState<_DropoffSearchOverlay> {
-  final _searchController = TextEditingController();
-  List<GeocodingResult> _results = [];
-  bool _isSearching = false;
-  Timer? _debounce;
-  List<Map<String, dynamic>> _recentLocations = [];
-  static const _recentKey = 'recent_dropoff_locations';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRecentLocations();
-  }
-
-  Future<void> _loadRecentLocations() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_recentKey);
-    if (raw != null) {
-      try {
-        final list = jsonDecode(raw) as List<dynamic>;
-        if (mounted) {
-          setState(() => _recentLocations = list.cast<Map<String, dynamic>>());
-        }
-      } catch (_) {}
-    }
-  }
-
-  Future<void> _saveRecentLocation(LatLng location, String address) async {
-    final prefs = await SharedPreferences.getInstance();
-    final entry = {
-      'latitude': location.latitude,
-      'longitude': location.longitude,
-      'address': address,
-      'savedAt': DateTime.now().toIso8601String(),
-    };
-    // Remove duplicates by address, prepend, cap at 5
-    _recentLocations.removeWhere((e) => e['address'] == address);
-    _recentLocations.insert(0, entry);
-    if (_recentLocations.length > 5) {
-      _recentLocations = _recentLocations.sublist(0, 5);
-    }
-    await prefs.setString(_recentKey, jsonEncode(_recentLocations));
-  }
-
-  void _selectRecentLocation(Map<String, dynamic> loc) {
-    AppHaptics.light();
-    final lat = (loc['latitude'] as num?)?.toDouble() ?? 11.9356;
-    final lng = (loc['longitude'] as num?)?.toDouble() ?? 79.8301;
-    final address = loc['address'] as String? ?? 'Recent location';
-    Navigator.of(context).pop({
-      'location': LatLng(lat, lng),
-      'address': address,
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _debounce?.cancel();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String query) {
-    _debounce?.cancel();
-    if (query.trim().length < 3) {
-      setState(() {
-        _results = [];
-        _isSearching = false;
-      });
-      return;
-    }
-    setState(() => _isSearching = true);
-    _debounce = Timer(const Duration(milliseconds: 500), () async {
-      try {
-        final geocoding = ref.read(geocodingProvider);
-        final results = await geocoding.search(
-          query,
-          countryCodes: const ['in'],
-          limit: 8,
-        );
-        if (mounted) {
-          setState(() {
-            _results = results;
-            _isSearching = false;
-          });
-        }
-      } catch (_) {
-        if (mounted) {
-          setState(() => _isSearching = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not search addresses'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    });
-  }
-
-  void _selectResult(GeocodingResult result) {
-    AppHaptics.light();
-    _saveRecentLocation(result.location, result.displayName);
-    Navigator.of(context).pop({
-      'location': result.location,
-      'address': result.displayName,
-    });
-  }
-
-  void _selectSavedLocation(dynamic loc) {
-    AppHaptics.light();
-    final lat = (loc['latitude'] as num?)?.toDouble() ?? 11.9356;
-    final lng = (loc['longitude'] as num?)?.toDouble() ?? 79.8301;
-    final address = loc['address'] as String? ?? loc['label'] as String? ?? 'Saved location';
-    _saveRecentLocation(LatLng(lat, lng), address);
-    Navigator.of(context).pop({
-      'location': LatLng(lat, lng),
-      'address': address,
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final savedLocationsAsync = ref.watch(savedLocationsProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: TextField(
-          controller: _searchController,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Where to?',
-            border: InputBorder.none,
-            prefixIcon: const Icon(Icons.search, size: 22),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 20),
-                    onPressed: () {
-                      _searchController.clear();
-                      _onSearchChanged('');
-                    },
-                  )
-                : null,
-          ),
-          onChanged: _onSearchChanged,
-        ),
-      ),
-      body: Column(
-        children: [
-          // Search results
-          if (_isSearching)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_results.isNotEmpty)
-            Expanded(
-              child: ListView.builder(
-                itemCount: _results.length,
-                itemBuilder: (context, index) {
-                  final r = _results[index];
-                  return ListTile(
-                    leading: Icon(Icons.location_on, color: AppTheme.emerald, size: 22),
-                    title: Text(r.displayName, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    onTap: () => _selectResult(r),
-                  );
-                },
-              ),
-            )
-          else ...[
-            // Saved places section
-            savedLocationsAsync.when(
-              data: (locations) {
-                if (locations.isEmpty) return const SizedBox.shrink();
-                return Expanded(
-                  child: ListView(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                        child: Text(
-                          'SAVED PLACES',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.slate,
-                          ),
-                        ),
-                      ),
-                      ...locations.map((loc) => ListTile(
-                            leading: Icon(Icons.bookmark, color: AppTheme.emerald, size: 22),
-                            title: Text(loc['label'] as String? ?? 'Saved place'),
-                            subtitle: Text(
-                              loc['address'] as String? ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            onTap: () => _selectSavedLocation(loc),
-                          )),
-                    ],
-                  ),
-                );
-              },
-              loading: () => const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
-            // Recent locations (shown when no active search results)
-            if (_results.isEmpty && _recentLocations.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                child: Text(
-                  'Recent Locations',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              ..._recentLocations.map((loc) => ListTile(
-                    leading: Icon(Icons.history, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 22),
-                    title: Text(
-                      loc['address'] as String? ?? 'Recent location',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () => _selectRecentLocation(loc),
-                  )),
-            ],
-            // Empty state placeholder (only when no recents and no saved places)
-            if (_results.isEmpty &&
-                _recentLocations.isEmpty &&
-                savedLocationsAsync.maybeWhen(data: (l) => l.isEmpty, orElse: () => false))
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Search for a destination',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Try "Rock Beach", "Auroville", or "White Town"',
-                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ],
       ),
     );
   }

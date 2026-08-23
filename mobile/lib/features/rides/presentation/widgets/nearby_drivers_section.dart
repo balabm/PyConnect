@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../domain/nearby_driver.dart';
 
 /// Modern horizontal scroll list of nearby drivers.
 class NearbyDriversSection extends StatelessWidget {
   const NearbyDriversSection({super.key, required this.drivers});
 
-  final List<dynamic> drivers;
+  final List<NearbyDriver> drivers;
 
   @override
   Widget build(BuildContext context) {
@@ -88,15 +89,11 @@ class NearbyDriversSection extends StatelessWidget {
             itemCount: drivers.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              final driver = drivers[index] as Map<String, dynamic>;
-              final name = driver['name'] as String? ?? 'Driver';
-              final vehicleType =
-                  driver['vehicleType'] as String? ?? 'Bike';
-              final vehiclePlate =
-                  driver['vehiclePlate'] as String? ?? '';
-              final distanceKm = (driver['distanceKm'] as num?)?.toDouble();
-              final rating =
-                  (driver['rating'] as num?)?.toDouble() ?? 4.5;
+              final driver = drivers[index];
+              final name = driver.name;
+              final vehicleType = driver.vehicleType;
+              final distanceKm = driver.distanceKm;
+              final rating = driver.rating ?? 4.5;
 
               return TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
@@ -170,17 +167,6 @@ class NearbyDriversSection extends StatelessWidget {
                             const SizedBox(height: 2),
                             Row(
                               children: [
-                                if (vehiclePlate.isNotEmpty) ...[
-                                  Text(
-                                    vehiclePlate,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                ],
                                 if (distanceKm != null) ...[
                                   Container(
                                     width: 4,

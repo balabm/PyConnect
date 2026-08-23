@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../domain/nearby_driver.dart';
 import 'animated_vehicle_marker.dart';
 
 /// CartoDB Positron (light) and Dark Matter (dark) tiles per MasterPlan spec.
@@ -37,6 +38,9 @@ class RideMap extends StatefulWidget {
     this.zoom = 14.0,
     this.onMapTap,
     this.fitRoute = false,
+    this.focusLocation,
+    this.focusNonce = 0,
+    this.focusZoom = 16.5,
   });
 
   final LatLng pickup;
@@ -48,18 +52,40 @@ class RideMap extends StatefulWidget {
   /// Rendered as a dashed muted-color line distinct from the main route.
   final List<LatLng>? driverRoutePoints;
   /// Nearby driver locations to show as markers on the map.
-  final List<LatLng>? nearbyDrivers;
+  final List<NearbyDriver>? nearbyDrivers;
   final double zoom;
   final void Function(LatLng)? onMapTap;
   final bool fitRoute;
+
+  /// When [focusNonce] changes, the map camera animates to this location at
+  /// [focusZoom]. Used to smoothly frame the user's GPS fix after locate.
+  final LatLng? focusLocation;
+
+  /// Monotonically-increasing counter; a change triggers an animated camera
+  /// move to [focusLocation]. Bumping the nonce re-triggers the animation even
+  /// when the target location is unchanged.
+  final int focusNonce;
+
+  final double focusZoom;
 
   @override
   State<RideMap> createState() => _RideMapState();
 }
 
-class _RideMapState extends State<RideMap> {
+class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   late final MapController _mapController;
   bool _hasFitRoute = false;
+
+  /// Lightweight animated-camera controller. Drives a per-frame
+  /// [_mapController.move] call to ease from the current center/zoom to the
+  /// target focus location, avoiding a new dependency on
+  /// `flutter_map_animations`.
+  AnimationController? _focusAnim;
+  LatLng? _focusFrom;
+  LatLng? _focusTo;
+  double _focusFromZoom = 14.0;
+  double _focusToZoom = 16.5;
+  int _lastFocusNonce = -1;
 
   /// The geographic position the driver marker is currently displayed at.
   /// This is updated every animation frame by [AnimatedVehicleMarker] so the
@@ -72,6 +98,15 @@ class _RideMapState extends State<RideMap> {
   LatLng? _animStart;
   LatLng? _animEnd;
 
+  /// Currently-displayed (animated) positions of nearby drivers, keyed by
+  /// driver id. Updated each animation frame by each driver's
+  /// [AnimatedVehicleMarker] so the marker glides between polling refreshes.
+  final Map<String, LatLng> _nearbyAnimatedPositions = {};
+
+  /// The previous fix per nearby driver, used as the glide start point when a
+  /// new polling refresh arrives.
+  final Map<String, LatLng> _nearbyPreviousPositions = {};
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +116,18 @@ class _RideMapState extends State<RideMap> {
     _animatedDriverLocation = widget.driverLocation;
     _animStart = widget.driverLocation;
     _animEnd = widget.driverLocation;
+    _seedNearbyPositions();
+  }
+
+  /// Seeds the animated/previous position maps for any newly-arrived nearby
+  /// drivers so their first frame is placed at the reported fix (no glide
+  /// from origin).
+  void _seedNearbyPositions() {
+    if (widget.nearbyDrivers == null) return;
+    for (final d in widget.nearbyDrivers!) {
+      _nearbyAnimatedPositions.putIfAbsent(d.id, () => d.location);
+      _nearbyPreviousPositions.putIfAbsent(d.id, () => d.location);
+    }
   }
 
   @override
@@ -114,6 +161,62 @@ class _RideMapState extends State<RideMap> {
     if (widget.routePoints != oldWidget.routePoints) {
       _hasFitRoute = false;
     }
+
+    // For nearby drivers: when a new polling refresh arrives, record the
+    // currently displayed position as the glide start point. The
+    // [AnimatedVehicleMarker] (keyed by id+segment) will animate from that
+    // start to the new fix and update [_nearbyAnimatedPositions] each frame
+    // via its callback. For first appearances, seed both maps to the fix so
+    // the marker is placed without animating from origin.
+    if (widget.nearbyDrivers != null) {
+      for (final d in widget.nearbyDrivers!) {
+        if (!_nearbyAnimatedPositions.containsKey(d.id)) {
+          _nearbyAnimatedPositions[d.id] = d.location;
+          _nearbyPreviousPositions[d.id] = d.location;
+        } else {
+          _nearbyPreviousPositions[d.id] = _nearbyAnimatedPositions[d.id]!;
+        }
+      }
+    }
+
+    // Animated camera framing: when the focus nonce changes, ease the map
+    // center/zoom to the requested focus location.
+    if (widget.focusLocation != null &&
+        widget.focusNonce != _lastFocusNonce) {
+      _lastFocusNonce = widget.focusNonce;
+      _animateCameraTo(widget.focusLocation!, widget.focusZoom);
+    }
+  }
+
+  /// Eases the map camera from its current center/zoom to [target] at
+  /// [targetZoom] over ~700ms using a per-frame [MapController.move] call.
+  /// This avoids adding the `flutter_map_animations` dependency.
+  void _animateCameraTo(LatLng target, double targetZoom) {
+    _focusAnim?.dispose();
+    final currentCenter = _mapController.camera.center;
+    _focusFrom = currentCenter;
+    _focusTo = target;
+    _focusFromZoom = _mapController.camera.zoom;
+    _focusToZoom = targetZoom;
+    _focusAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..addListener(() {
+        final t = Curves.easeOutCubic.transform(_focusAnim!.value);
+        final lat =
+            _focusFrom!.latitude + (_focusTo!.latitude - _focusFrom!.latitude) * t;
+        final lng = _focusFrom!.longitude +
+            (_focusTo!.longitude - _focusFrom!.longitude) * t;
+        final z = _focusFromZoom + (_focusToZoom - _focusFromZoom) * t;
+        _mapController.move(LatLng(lat, lng), z);
+      })
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _focusAnim?.dispose();
+    super.dispose();
   }
 
   void _fitBounds() {
@@ -264,34 +367,37 @@ class _RideMapState extends State<RideMap> {
             ],
           ),
         ],
-        // Nearby driver markers
+        // Nearby driver markers — one animated, vehicle-type-specific marker
+        // per driver. Each marker glides from its previous fix to the new one
+        // and rotates to face the direction of travel.
         if (widget.nearbyDrivers != null && widget.nearbyDrivers!.isNotEmpty)
           MarkerLayer(
             markers: widget.nearbyDrivers!
-                .map((loc) => Marker(
-                      point: loc,
-                      width: 32,
-                      height: 32,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppTheme.emerald,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.emerald.withValues(alpha: 0.3),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.two_wheeler,
-                          size: 18,
-                          color: Colors.white,
-                        ),
+                .map((d) {
+                    final start = _nearbyPreviousPositions[d.id] ?? d.location;
+                    final end = d.location;
+                    final point = _nearbyAnimatedPositions[d.id] ?? d.location;
+                    return Marker(
+                      point: point,
+                      width: 40,
+                      height: 40,
+                      child: AnimatedVehicleMarker(
+                        key: ValueKey(
+                            'nearby-${d.id}-${start.latitude},${start.longitude}->${end.latitude},${end.longitude}'),
+                        startLatLng: start,
+                        endLatLng: end,
+                        icon: d.icon,
+                        size: 20.0,
+                        onPositionUpdate: (latlng) {
+                          if (mounted) {
+                            setState(() {
+                              _nearbyAnimatedPositions[d.id] = latlng;
+                            });
+                          }
+                        },
                       ),
-                    ))
+                    );
+                  })
                 .toList(),
           ),
         MarkerLayer(markers: markers),

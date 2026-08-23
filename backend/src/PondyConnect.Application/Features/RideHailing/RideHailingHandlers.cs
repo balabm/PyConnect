@@ -743,7 +743,7 @@ public sealed class ListUserRidesHandler : IRequestHandler<ListUserRidesQuery, I
 
 public sealed record GetNearbyDriversQuery(double Latitude, double Longitude, double RadiusKm = 3.0) : IRequest<IReadOnlyList<NearbyDriverResponse>>;
 
-public sealed record NearbyDriverResponse(Guid Id, string Name, string VehicleType, double DistanceKm, double Rating, int TotalRides);
+public sealed record NearbyDriverResponse(Guid Id, string Name, string VehicleType, double DistanceKm, double Rating, int TotalRides, double Latitude, double Longitude);
 
 public sealed class GetNearbyDriversHandler : IRequestHandler<GetNearbyDriversQuery, IReadOnlyList<NearbyDriverResponse>>
 {
@@ -763,7 +763,7 @@ public sealed class GetNearbyDriversHandler : IRequestHandler<GetNearbyDriversQu
             .Select(d => new { Driver = d, Distance = d.CurrentLocation.DistanceKm(center) })
             .Where(x => x.Distance <= request.RadiusKm)
             .OrderBy(x => x.Distance)
-            .Select(x => new NearbyDriverResponse(x.Driver.Id, x.Driver.Name, x.Driver.VehicleType.ToString(), x.Distance, x.Driver.Rating, x.Driver.TotalRides))
+            .Select(x => new NearbyDriverResponse(x.Driver.Id, x.Driver.Name, x.Driver.VehicleType.ToString(), x.Distance, x.Driver.Rating, x.Driver.TotalRides, x.Driver.CurrentLocation.Latitude, x.Driver.CurrentLocation.Longitude))
             .ToList();
     }
 }
