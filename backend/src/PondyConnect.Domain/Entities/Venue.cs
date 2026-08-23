@@ -82,6 +82,16 @@ public sealed class Venue : BaseEntity
         };
     }
 
+    /// <summary>
+    /// Links this venue to a vendor (business owner). Used during seeding
+    /// to connect nightlife venues to their corresponding vendor records.
+    /// </summary>
+    public void SetVendorId(Guid vendorId)
+    {
+        VendorId = vendorId;
+        MarkUpdated();
+    }
+
     public void UpdateDetails(string name, string? description, string? address)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);

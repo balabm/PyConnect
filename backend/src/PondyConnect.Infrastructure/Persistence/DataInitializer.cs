@@ -263,9 +263,44 @@ public sealed class DataInitializer
         foreach (var vendor in vendors)
             vendor.Approve();
 
+        // Save vendors first so we can link venues to their IDs.
+        _context.Vendors.AddRange(vendors);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Link nightlife venues to their corresponding vendors by name.
+        // Without this, the venue VendorId stays NULL and the partner app
+        // gets a 404 when querying GET /api/vendor/venues.
+        var vendorByName = vendors.ToDictionary(v => v.Name);
+        foreach (var venue in venues)
+        {
+            if (vendorByName.TryGetValue(venue.Name, out var matchedVendor))
+            {
+                venue.SetVendorId(matchedVendor.Id);
+            }
+        }
+
+        // Create vendor owner users for the flagship nightlife vendors so
+        // they can log in to the Partner app via OTP. Without a User row,
+        // the OTP verify handler throws "No vendor profile is linked to
+        // this phone number" because the user doesn't exist yet.
+        var nightlifeOwnerPhones = new[]
+        {
+            ("Drunken Daddy Owner", "9000000010"),
+            ("The Fixx Owner", "9000000011"),
+            ("Royal Brothers Owner", "9000000012"),
+            ("Promenade SafeDrop Owner", "9000000013"),
+        };
+        foreach (var (ownerName, phone) in nightlifeOwnerPhones)
+        {
+            if (!await _context.Users.AnyAsync(u => u.Phone == phone, cancellationToken))
+            {
+                _context.Users.Add(User.Create(ownerName, phone, UserRole.Vendor));
+            }
+        }
+        await _context.SaveChangesAsync(cancellationToken);
+
         _context.Venues.AddRange(venues);
         _context.TransitHubs.AddRange(hubs);
-        _context.Vendors.AddRange(vendors);
 
         await _context.SaveChangesAsync(cancellationToken);
     }
