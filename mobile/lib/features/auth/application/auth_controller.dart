@@ -1,7 +1,9 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/providers.dart';
 import '../../notifications/application/notification_providers.dart';
 import '../data/google_sign_in_service.dart';
@@ -18,6 +20,9 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     ref.read(authTokenProvider.notifier).state = token;
     try {
       final me = await ref.read(authApiProvider).me();
+      if (kDebugMode) {
+        print('DEBUG ConsumerProfile: name=${me.name} phone=${me.phone} role=${me.role}');
+      }
       return AuthSession(
         name: me.name,
         phone: me.phone,
@@ -25,8 +30,18 @@ class AuthController extends AsyncNotifier<AuthSession?> {
         token: token,
         isProMember: me.isProMember,
       );
-    } catch (_) {
-      // Token may be stale; the router will force re-auth on a 401.
+    } on AuthRequiredException {
+      // 401 — token is invalid/expired (e.g. after DB purge). Clear and
+      // force re-login instead of keeping a dead token.
+      if (kDebugMode) print('DEBUG ConsumerAuth: 401 — token invalid, clearing');
+      await ref.read(tokenStorageProvider).clear();
+      ref.read(authTokenProvider.notifier).state = null;
+      ref.read(apiClientProvider).setToken(null);
+      return null;
+    } catch (e) {
+      // Network/transient error — keep the token so the user can retry
+      // when connectivity returns.
+      if (kDebugMode) print('DEBUG ConsumerAuth: profile fetch failed (non-auth): $e');
       return AuthSession(name: '', phone: '', role: '', token: token);
     }
   }

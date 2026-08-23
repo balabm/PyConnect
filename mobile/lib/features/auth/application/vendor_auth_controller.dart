@@ -1,7 +1,9 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/providers.dart';
 import '../../notifications/application/notification_providers.dart';
 import '../../vendor/data/vendor_dashboard_api.dart';
@@ -64,10 +66,15 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
     try {
       final profile =
           await VendorDashboardApi(ref.read(apiClientProvider)).getProfile();
+      if (kDebugMode) {
+        print('DEBUG VendorProfile: id=${profile.id} name=${profile.name} '
+            'category=${profile.category} isApproved=${profile.isApproved} '
+            'isActive=${profile.isActive}');
+      }
       final status = _statusFromProfile(profile);
       final updated = VendorAuthSession(
         accessToken: prefsSession.accessToken,
-        vendorId: prefsSession.vendorId,
+        vendorId: profile.id.isNotEmpty ? profile.id : prefsSession.vendorId,
         vendorName: profile.name.isNotEmpty ? profile.name : prefsSession.vendorName,
         category: profile.category.isNotEmpty ? profile.category : prefsSession.category,
         phone: prefsSession.phone,
@@ -79,9 +86,24 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
       );
       await _persistSession(updated);
       return updated;
-    } catch (_) {
-      // Offline or transient error — fall back to the locally cached session
-      // so the partner can still use the app and re-check later.
+    } on AuthRequiredException {
+      // 401 — the token is invalid/expired (e.g. after a DB purge that
+      // re-seeded user IDs). Clear the token and force re-login instead of
+      // falling back to a cached session with a dead token.
+      if (kDebugMode) {
+        print('DEBUG VendorAuth: 401 — token invalid, clearing session');
+      }
+      await ref.read(tokenStorageProvider).clear();
+      ref.read(authTokenProvider.notifier).state = null;
+      ref.read(apiClientProvider).setToken(null);
+      await _clearSession();
+      return null;
+    } catch (e) {
+      // Network/transient error — fall back to the locally cached session
+      // so the partner can still use the app offline and re-check later.
+      if (kDebugMode) {
+        print('DEBUG VendorAuth: profile fetch failed (non-auth): $e');
+      }
       return prefsSession;
     }
   }
@@ -105,6 +127,11 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
     state = await AsyncValue.guard(() async {
       final result =
           await ref.read(vendorAuthApiProvider).verifyOtp(phone, otpCode);
+      if (kDebugMode) {
+        print('DEBUG VendorLogin: vendorId=${result.vendorId} '
+            'name=${result.vendorName} category=${result.category} '
+            'status=${result.status}');
+      }
       await ref.read(tokenStorageProvider).write(result.accessToken);
       ref.read(apiClientProvider).setToken(result.accessToken);
       ref.read(authTokenProvider.notifier).state = result.accessToken;
