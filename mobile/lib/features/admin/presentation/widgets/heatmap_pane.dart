@@ -7,8 +7,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../application/admin_providers.dart';
 
 /// Live map pane showing real driver locations on an interactive map.
-/// Uses OpenStreetMap standard raster tiles — free, no API key, and not
-/// blocked by common ad blockers (unlike CartoDB basemaps).
+/// Uses CartoDB Dark Matter tiles for a sleek, high-contrast dark map
+/// that makes route lines and markers pop (Uber-style).
 class HeatmapPane extends ConsumerStatefulWidget {
   const HeatmapPane({super.key});
 
@@ -22,8 +22,10 @@ class _HeatmapPaneState extends ConsumerState<HeatmapPane> {
   // Pondicherry center
   static const _pondyCenter = LatLng(11.9356, 79.8301);
 
-  // OpenStreetMap standard raster tiles — not blocked by ad blockers.
-  static const _osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  // CartoDB Dark Matter — pitch black, muted greys, no noise.
+  static const _darkTiles =
+      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+  static const _subdomains = ['a', 'b', 'c', 'd'];
 
   @override
   void initState() {
@@ -47,7 +49,8 @@ class _HeatmapPaneState extends ConsumerState<HeatmapPane> {
           ),
           children: [
             TileLayer(
-              urlTemplate: _osmTiles,
+              urlTemplate: _darkTiles,
+              subdomains: _subdomains,
               userAgentPackageName: 'com.pondyconnect.admin',
             ),
             driversAsync.when(

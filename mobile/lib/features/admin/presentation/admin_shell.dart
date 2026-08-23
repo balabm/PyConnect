@@ -278,7 +278,7 @@ class _AdminShellState extends ConsumerState<AdminShell>
                 ),
               ),
             ),
-      trailing: isExtended ? _buildMoreMenu(context, hasCritical) : null,
+      trailing: _buildMoreMenu(context, hasCritical),
       destinations: _destinations
           .map(
             (d) => NavigationRailDestination(
@@ -294,19 +294,22 @@ class _AdminShellState extends ConsumerState<AdminShell>
   /// so the existing routes remain reachable from the desktop rail without
   /// crowding the 5 primary tabs. Also includes a Sign out action.
   Widget _buildMoreMenu(BuildContext context, bool hasCritical) {
+    final isExtended = MediaQuery.of(context).size.width >= 1100;
     return PopupMenuButton<String>(
       tooltip: 'More sections',
-      icon: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.more_horiz_rounded, color: AdminColors.textMuted),
-          if (true) SizedBox(width: 6),
-          Text(
-            'More',
-            style: TextStyle(color: AdminColors.textMuted, fontSize: 14),
-          ),
-        ],
-      ),
+      icon: isExtended
+          ? const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.more_horiz_rounded, color: AdminColors.textMuted),
+                SizedBox(width: 6),
+                Text(
+                  'More',
+                  style: TextStyle(color: AdminColors.textMuted, fontSize: 14),
+                ),
+              ],
+            )
+          : const Icon(Icons.more_horiz_rounded, color: AdminColors.textMuted),
       color: AdminColors.surface,
       onSelected: (value) {
         if (value == '__logout__') {
