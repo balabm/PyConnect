@@ -577,6 +577,11 @@ public sealed class DataInitializer
         {
             driver.Approve();
             driver.GoOnline();
+            // Complete tutorial and sign agreement so the Flutter router
+            // routes seeded drivers directly to the dashboard instead of
+            // redirecting them to the tutorial screen.
+            driver.CompleteTutorial();
+            driver.SignAgreement();
         }
 
         _context.Drivers.AddRange(drivers);
