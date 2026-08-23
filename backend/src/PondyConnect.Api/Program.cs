@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -164,6 +165,14 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Allow enum values to be serialized/deserialized as strings (e.g.
+        // "Bike" instead of 1) so the mobile apps can send readable vehicle
+        // types, payment methods, vendor categories, etc. without mapping to
+        // integer values on the client.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
         options.InvalidModelStateResponseFactory = context =>
