@@ -1,66 +1,124 @@
-version: '3.8'
+# PondyConnect - Production Docker Compose for AWS EC2 (t3.micro)
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Secrets are injected via environment variables on the EC2 host.
+# On EC2, set them in ~/.bashrc or an .env file next to this compose file:
+#   export POSTGRES_CONNECTION_STRING="Host=xxx.rds.amazonaws.com;Port=5432;Database=pondyconnect;Username=postgres;Password=..."
+#   export JWT_KEY="your-production-jwt-key"
+#   etc.
+#
+# Alternatively, create a .env file in the same directory:
+#   POSTGRES_CONNECTION_STRING=Host=...
+#   JWT_KEY=...
+#
+# Docker Compose reads .env automatically.
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: pondyconnect_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7.2-alpine
-    container_name: pondyconnect_redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    volumes:
-      - ./redisdata:/data
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   api:
+    # LOCAL: build from source. EC2: comment out build, uncomment image.
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     image: balabm/pondyconnect-api:latest
     container_name: pondyconnect_api
-    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+        # --- Database (RDS PostgreSQL) ---
+        # Injected via environment variable on the host.
+      ConnectionStrings__PostgreSQL: "${POSTGRES_CONNECTION_STRING}"
+
+        # --- Redis (local container, internal network only) ---
+        # The redis service below is on the default bridge network.
+      ConnectionStrings__Redis: "redis:6379"
+
+        # --- Database provider: use PostgreSQL in production ---
+      Database__Provider: "PostgreSQL"
+
+        # --- JWT authentication ---
+      Jwt__Key: "${JWT_KEY}"
+      Jwt__Issuer: "${JWT_ISSUER:-https://pyconnect.run.place}"
+      Jwt__Audience: "${JWT_AUDIENCE:-https://pyconnect.run.place}"
+      Jwt__AccessTokenLifetimeMinutes: "${JWT_ACCESS_TOKEN_LIFETIME_MINUTES:-60}"
+
+        # --- SMS provider (set to a real provider in production) ---
+      Sms__Provider: "${SMS_PROVIDER:-Console}"
+      Sms__UseMock: "${SMS_USE_MOCK:-false}"
+      Sms__ApiKey: "${SMS_API_KEY:-}"
+      Sms__SenderId: "${SMS_SENDER_ID:-PNDYC}"
+
+        # --- Rate limiting (auth: 10 OTP requests per 5 min) ---
+      RateLimiting__Auth__PermitLimit: "10"
+      RateLimiting__Auth__WindowSeconds: "300"
+      RateLimiting__Global__PermitLimit: "200"
+      RateLimiting__Global__WindowSeconds: "60"
+
+        # --- CORS: production allowed origins (localhost removed for security) ---
+      Cors__AllowedOrigins__0: "https://pyconnect.run.place"
+
+        # --- WhatsApp Business API ---
+      WhatsApp__AccessToken: "${WHATSAPP_ACCESS_TOKEN:-}"
+      WhatsApp__PhoneNumberId: "${WHATSAPP_PHONE_NUMBER_ID:-}"
+
+        # --- Payments ---
+      Payments__UseMock: "${PAYMENTS_USE_MOCK:-true}"
+
+        # --- Razorpay payment gateway (leave blank to use no-op dev gateway) ---
+      Razorpay__KeyId: "${RAZORPAY_KEY_ID:-}"
+      Razorpay__KeySecret: "${RAZORPAY_KEY_SECRET:-}"
+      Razorpay__WebhookSecret: "${RAZORPAY_WEBHOOK_SECRET:-}"
+
+        # --- OSRM routing service for distance validation ---
+      Osrm__BaseUrl: "${OSRM_BASE_URL:-https://router.project-osrm.org}"
+
+        # --- Firebase push notifications ---
+      Firebase__ServiceAccountPath: "${FIREBASE_SERVICE_ACCOUNT_PATH:-}"
+      Firebase__IsEnabled: "${FIREBASE_IS_ENABLED:-false}"
+
+        # --- Storage (S3 for KYC docs — mock = local filesystem for now) ---
+      Storage__UseMock: "${STORAGE_USE_MOCK:-true}"
+
+        # --- ASP.NET Core runtime ---
+      ASPNETCORE_ENVIRONMENT: "Production"
+        # aspnet:8.0-alpine listens on 8080 by default via ASPNETCORE_HTTP_PORTS
+    volumes:
+      # Mount Firebase service account JSON (read-only) for FCM push notifications.
+      # Upload to ~/firebase-service-account.json on the EC2 host, then set
+      # FIREBASE_IS_ENABLED=true in .env to activate push notifications.
+      - ~/firebase-service-account.json:/app/firebase-service-account.json:ro
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      ConnectionStrings__Redis: redis:6379
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-      Razorpay__KeyId: ${RAZORPAY_KEY_ID}
-      Razorpay__KeySecret: ${RAZORPAY_KEY_SECRET}
-      Payments__UseMock: "true"
-      Payments__UseMockPayouts: "true"
-      Firebase__ServiceAccount: ${FIREBASE_SERVICE_ACCOUNT}
-      Ocr__Provider: ${OCR_PROVIDER}
-      Ocr__GoogleCredentials: ${OCR_GOOGLE_CREDENTIALS}
-    ports:
-      - "8080:8080"
-    entrypoint: ["./entrypoint.sh"]
+    restart: unless-stopped
+    networks:
+      - pondyconnect-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: pondyconnect-redis
+    # Exposed internally only — no host port mapping.
+    # The api service reaches it via "redis:6379" on the shared network.
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    # Persist to disk every 60 seconds if at least 1 key changed.
+    # For stronger durability use "appendonly yes" (higher memory/disk usage).
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pondyconnect-net
+
+volumes:
+  redis-data:
 
 networks:
-  default:
-    name: pondyconnect_network
+  pondyconnect-net:
+    driver: bridge
