@@ -16,6 +16,7 @@ import '../features/essentials/presentation/essentials_order_history_screen.dart
 import '../features/essentials/presentation/essentials_screen.dart';
 import '../features/essentials/presentation/essentials_store_view.dart';
 import '../features/experiences/presentation/experiences_screen.dart';
+import '../features/events/presentation/party_builder_screen.dart';
 import '../features/food/presentation/food_order_detail_screen.dart';
 import '../features/food/presentation/food_order_history_screen.dart';
 import '../features/food/presentation/food_screen.dart';
@@ -166,6 +167,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'transit',
             builder: (_, _) => const TransitScreen(),
+          ),
+          GoRoute(
+            path: 'party',
+            builder: (_, _) => const PartyBuilderScreen(),
           ),
           GoRoute(
             path: 'ticket/:bookingId',

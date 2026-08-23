@@ -77,6 +77,73 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
     ],
   };
 
+  Widget _buildPartyBanner(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.light();
+          context.push('/party');
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [const Color(0xFF1A2E1F), const Color(0xFF0D1A12)]
+                  : [const Color(0xFF0D5C3F), const Color(0xFF0A4A33)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 4))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.celebration, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Host a Party',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'DJ · Bartender · Catering · Sound System',
+                      style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Start',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0D5C3F)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   String _fallbackImageFor(String category) {
     final catLower = category.toLowerCase();
     final list = _fallbackImages[catLower] ?? _fallbackImages['default']!;
@@ -199,6 +266,14 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
                   }).toList(),
                 ),
               ),
+            ),
+          ),
+
+          // Host a Party banner
+          SliverToBoxAdapter(
+            child: FadeSlideIn(
+              delay: const Duration(milliseconds: 120),
+              child: _buildPartyBanner(context),
             ),
           ),
 
