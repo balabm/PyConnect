@@ -594,6 +594,7 @@ public static class PassIssuer
 {
     private static readonly System.Security.Cryptography.HMACSHA256 s_hmac =
         new(System.Text.Encoding.UTF8.GetBytes("pondyconnect-pass-v1"));
+    private static readonly object s_hmacLock = new();
 
     /// <summary>
     /// Issues a signed QR payload combining booking ID, user ID, amount,
@@ -603,7 +604,11 @@ public static class PassIssuer
     public static string Issue(Guid bookingId, decimal amount, DateTimeOffset scheduledFor)
     {
         var raw = System.Text.Encoding.UTF8.GetBytes($"{bookingId:N}|{amount:F2}|{scheduledFor:O}");
-        var hash = s_hmac.ComputeHash(raw);
+        byte[] hash;
+        lock (s_hmacLock)
+        {
+            hash = s_hmac.ComputeHash(raw);
+        }
         return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
@@ -615,7 +620,11 @@ public static class PassIssuer
     public static string IssueSigned(Guid bookingId, Guid userId, decimal amount, DateTimeOffset scheduledFor)
     {
         var raw = System.Text.Encoding.UTF8.GetBytes($"{bookingId:N}|{userId:N}|{amount:F2}|{scheduledFor:O}");
-        var hash = s_hmac.ComputeHash(raw);
+        byte[] hash;
+        lock (s_hmacLock)
+        {
+            hash = s_hmac.ComputeHash(raw);
+        }
         return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 }

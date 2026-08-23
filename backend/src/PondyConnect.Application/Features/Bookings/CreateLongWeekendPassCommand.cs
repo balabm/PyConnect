@@ -97,11 +97,16 @@ public static class WeekendPassIssuer
 {
     private static readonly HMACSHA256 s_hmac =
         new(Encoding.UTF8.GetBytes("pondyconnect-weekendpass-v1"));
+    private static readonly object s_hmacLock = new();
 
     public static string Issue(Guid bundleId, Guid userId, DateTimeOffset expiresAt)
     {
         var raw = Encoding.UTF8.GetBytes($"LWP|{bundleId:N}|{userId:N}|{expiresAt:O}");
-        var hash = s_hmac.ComputeHash(raw);
+        byte[] hash;
+        lock (s_hmacLock)
+        {
+            hash = s_hmac.ComputeHash(raw);
+        }
         return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 }
