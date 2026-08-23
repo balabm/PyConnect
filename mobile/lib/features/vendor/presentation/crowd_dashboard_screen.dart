@@ -37,12 +37,12 @@ class _CrowdDashboardScreenState extends State<CrowdDashboardScreen>
   int _maleCount = 57;
   int _femaleCount = 48;
   int _coupleCount = 37;
-  int _coverCollected = 124000;
+  int _coverCollected = 213000; // ~142 guests * ₹1,500 cover
   int _vipMembers = 23;
   int _firstTimers = 89;
   int _regulars = 53;
   int _averageAge = 24;
-  int _liveRevenue = 29000;
+  int _liveRevenue = 213000; // matches cover collected
 
   Timer? _liveTimer;
 
@@ -65,7 +65,8 @@ class _CrowdDashboardScreenState extends State<CrowdDashboardScreen>
         _coupleCount = _currentOccupancy - _maleCount - _femaleCount;
         if (_coupleCount < 20) _coupleCount = 20;
         _coverCollected += _randomInt(0, 2000);
-        _liveRevenue += _randomInt(500, 3000);
+        // Live revenue tracks cover charge (₹1,500/guest) plus bar sales
+        _liveRevenue = _coverCollected + _randomInt(15000, 45000);
         _vipMembers = (_vipMembers + _randomInt(-1, 1)).clamp(15, 35);
         _firstTimers = (_firstTimers + _randomInt(-2, 3)).clamp(70, 110);
         _regulars = _currentOccupancy - _firstTimers;
@@ -170,6 +171,7 @@ class _CrowdDashboardScreenState extends State<CrowdDashboardScreen>
               _RevenueRow(
                 coverCollected: _coverCollected,
                 cardColor: cardColor,
+                occupancyPct: occupancyPct,
               ),
               const SizedBox(height: 20),
 
@@ -597,9 +599,10 @@ class _LegendItem extends StatelessWidget {
 }
 
 class _RevenueRow extends StatelessWidget {
-  const _RevenueRow({required this.coverCollected, required this.cardColor});
+  const _RevenueRow({required this.coverCollected, required this.cardColor, required this.occupancyPct});
   final int coverCollected;
   final Color cardColor;
+  final int occupancyPct;
 
   @override
   Widget build(BuildContext context) {
@@ -657,6 +660,9 @@ class _RevenueRow extends StatelessWidget {
               ],
             ),
           ),
+          // Dynamic Surge Pricing indicator (demo feature)
+          const SizedBox(height: 10),
+          _SurgePricingBanner(occupancyPct: occupancyPct),
         ],
       ),
     );
@@ -846,6 +852,58 @@ class _DoorLog extends StatelessWidget {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+/// Dynamic surge pricing banner that appears when occupancy is high.
+/// Shows a lightning bolt icon and the surge amount. Demo UI mockup.
+class _SurgePricingBanner extends StatelessWidget {
+  const _SurgePricingBanner({required this.occupancyPct});
+  final int occupancyPct;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSurge = occupancyPct >= 85;
+    final surgeAmount = occupancyPct >= 90 ? 500 : 300;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isSurge
+            ? AppTheme.warning.withValues(alpha: 0.12)
+            : AppTheme.emerald.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSurge
+              ? AppTheme.warning.withValues(alpha: 0.3)
+              : AppTheme.emerald.withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isSurge ? Icons.flash_on : Icons.trending_up,
+            size: 16,
+            color: isSurge ? AppTheme.warning : AppTheme.emerald,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isSurge
+                  ? 'Surge Active: +\u20B9$surgeAmount cover charge \u2022 Demand is high'
+                  : 'Dynamic pricing ready \u2022 Auto-activates at 85% capacity',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSurge ? AppTheme.warning : AppTheme.emerald,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

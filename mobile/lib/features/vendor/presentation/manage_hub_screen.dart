@@ -6,6 +6,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/application/vendor_auth_controller.dart';
 import '../application/vendor_providers.dart';
+import '../data/vendor_dashboard_api.dart';
 import '../domain/vendor_category_type.dart';
 
 class ManageHubScreen extends ConsumerWidget {
@@ -45,11 +46,13 @@ class ManageHubScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Venue status card
+            // Venue status card — falls back to session data if venue API
+            // returns null so the card never shows "No venue set up" when
+            // the vendor is logged in.
             venueAsync.when(
               loading: () => _buildShimmerCard(context),
-              error: (_, __) => _buildVenueCard(context, null),
-              data: (venue) => _buildVenueCard(context, venue),
+              error: (_, __) => _buildVenueCard(context, _fallbackVenue(session)),
+              data: (venue) => _buildVenueCard(context, venue ?? _fallbackVenue(session)),
             ),
             const SizedBox(height: 16),
             // Management grid
@@ -147,6 +150,20 @@ class ManageHubScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 24),
+            // Promoter / Affiliate Links (demo feature for pub owners)
+            if (category == VendorCategoryType.pubClub) ...[
+              Text(
+                'Promoter Links',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _PromoterLinksSection(),
+              const SizedBox(height: 24),
+            ],
             // Quick stats
             Text(
               'Quick Actions',
@@ -391,6 +408,19 @@ class ManageHubScreen extends ConsumerWidget {
     );
   }
 
+  /// Builds a fallback venue detail from the vendor auth session when the
+  /// venue API returns null. This ensures the Manage tab always shows the
+  /// vendor's business name instead of "No venue set up".
+  VendorVenueDetail _fallbackVenue(VendorAuthSession? session) {
+    if (session == null) return VendorVenueDetail(venueId: '', name: '', category: '', isActive: false);
+    return VendorVenueDetail(
+      venueId: session.vendorId,
+      name: session.vendorName,
+      category: session.category,
+      isActive: session.isApproved,
+    );
+  }
+
   Widget _buildQuickAction(
     BuildContext context, {
     required IconData icon,
@@ -525,6 +555,122 @@ class _ManageTile extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Promoter / Guestlist Affiliate Link section for pub owners.
+/// Shows a leaderboard of promoters and a button to generate new
+/// affiliate links. Demo UI mockup — no backend affiliate tracking yet.
+class _PromoterLinksSection extends StatelessWidget {
+  const _PromoterLinksSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final promoters = [
+      ('Rahul "The Plug"', 47, 18500),
+      ('Sneha Events', 32, 12800),
+      ('Vibe Collective', 18, 7200),
+    ];
+
+    return Card(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: 1,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.link, size: 18, color: AppTheme.emerald),
+                const SizedBox(width: 8),
+                Text(
+                  'Active Promoters',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.emerald,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: const Size(0, 32),
+                  ),
+                  onPressed: () {
+                    AppHaptics.light();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Affiliate link generated! Share it with your promoter.'),
+                        backgroundColor: AppTheme.emerald,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Generate Link', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...promoters.map((p) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppTheme.emerald.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            p.$1[0],
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.emerald,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p.$1,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              '${p.$2} guests \u2022 \u20B9${p.$3} commission earned',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.share, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+                    ],
+                  ),
+                )),
+          ],
         ),
       ),
     );

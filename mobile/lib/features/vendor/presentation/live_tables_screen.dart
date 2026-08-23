@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -56,20 +57,63 @@ class _LiveTablesScreenState extends ConsumerState<LiveTablesScreen>
       final tables = await ref.read(vendorApiProvider).getLiveTables();
       if (mounted) {
         setState(() {
-          _tables = tables;
+          // In demo mode or when no live tables exist, show mock data
+          // so the screen never appears empty during a pitch.
+          _tables = tables.isNotEmpty ? tables : _demoTables;
           _loading = false;
           _error = null;
         });
       }
     } catch (e) {
-      if (mounted && _loading) {
+      if (mounted) {
         setState(() {
-          _error = e.toString();
+          // On error, fall back to demo tables instead of showing an
+          // error screen. This keeps the demo flowing.
+          _tables = AppConfig.isDemoMode ? _demoTables : [];
           _loading = false;
+          _error = AppConfig.isDemoMode ? null : e.toString();
         });
       }
     }
   }
+
+  /// Mock demo tables for the Live Tables screen. Shows realistic data
+  /// that a pub owner would expect to see on a busy Saturday night.
+  List<LiveTableEntry> get _demoTables => [
+        LiveTableEntry(
+          bookingId: 'demo-t1',
+          guestName: 'Arjun Mehta',
+          guestCount: 4,
+          coverChargeAmount: 6000,
+          creditUsed: 1200,
+          creditAvailable: 4800,
+          serviceType: 'PubClub',
+          checkedInAt: DateTime.now().subtract(const Duration(minutes: 45)),
+          status: 'Seated',
+        ),
+        LiveTableEntry(
+          bookingId: 'demo-t2',
+          guestName: 'VIP Couch 1 — Priya & Guests',
+          guestCount: 6,
+          coverChargeAmount: 18000,
+          creditUsed: 4500,
+          creditAvailable: 13500,
+          serviceType: 'PubClub',
+          checkedInAt: DateTime.now().subtract(const Duration(minutes: 90)),
+          status: 'VIP',
+        ),
+        LiveTableEntry(
+          bookingId: 'demo-t3',
+          guestName: 'Karthik R',
+          guestCount: 2,
+          coverChargeAmount: 3000,
+          creditUsed: 800,
+          creditAvailable: 2200,
+          serviceType: 'PubClub',
+          checkedInAt: DateTime.now().subtract(const Duration(minutes: 20)),
+          status: 'Seated',
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -226,6 +270,10 @@ class _LiveTablesScreenState extends ConsumerState<LiveTablesScreen>
 
         // Table cards
         ..._tables.map((table) => _LiveTableCard(table: table)),
+
+        // VIP Escrow reserved table (demo feature)
+        const SizedBox(height: 16),
+        _EscrowReservedCard(),
       ],
     );
   }
@@ -452,6 +500,93 @@ class _CreditColumn extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Shows a VIP table held with an escrow auth-hold. If the guest doesn't
+/// show up by the expiry time, the escrow is captured and the table is
+/// released back into the app. This is a demo UI mockup.
+class _EscrowReservedCard extends StatelessWidget {
+  const _EscrowReservedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.danger.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3), width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.lock_clock, color: AppTheme.danger, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'VIP Couch 3',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.danger,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: const Text(
+                          'RESERVED',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '\u20B95,000 Escrow Held \u2022 Expires 11:00 PM',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.danger,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Auto-releases to pool if no-show',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
