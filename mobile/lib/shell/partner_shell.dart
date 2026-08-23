@@ -21,6 +21,8 @@ import '../features/vendor/presentation/active_rentals_screen.dart';
 import '../features/vendor/presentation/taxi_fleet_screen.dart';
 import '../features/vendor/presentation/taxi_rides_screen.dart';
 import '../features/vendor/presentation/cloak_capacity_screen.dart';
+import '../features/vendor/presentation/crowd_dashboard_screen.dart';
+import '../features/vendor/presentation/promo_sheet.dart';
 import '../features/scanner/presentation/scanner_screen.dart';
 import '../core/services/keep_awake_service.dart';
 
@@ -142,7 +144,7 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
             ManageHubScreen(),
           ],
         VendorCategoryType.pubClub => const [
-            VendorDashboardScreen(),
+            CrowdDashboardScreen(),
             LiveTablesScreen(),
             DrinksMenuScreen(),
             ScannerScreen(),
@@ -352,6 +354,15 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           children: _screens,
         ),
       ),
+      floatingActionButton: _category == VendorCategoryType.pubClub
+          ? FloatingActionButton.extended(
+              onPressed: () => PromoSheet.show(context),
+              backgroundColor: AppTheme.emerald,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.flash_on),
+              label: const Text('Boost'),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) {
