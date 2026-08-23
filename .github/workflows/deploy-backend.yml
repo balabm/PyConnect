@@ -90,6 +90,13 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            sleep 5
+            sleep 10
+            # Check container is running (not in restart loop from migration failure)
+            STATE=$(docker inspect -f '{{.State.Running}}' pondyconnect_api 2>/dev/null || echo "false")
+            if [ "$STATE" != "true" ]; then
+              echo "Container not running — checking logs for migration failure..."
+              docker logs --tail 50 pondyconnect_api 2>&1
+              exit 1
+            fi
             curl -sf http://localhost:5000/health || exit 1
             echo "Health check passed"

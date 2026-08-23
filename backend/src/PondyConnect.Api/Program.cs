@@ -327,12 +327,15 @@ app.MapHub<RideHub>("/hubs/ride");
 app.MapHub<AdminHub>("/hubs/admin");
 app.MapHub<VendorHub>("/hubs/vendor");
 
-// Apply migrations + seed known venues on startup. Log a warning when the
-// database is unreachable so local development can still boot the API.
+// Apply migrations + seed known venues on startup. In production, a migration
+// failure is fatal — the container should crash and restart rather than serving
+// requests against a stale schema (which causes 500s on missing columns). In
+// development, we log a warning so the API can still boot without a database.
 using (var scope = app.Services.CreateScope())
 {
     var initializer = scope.ServiceProvider.GetRequiredService<DataInitializer>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var isProduction = builder.Environment.IsProduction();
     try
     {
         await initializer.InitializeAsync();
@@ -342,6 +345,11 @@ using (var scope = app.Services.CreateScope())
         // Startup-only diagnostics; suppressed here because LoggerMessage
         // source generation is overkill for a one-time boot path.
 #pragma warning disable CA1848
+        if (isProduction)
+        {
+            logger.LogCritical(ex, "Database migration failed in production. Container will exit to force restart and retry.");
+            throw;
+        }
         logger.LogWarning(ex, "Database initialization skipped (is Postgres running?). API started without schema.");
 #pragma warning restore CA1848
     }
