@@ -782,28 +782,34 @@ class _InfoCard extends StatelessWidget {
 class _HouseRulesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final rules = [
-      'Check-in after 2:00 PM',
-      'Check-out before 11:00 AM',
-      'No smoking inside the property',
-      'Pets are not allowed',
-      'Quiet hours after 10:00 PM',
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final rules = <(IconData, String)>[
+      (Icons.access_time, 'Check-in after 2:00 PM'),
+      (Icons.logout, 'Check-out before 11:00 AM'),
+      (Icons.smoke_free, 'No smoking inside the property'),
+      (Icons.do_not_disturb, 'Pets are not allowed'),
+      (Icons.nightlight, 'Quiet hours after 10:00 PM'),
     ];
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: isDark
+            ? Theme.of(context).colorScheme.surfaceContainerLow
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+        ),
       ),
       child: Column(
         children: rules.map((rule) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               children: [
-                Icon(Icons.check_circle, size: 16, color: AppTheme.emerald),
-                const SizedBox(width: 8),
-                Expanded(child: Text(rule, style: const TextStyle(fontSize: 14))),
+                Icon(rule.$1, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(child: Text(rule.$2, style: TextStyle(fontSize: 14, height: 1.4, color: Theme.of(context).colorScheme.onSurface))),
               ],
             ),
           );
@@ -856,61 +862,116 @@ class _CompleteTripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.emerald.withValues(alpha: 0.06),
-            Colors.white,
-          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [const Color(0xFF1A2E1F), const Color(0xFF0D1A12)]
+              : [const Color(0xFFF0F7F2), const Color(0xFFE8F5EE)],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppTheme.emerald.withValues(alpha: addOnEnabled ? 0.6 : 0.2),
+          width: addOnEnabled ? 1.5 : 1,
+        ),
+        boxShadow: addOnEnabled
+            ? [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.15), blurRadius: 12, offset: const Offset(0, 4))]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.luggage, size: 24, color: AppTheme.emerald),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Complete Your Trip',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.emerald,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.emerald.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.luggage, size: 20, color: AppTheme.emerald),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Complete Your Trip',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : AppTheme.charcoal,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Scooter + Luggage Drop · ₹300/day',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Sleek pill button instead of Switch
+              GestureDetector(
+                onTap: () => onToggle(!addOnEnabled),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: addOnEnabled
+                        ? AppTheme.emerald
+                        : (isDark ? Colors.white10 : AppTheme.emerald.withValues(alpha: 0.08)),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: addOnEnabled ? AppTheme.emerald : AppTheme.emerald.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    addOnEnabled ? '✓ Added' : '+ Add Bundle',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: addOnEnabled ? Colors.white : AppTheme.emerald,
+                    ),
                   ),
                 ),
               ),
-              Switch(
-                value: addOnEnabled,
-                onChanged: onToggle,
-                activeThumbColor: AppTheme.emerald,
-              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Add a Scooter & Luggage Drop for just ₹300/day',
-            style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            addOnEnabled
-                ? 'Bundle added — save 10% on scooter pickup + free luggage cloak'
-                : 'Toggle to add scooter pickup (10% off) + early luggage drop (free)',
-            style: TextStyle(
-              fontSize: 12,
-              color: addOnEnabled
-                  ? AppTheme.success
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+          if (addOnEnabled) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.emerald.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, size: 16, color: AppTheme.emerald.withValues(alpha: 0.8)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Save 10% on scooter pickup + free luggage cloak',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.emerald,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

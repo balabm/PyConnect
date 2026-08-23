@@ -1080,9 +1080,16 @@ class _MenuItemTile extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: isDark
-                                  ? [const Color(0xFF1F2937), const Color(0xFF111827)]
-                                  : [const Color(0xFFF9FAFB), const Color(0xFFE5E7EB)],
+                                  ? [AppTheme.emerald.withValues(alpha: 0.15), AppTheme.emerald.withValues(alpha: 0.05)]
+                                  : [AppTheme.emerald.withValues(alpha: 0.08), AppTheme.emerald.withValues(alpha: 0.02)],
                             ),
+                          ),
+                          child: Icon(
+                            Icons.restaurant_outlined,
+                            size: 32,
+                            color: isDark
+                                ? AppTheme.emerald.withValues(alpha: 0.4)
+                                : AppTheme.emerald.withValues(alpha: 0.3),
                           ),
                         ),
                 ),

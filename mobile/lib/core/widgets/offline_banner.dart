@@ -94,6 +94,9 @@ class _OfflineBannerState extends State<OfflineBanner> {
 
   @override
   Widget build(BuildContext context) {
+    // In demo mode, completely suppress the network banner so transient
+    // Wi-Fi blips during a pitch don't show a scary orange error.
+    if (AppConfig.isDemoMode) return widget.child;
     return ListenableBuilder(
       listenable: _checker,
       builder: (context, child) {

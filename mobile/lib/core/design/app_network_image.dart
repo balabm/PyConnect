@@ -104,8 +104,7 @@ class _FallbackWidget extends StatelessWidget {
 
   Widget _buildIconFallback(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // No hard-edged icon. Use a soft, abstract gradient as fallback
-    // so the UI doesn't look broken when images are missing.
+    // Branded emerald gradient fallback — looks intentional, not broken.
     return Container(
       height: height,
       width: width,
@@ -114,24 +113,18 @@ class _FallbackWidget extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? [const Color(0xFF1F2937), const Color(0xFF0B0F19)]
-              : [const Color(0xFFF9FAFB), const Color(0xFFE5E7EB)],
+              ? [const Color(0xFF0F2A1F), const Color(0xFF081711)]
+              : [const Color(0xFFE8F5EE), const Color(0xFFD4EDDA)],
         ),
       ),
       child: assetFallback != null
           ? null
-          : Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.3, 0.3),
-                  radius: 0.8,
-                  colors: [
-                    (isDark ? const Color(0xFF374151) : const Color(0xFFD1D5DB))
-                        .withValues(alpha: 0.3),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
+          : Icon(
+              icon,
+              size: (height ?? 48) * 0.35,
+              color: isDark
+                  ? const Color(0xFF2E7D52).withValues(alpha: 0.5)
+                  : const Color(0xFF2E7D52).withValues(alpha: 0.3),
             ),
     );
   }

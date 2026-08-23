@@ -11,6 +11,10 @@ class AppConfig {
 
   static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
 
+  /// Demo mode flag. Set with --dart-define=DEMO_MODE=true
+  /// Suppresses non-essential UI elements (network banner) for pitch demos.
+  static const bool isDemoMode = bool.fromEnvironment('DEMO_MODE', defaultValue: false);
+
   static String get apiBaseUrl {
     if (_envBaseUrl.isNotEmpty) return _envBaseUrl;
     // Default to production backend for both debug and release.
