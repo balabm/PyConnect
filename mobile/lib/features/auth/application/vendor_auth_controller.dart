@@ -9,7 +9,8 @@ import 'auth_controller.dart';
 import '../data/vendor_auth_api.dart';
 
 /// Auth session for the vendor/partner app. Stores the vendor-scoped JWT
-/// and exposes the current vendor identity.
+/// and exposes the current vendor identity. Supports multi-business
+/// partners via the [businesses] list and [activeVendorId].
 class VendorAuthSession {
   VendorAuthSession({
     required this.accessToken,
@@ -19,6 +20,7 @@ class VendorAuthSession {
     required this.phone,
     required this.status,
     this.rejectionReason,
+    this.businesses = const [],
   });
 
   final String accessToken;
@@ -28,9 +30,11 @@ class VendorAuthSession {
   final String phone;
   final String status;
   final String? rejectionReason;
+  final List<VendorBusinessSummary> businesses;
 
   bool get isAuthenticated => accessToken.isNotEmpty;
   bool get isApproved => status == 'Approved';
+  bool get hasMultipleBusinesses => businesses.length > 1;
 }
 
 /// Owns vendor authentication: requesting OTP, verifying it, persisting
@@ -71,6 +75,7 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
         rejectionReason: status == 'Rejected'
             ? 'Account has been deactivated. Contact support for details.'
             : null,
+        businesses: prefsSession.businesses,
       );
       await _persistSession(updated);
       return updated;
@@ -188,6 +193,7 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
         phone: result.phone,
         status: result.status,
         rejectionReason: result.rejectionReason,
+        businesses: result.businesses,
       );
 }
 

@@ -132,6 +132,14 @@ public sealed class VendorAuthController : ControllerBase
         if (vendor is null)
             return Unauthorized(new { Message = "No vendor profile is linked to this account." });
 
+        // Load all businesses for this partner (multi-business support).
+        var allVendors = await _dbContext.Vendors
+            .AsNoTracking()
+            .Where(v => v.ContactPhone == user.Phone)
+            .OrderByDescending(v => v.IsApproved)
+            .ThenBy(v => v.Name)
+            .ToListAsync(cancellationToken);
+
         string status;
         string? rejectionReason = null;
         if (!vendor.IsActive)
@@ -150,6 +158,15 @@ public sealed class VendorAuthController : ControllerBase
 
         var accessToken = _jwtTokenFactory.CreateAccessToken(user.Id, user.Phone, user.Role.ToString());
 
+        var businesses = allVendors
+            .Select(v => new VendorSummary(
+                v.Id,
+                v.Name,
+                v.Category.ToString(),
+                !v.IsActive ? "Rejected" : v.IsApproved ? "Approved" : "Pending",
+                v.IsActive))
+            .ToList();
+
         return Ok(new VendorLoginResponse(
             accessToken,
             vendor.Id,
@@ -159,6 +176,37 @@ public sealed class VendorAuthController : ControllerBase
             user.Name,
             user.Phone,
             status,
-            rejectionReason));
+            rejectionReason,
+            businesses));
+    }
+
+    /// <summary>
+    /// Lists all vendor businesses linked to the authenticated partner's
+    /// phone number. Supports multi-business partners.
+    /// </summary>
+    [HttpGet("businesses")]
+    [ProducesResponseType(typeof(IReadOnlyList<VendorSummary>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<VendorSummary>>> ListMyBusinesses(
+        CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Authenticated phone not found." });
+
+        var vendors = await _dbContext.Vendors
+            .AsNoTracking()
+            .Where(v => v.ContactPhone == phone)
+            .OrderByDescending(v => v.IsApproved)
+            .ThenBy(v => v.Name)
+            .Select(v => new VendorSummary(
+                v.Id,
+                v.Name,
+                v.Category.ToString(),
+                !v.IsActive ? "Rejected" : v.IsApproved ? "Approved" : "Pending",
+                v.IsActive))
+            .ToListAsync(cancellationToken);
+
+        return Ok(vendors);
     }
 }

@@ -34,6 +34,15 @@ class VendorAuthApi {
       return null;
     }
   }
+
+  /// Lists all vendor businesses linked to the authenticated partner's
+  /// phone number. Used by the multi-business switcher.
+  Future<List<VendorBusinessSummary>> listBusinesses() async {
+    final body = await _api.get('/api/vendor/auth/businesses');
+    return (body as List)
+        .map((e) => VendorBusinessSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }
 
 class VendorOtpResult {
@@ -59,6 +68,7 @@ class VendorLoginResult {
     required this.phone,
     required this.status,
     this.rejectionReason,
+    this.businesses = const [],
   });
 
   factory VendorLoginResult.fromJson(Map<String, dynamic> json) =>
@@ -72,6 +82,9 @@ class VendorLoginResult {
         phone: json['phone'] as String? ?? '',
         status: json['status'] as String? ?? 'Pending',
         rejectionReason: json['rejectionReason'] as String?,
+        businesses: (json['businesses'] as List?)
+            ?.map((e) => VendorBusinessSummary.fromJson(e as Map<String, dynamic>))
+            .toList() ?? const [],
       );
 
   final String accessToken;
@@ -83,4 +96,31 @@ class VendorLoginResult {
   final String phone;
   final String status;
   final String? rejectionReason;
+  final List<VendorBusinessSummary> businesses;
+}
+
+/// Lightweight vendor business summary for multi-business partners.
+class VendorBusinessSummary {
+  VendorBusinessSummary({
+    required this.vendorId,
+    required this.name,
+    required this.category,
+    required this.status,
+    required this.isActive,
+  });
+
+  factory VendorBusinessSummary.fromJson(Map<String, dynamic> json) =>
+      VendorBusinessSummary(
+        vendorId: json['vendorId'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        category: json['category'] as String? ?? '',
+        status: json['status'] as String? ?? 'Pending',
+        isActive: json['isActive'] as bool? ?? false,
+      );
+
+  final String vendorId;
+  final String name;
+  final String category;
+  final String status;
+  final bool isActive;
 }

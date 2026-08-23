@@ -24,6 +24,21 @@ class ManageHubScreen extends ConsumerWidget {
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         title: Text('Manage', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          if (session != null && session.hasMultipleBusinesses)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: () => _showBusinessSwitcher(context, session),
+                icon: const Icon(Icons.storefront, size: 18),
+                label: Text(
+                  session.vendorName,
+                  style: const TextStyle(fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -218,6 +233,61 @@ class ManageHubScreen extends ConsumerWidget {
           const SizedBox(height: 8),
         ];
     }
+  }
+
+  /// Shows a bottom sheet listing all businesses owned by this partner.
+  /// Tapping a business switches the active vendor context.
+  void _showBusinessSwitcher(BuildContext context, VendorAuthSession session) {
+    AppHaptics.light();
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Switch Business',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+            ...session.businesses.map((b) {
+              final isActive = b.vendorId == session.vendorId;
+              return ListTile(
+                leading: Icon(
+                  VendorCategoryType.fromString(b.category).icon,
+                  color: isActive ? AppTheme.emerald : null,
+                ),
+                title: Text(
+                  b.name,
+                  style: TextStyle(
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                subtitle: Text(
+                  '${VendorCategoryType.fromString(b.category).displayName} · ${b.status}',
+                  style: TextStyle(fontSize: 12),
+                ),
+                trailing: isActive
+                    ? const Icon(Icons.check_circle, color: AppTheme.emerald)
+                    : null,
+                onTap: () {
+                  AppHaptics.selection();
+                  Navigator.pop(ctx);
+                  // TODO: Switch active vendor context — requires
+                  // persisting the selected vendorId and passing it as
+                  // a query param to vendor API calls.
+                },
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildVenueCard(BuildContext context, dynamic venue) {

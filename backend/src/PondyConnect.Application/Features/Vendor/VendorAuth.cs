@@ -2,6 +2,8 @@ namespace PondyConnect.Application.Features.Vendor;
 
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using PondyConnect.Application.Common.Interfaces;
 
 /// <summary>
 /// Issues a fresh OTP for a vendor owner phone number. Reuses the same
@@ -60,4 +62,55 @@ public sealed record VendorLoginResponse(
     string UserName,
     string Phone,
     string Status,
-    string? RejectionReason);
+    string? RejectionReason,
+    IReadOnlyList<VendorSummary> Businesses);
+
+/// <summary>
+/// Lightweight vendor summary used in the multi-business login response
+/// and the list-my-vendors endpoint.
+/// </summary>
+public sealed record VendorSummary(
+    Guid VendorId,
+    string Name,
+    string Category,
+    string Status,
+    bool IsActive);
+
+/// <summary>
+/// Lists all vendor businesses linked to the authenticated partner's phone.
+/// Supports multi-business partners who own more than one venue/shop.
+/// </summary>
+public sealed record ListMyVendorsQuery : IRequest<IReadOnlyList<VendorSummary>>;
+
+public sealed class ListMyVendorsHandler : IRequestHandler<ListMyVendorsQuery, IReadOnlyList<VendorSummary>>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+
+    public ListMyVendorsHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    {
+        _context = context;
+        _currentUser = currentUser;
+    }
+
+    public async Task<IReadOnlyList<VendorSummary>> Handle(ListMyVendorsQuery request, CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone
+            ?? throw new UnauthorizedAccessException("Authenticated phone not found.");
+
+        var vendors = await _context.Vendors
+            .AsNoTracking()
+            .Where(v => v.ContactPhone == phone)
+            .OrderByDescending(v => v.IsApproved)
+            .ThenBy(v => v.Name)
+            .Select(v => new VendorSummary(
+                v.Id,
+                v.Name,
+                v.Category.ToString(),
+                !v.IsActive ? "Rejected" : v.IsApproved ? "Approved" : "Pending",
+                v.IsActive))
+            .ToListAsync(cancellationToken);
+
+        return vendors;
+    }
+}

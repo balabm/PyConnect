@@ -53,10 +53,21 @@ public sealed class VerifyVendorOtpHandler : IRequestHandler<VerifyVendorOtpComm
 
         var owner = await _userResolver.GetOrCreateAsync(request.OwnerName ?? "Vendor", request.Phone, UserRole.Vendor, cancellationToken);
 
-        var vendor = await _context.Vendors
-            .FirstOrDefaultAsync(v => v.ContactPhone == request.Phone, cancellationToken);
-        if (vendor is null)
+        // Load ALL vendors linked to this phone — a partner may own multiple
+        // businesses (e.g. a restaurant + a scooter rental). The primary
+        // vendor (first approved) is returned for backwards compatibility;
+        // the full list is in the Businesses field for the mobile app's
+        // business switcher.
+        var vendors = await _context.Vendors
+            .Where(v => v.ContactPhone == request.Phone)
+            .OrderByDescending(v => v.IsApproved)
+            .ThenBy(v => v.Name)
+            .ToListAsync(cancellationToken);
+
+        if (vendors.Count == 0)
             throw new UnauthorizedAccessException("No vendor profile is linked to this phone number. Please register first.");
+
+        var vendor = vendors[0];
 
         string status;
         string? rejectionReason = null;
@@ -76,6 +87,15 @@ public sealed class VerifyVendorOtpHandler : IRequestHandler<VerifyVendorOtpComm
 
         var accessToken = _jwtTokenFactory.CreateAccessToken(owner.Id, owner.Phone, UserRole.Vendor.ToString());
 
+        var businesses = vendors
+            .Select(v => new VendorSummary(
+                v.Id,
+                v.Name,
+                v.Category.ToString(),
+                !v.IsActive ? "Rejected" : v.IsApproved ? "Approved" : "Pending",
+                v.IsActive))
+            .ToList();
+
         return new VendorLoginResponse(
             accessToken,
             vendor.Id,
@@ -85,6 +105,7 @@ public sealed class VerifyVendorOtpHandler : IRequestHandler<VerifyVendorOtpComm
             owner.Name,
             owner.Phone,
             status,
-            rejectionReason);
+            rejectionReason,
+            businesses);
     }
 }

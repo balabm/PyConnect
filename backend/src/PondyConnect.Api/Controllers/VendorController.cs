@@ -53,6 +53,28 @@ public sealed class VendorController : ControllerBase
     }
 
     /// <summary>
+    /// Resolves the vendor for the authenticated partner. When
+    /// <paramref name="vendorId"/> is provided, loads that specific vendor
+    /// (multi-business support). Otherwise falls back to the first vendor
+    /// linked to the partner's phone (backwards compatibility).
+    /// The vendor must belong to the authenticated partner's phone.
+    /// </summary>
+    private async Task<Domain.Entities.Vendor?> ResolveVendorAsync(
+        string phone,
+        Guid? vendorId,
+        CancellationToken cancellationToken)
+    {
+        if (vendorId.HasValue)
+        {
+            return await _context.Vendors
+                .FirstOrDefaultAsync(v => v.Id == vendorId.Value && v.ContactPhone == phone, cancellationToken);
+        }
+
+        return await _context.Vendors
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone, cancellationToken);
+    }
+
+    /// <summary>
     /// Validates that an uploaded file is an image within the allowed types
     /// and size limit. Returns an error message if validation fails, null if OK.
     /// </summary>
@@ -219,15 +241,15 @@ public sealed class VendorController : ControllerBase
     [HttpGet("profile")]
     [ProducesResponseType(typeof(VendorProfileResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<VendorProfileResponse>> GetProfile(CancellationToken cancellationToken)
+    public async Task<ActionResult<VendorProfileResponse>> GetProfile(
+        Guid? vendorId = null,
+        CancellationToken cancellationToken = default)
     {
         var phone = _currentUser.Phone;
         if (string.IsNullOrWhiteSpace(phone))
             return Unauthorized();
 
-        var vendor = await _context.Vendors.AsNoTracking()
-            .FirstOrDefaultAsync(v => v.ContactPhone == phone, cancellationToken);
-
+        var vendor = await ResolveVendorAsync(phone, vendorId, cancellationToken);
         if (vendor is null)
             return NotFound();
 
@@ -245,15 +267,16 @@ public sealed class VendorController : ControllerBase
     [HttpPut("profile")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateProfile([FromBody] UpdateVendorProfileRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateProfile(
+        [FromBody] UpdateVendorProfileRequest request,
+        Guid? vendorId = null,
+        CancellationToken cancellationToken = default)
     {
         var phone = _currentUser.Phone;
         if (string.IsNullOrWhiteSpace(phone))
             return Unauthorized();
 
-        var vendor = await _context.Vendors
-            .FirstOrDefaultAsync(v => v.ContactPhone == phone, cancellationToken);
-
+        var vendor = await ResolveVendorAsync(phone, vendorId, cancellationToken);
         if (vendor is null)
             return NotFound();
 
@@ -267,14 +290,15 @@ public sealed class VendorController : ControllerBase
     [HttpPut("toggle-active")]
     [ProducesResponseType(typeof(ToggleActiveResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ToggleActiveResponse>> ToggleActive(CancellationToken cancellationToken)
+    public async Task<ActionResult<ToggleActiveResponse>> ToggleActive(
+        Guid? vendorId = null,
+        CancellationToken cancellationToken = default)
     {
         var phone = _currentUser.Phone;
         if (string.IsNullOrWhiteSpace(phone))
             return Unauthorized();
 
-        var vendor = await _context.Vendors
-            .FirstOrDefaultAsync(v => v.ContactPhone == phone, cancellationToken);
+        var vendor = await ResolveVendorAsync(phone, vendorId, cancellationToken);
 
         if (vendor is null)
             return NotFound();
@@ -820,7 +844,9 @@ public sealed class VendorController : ControllerBase
 
     [HttpGet("wallet")]
     [ProducesResponseType(typeof(VendorWalletResponse), StatusCodes.Status200OK)]
-    public async Task<ActionResult<VendorWalletResponse>> GetWallet(CancellationToken cancellationToken)
+    public async Task<ActionResult<VendorWalletResponse>> GetWallet(
+        Guid? vendorId = null,
+        CancellationToken cancellationToken = default)
     {
         var userPhone = _currentUser.Phone;
         if (string.IsNullOrWhiteSpace(userPhone))
@@ -828,7 +854,9 @@ public sealed class VendorController : ControllerBase
 
         var vendor = await _context.Vendors
             .AsNoTracking()
-            .FirstOrDefaultAsync(v => v.ContactPhone == userPhone && v.IsApproved, cancellationToken);
+            .FirstOrDefaultAsync(v => v.ContactPhone == userPhone
+                && (!vendorId.HasValue || v.Id == vendorId.Value)
+                && v.IsApproved, cancellationToken);
 
         if (vendor is null)
             return Unauthorized();
