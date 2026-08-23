@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+
 import '../../../core/network/api_client.dart';
 
 class DashboardData {
@@ -302,6 +306,93 @@ class VendorDashboardApi {
     final list = body as List? ?? [];
     return list.map((e) => WalletTransactionModel.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  // ── Luggage Cloak Operations ──
+
+  /// Lists luggage drop-offs for the authenticated vendor, optionally
+  /// filtered by status. Used by the Cloak Capacity screen.
+  Future<List<LuggageDropOffModel>> getLuggageDropOffs({String? status}) async {
+    final body = await _api.get(
+      '/api/vendor/luggage',
+      queryParameters: {if (status != null) 'status': status},
+    );
+    final list = body as List? ?? [];
+    return list.map((e) => LuggageDropOffModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Creates a walk-in claim check for a luggage drop-off. Returns the
+  /// claim check ID and QR payload for the customer to scan at pickup.
+  Future<ClaimCheckResult> createClaimCheck({
+    required String customerName,
+    required int bagCount,
+  }) async {
+    final body = await _api.post('/api/vendor/claim-check', data: {
+      'customerName': customerName,
+      'bagCount': bagCount,
+    });
+    return ClaimCheckResult.fromJson(body as Map<String, dynamic>);
+  }
+
+  /// Receives bags at the partner location with an intake photo.
+  /// Transitions the status from Reserved to Dropped.
+  Future<ReceiveBagsResult> receiveBags(String dropOffId, File intakePhoto) async {
+    final formData = FormData.fromMap({
+      'intakePhoto': await MultipartFile.fromFile(intakePhoto.path,
+          filename: 'intake_${DateTime.now().millisecondsSinceEpoch}.jpg'),
+    });
+    final body = await _api.post(
+      '/api/vendor/luggage/$dropOffId/receive',
+      data: formData,
+    );
+    return ReceiveBagsResult.fromJson(body as Map<String, dynamic>);
+  }
+
+  /// Collects bags using the retrieval PIN. Closes the liability loop.
+  Future<CollectBagsResult> collectBags(String dropOffId, String pin) async {
+    final body = await _api.post('/api/vendor/luggage/$dropOffId/collect', data: {
+      'pin': pin,
+    });
+    return CollectBagsResult.fromJson(body as Map<String, dynamic>);
+  }
+
+  // ── Scooter Rental Operations ──
+
+  /// Records pre-rental 4-angle condition photos as a JSON string.
+  Future<ConditionPhotosResult> recordConditionPhotos(
+    String rentalId,
+    String photosJson,
+  ) async {
+    final body = await _api.post('/api/vendor/rentals/$rentalId/condition-photos', data: {
+      'photosJson': photosJson,
+    });
+    return ConditionPhotosResult.fromJson(body as Map<String, dynamic>);
+  }
+
+  /// Completes a rental return with late fees, damage penalties, and
+  /// return condition photos.
+  Future<RentalReturnResult> completeRentalReturn(
+    String rentalId, {
+    int lateMinutes = 0,
+    double damageAmount = 0,
+    String? returnConditionPhotosJson,
+  }) async {
+    final body = await _api.post('/api/vendor/rentals/$rentalId/complete-return', data: {
+      'lateMinutes': lateMinutes,
+      'damageAmount': damageAmount,
+      if (returnConditionPhotosJson != null) 'returnConditionPhotosJson': returnConditionPhotosJson,
+    });
+    return RentalReturnResult.fromJson(body as Map<String, dynamic>);
+  }
+
+  // ── Venue Occupancy ──
+
+  /// Updates the live occupancy percentage for a venue.
+  Future<void> updateOccupancy(String venueId, int occupancyPercentage) async {
+    await _api.post('/api/vendor/occupancy', data: {
+      'venueId': venueId,
+      'occupancyPercentage': occupancyPercentage,
+    });
+  }
 }
 
 class MenuItemModel {
@@ -592,6 +683,124 @@ class VendorVenueDetail {
   final String? openingTime;
   final String? closingTime;
   final String? imageUrl;
+}
+
+// ── Luggage & Rental Response Models ──
+
+class LuggageDropOffModel {
+  LuggageDropOffModel({
+    required this.id,
+    required this.bagCount,
+    required this.status,
+    required this.scheduledFor,
+    this.droppedAt,
+    this.collectedAt,
+    this.intakeImageUrl,
+    this.notes,
+  });
+
+  factory LuggageDropOffModel.fromJson(Map<String, dynamic> json) => LuggageDropOffModel(
+        id: json['id'] as String,
+        bagCount: json['bagCount'] as int? ?? 0,
+        status: json['status'] as String? ?? '',
+        scheduledFor: json['scheduledFor'] as String? ?? '',
+        droppedAt: json['droppedAt'] as String?,
+        collectedAt: json['collectedAt'] as String?,
+        intakeImageUrl: json['intakeImageUrl'] as String?,
+        notes: json['notes'] as String?,
+      );
+
+  final String id;
+  final int bagCount;
+  final String status;
+  final String scheduledFor;
+  final String? droppedAt;
+  final String? collectedAt;
+  final String? intakeImageUrl;
+  final String? notes;
+}
+
+class ClaimCheckResult {
+  ClaimCheckResult({
+    required this.claimCheckId,
+    required this.customerName,
+    required this.bagCount,
+    required this.qrPayload,
+  });
+
+  factory ClaimCheckResult.fromJson(Map<String, dynamic> json) => ClaimCheckResult(
+        claimCheckId: json['claimCheckId'] as String,
+        customerName: json['customerName'] as String? ?? '',
+        bagCount: json['bagCount'] as int? ?? 0,
+        qrPayload: json['qrPayload'] as String? ?? '',
+      );
+
+  final String claimCheckId;
+  final String customerName;
+  final int bagCount;
+  final String qrPayload;
+}
+
+class ReceiveBagsResult {
+  ReceiveBagsResult({required this.dropOffId, required this.message, this.intakeImageUrl});
+
+  factory ReceiveBagsResult.fromJson(Map<String, dynamic> json) => ReceiveBagsResult(
+        dropOffId: json['dropOffId'] as String,
+        message: json['message'] as String? ?? '',
+        intakeImageUrl: json['intakeImageUrl'] as String?,
+      );
+
+  final String dropOffId;
+  final String message;
+  final String? intakeImageUrl;
+}
+
+class CollectBagsResult {
+  CollectBagsResult({required this.dropOffId, required this.message});
+
+  factory CollectBagsResult.fromJson(Map<String, dynamic> json) => CollectBagsResult(
+        dropOffId: json['dropOffId'] as String,
+        message: json['message'] as String? ?? '',
+      );
+
+  final String dropOffId;
+  final String message;
+}
+
+class ConditionPhotosResult {
+  ConditionPhotosResult({required this.rentalId, required this.message});
+
+  factory ConditionPhotosResult.fromJson(Map<String, dynamic> json) => ConditionPhotosResult(
+        rentalId: json['rentalId'] as String,
+        message: json['message'] as String? ?? '',
+      );
+
+  final String rentalId;
+  final String message;
+}
+
+class RentalReturnResult {
+  RentalReturnResult({
+    required this.rentalId,
+    required this.securityDeposit,
+    required this.penaltyDeducted,
+    required this.depositRefunded,
+    required this.totalAmount,
+  });
+
+  factory RentalReturnResult.fromJson(Map<String, dynamic> json) => RentalReturnResult(
+        rentalId: json['rentalId'] as String,
+        securityDeposit: (json['securityDeposit'] as num?)?.toDouble() ?? 0,
+        penaltyDeducted: (json['penaltyDeducted'] as num?)?.toDouble() ?? 0,
+        depositRefunded: (json['depositRefunded'] as num?)?.toDouble() ?? 0,
+        totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      );
+
+  final String rentalId;
+  final double securityDeposit;
+  final double penaltyDeducted;
+  final double depositRefunded;
+  final double totalAmount;
 }
 
 class CreateVenuePayload {

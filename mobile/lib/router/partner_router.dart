@@ -22,6 +22,14 @@ import '../features/vendor/presentation/taxi_rides_screen.dart';
 import '../features/vendor/presentation/cloak_capacity_screen.dart';
 import '../features/vendor/presentation/vendor_registration_screen.dart';
 import '../features/vendor/presentation/printer_settings_screen.dart';
+import '../features/vendor/presentation/claim_check_screen.dart';
+import '../features/vendor/presentation/bag_intake_screen.dart';
+import '../features/vendor/presentation/bag_collection_screen.dart';
+import '../features/vendor/presentation/condition_photos_screen.dart';
+import '../features/vendor/presentation/rental_return_screen.dart';
+import '../features/vendor/presentation/assign_driver_screen.dart';
+import '../features/vendor/presentation/partial_refund_screen.dart';
+import '../features/vendor/presentation/occupancy_update_screen.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers/force_update_provider.dart';
 import '../features/splash/presentation/force_update_screen.dart';
@@ -162,6 +170,43 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'printer-settings',
             builder: (_, _) => const PrinterSettingsScreen(),
+          ),
+          // ── Luggage Cloak operational screens ──
+          GoRoute(
+            path: 'claim-check',
+            builder: (_, _) => const ClaimCheckScreen(),
+          ),
+          GoRoute(
+            path: 'bag-intake',
+            builder: (_, _) => const BagIntakeScreen(),
+          ),
+          GoRoute(
+            path: 'bag-collection',
+            builder: (_, _) => const BagCollectionScreen(),
+          ),
+          // ── Scooter Rental operational screens ──
+          GoRoute(
+            path: 'condition-photos',
+            builder: (_, _) => const ConditionPhotosScreen(),
+          ),
+          GoRoute(
+            path: 'rental-return',
+            builder: (_, _) => const RentalReturnScreen(),
+          ),
+          // ── Taxi Operator operational screens ──
+          GoRoute(
+            path: 'assign-driver',
+            builder: (_, _) => const AssignDriverScreen(),
+          ),
+          // ── Food vendor operational screens ──
+          GoRoute(
+            path: 'partial-refund',
+            builder: (_, _) => const PartialRefundScreen(),
+          ),
+          // ── Venue operational screens ──
+          GoRoute(
+            path: 'occupancy',
+            builder: (_, _) => const OccupancyUpdateScreen(),
           ),
         ],
       ),

@@ -183,6 +183,13 @@ class ManageHubScreen extends ConsumerWidget {
             color: AppTheme.coral,
             onTap: () { AppHaptics.light(); context.push('/kds'); },
           ),
+          _ManageTile(
+            icon: Icons.money_off,
+            label: 'Partial Refund',
+            subtitle: 'Remove out-of-stock item',
+            color: AppTheme.warning,
+            onTap: () { AppHaptics.light(); context.push('/partial-refund'); },
+          ),
         ]);
         break;
       case VendorCategoryType.pubClub:
@@ -200,6 +207,13 @@ class ManageHubScreen extends ConsumerWidget {
             subtitle: 'Cover charge tracking',
             color: AppTheme.info,
             onTap: () { AppHaptics.light(); context.push('/bookings'); },
+          ),
+          _ManageTile(
+            icon: Icons.people,
+            label: 'Occupancy',
+            subtitle: 'Update live crowd %',
+            color: AppTheme.gold,
+            onTap: () { AppHaptics.light(); context.push('/occupancy'); },
           ),
         ]);
         break;
@@ -219,6 +233,20 @@ class ManageHubScreen extends ConsumerWidget {
             color: AppTheme.info,
             onTap: () { AppHaptics.light(); context.push('/rentals'); },
           ),
+          _ManageTile(
+            icon: Icons.camera_alt,
+            label: 'Condition Photos',
+            subtitle: 'Pre-rental 5-angle capture',
+            color: AppTheme.gold,
+            onTap: () { AppHaptics.light(); context.push('/condition-photos'); },
+          ),
+          _ManageTile(
+            icon: Icons.assignment_turned_in,
+            label: 'Complete Return',
+            subtitle: 'Inspect & close rental',
+            color: AppTheme.coral,
+            onTap: () { AppHaptics.light(); context.push('/rental-return'); },
+          ),
         ]);
         break;
       case VendorCategoryType.taxiOperator:
@@ -237,6 +265,13 @@ class ManageHubScreen extends ConsumerWidget {
             color: AppTheme.info,
             onTap: () { AppHaptics.light(); context.push('/rides'); },
           ),
+          _ManageTile(
+            icon: Icons.assignment_ind,
+            label: 'Assign Driver',
+            subtitle: 'Assign driver to trip',
+            color: AppTheme.gold,
+            onTap: () { AppHaptics.light(); context.push('/assign-driver'); },
+          ),
         ]);
         break;
       case VendorCategoryType.luggageCloak:
@@ -254,6 +289,27 @@ class ManageHubScreen extends ConsumerWidget {
             subtitle: 'Reservations & intake',
             color: AppTheme.info,
             onTap: () { AppHaptics.light(); context.push('/bookings'); },
+          ),
+          _ManageTile(
+            icon: Icons.qr_code,
+            label: 'Claim Check',
+            subtitle: 'Walk-in QR generation',
+            color: AppTheme.gold,
+            onTap: () { AppHaptics.light(); context.push('/claim-check'); },
+          ),
+          _ManageTile(
+            icon: Icons.camera_alt,
+            label: 'Bag Intake',
+            subtitle: 'Receive bags with photo',
+            color: AppTheme.coral,
+            onTap: () { AppHaptics.light(); context.push('/bag-intake'); },
+          ),
+          _ManageTile(
+            icon: Icons.lock_open,
+            label: 'Collect Bags',
+            subtitle: 'PIN-based collection',
+            color: AppTheme.emerald,
+            onTap: () { AppHaptics.light(); context.push('/bag-collection'); },
           ),
         ]);
         break;
