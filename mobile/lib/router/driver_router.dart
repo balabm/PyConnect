@@ -10,9 +10,12 @@ import '../features/driver/domain/driver_models.dart';
 import '../features/driver/presentation/driver_earnings_screen.dart';
 import '../features/driver/presentation/driver_kyc_screen.dart';
 import '../features/driver/presentation/driver_pending_verification_screen.dart';
+import '../features/driver/presentation/driver_profile_screen.dart';
 import '../features/driver/presentation/driver_registration_screen.dart';
 import '../features/driver/presentation/driver_ride_screen.dart';
 import '../features/driver/presentation/driver_tutorial_screen.dart';
+import '../features/driver/presentation/driver_safety_settings_screen.dart';
+import '../features/driver/presentation/driver_help_screen.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers/force_update_provider.dart';
 import '../features/splash/presentation/force_update_screen.dart';
@@ -148,6 +151,18 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'pending-verification',
             builder: (_, _) => const DriverPendingVerificationScreen(),
+          ),
+          GoRoute(
+            path: 'profile',
+            builder: (_, _) => const DriverProfileScreen(),
+          ),
+          GoRoute(
+            path: 'safety-settings',
+            builder: (_, _) => const DriverSafetySettingsScreen(),
+          ),
+          GoRoute(
+            path: 'help',
+            builder: (_, _) => const DriverHelpScreen(),
           ),
         ],
       ),

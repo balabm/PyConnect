@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
@@ -257,17 +258,17 @@ class _EarningsBody extends ConsumerWidget {
                 _ProfileTile(
                   icon: Icons.document_scanner_outlined,
                   title: 'KYC Documents',
-                  onTap: () {},
+                  onTap: () => context.push('/kyc'),
                 ),
                 _ProfileTile(
                   icon: Icons.security_outlined,
                   title: 'Safety Settings',
-                  onTap: () {},
+                  onTap: () => context.push('/safety-settings'),
                 ),
                 _ProfileTile(
                   icon: Icons.headset_mic_outlined,
                   title: 'Help & Support',
-                  onTap: () {},
+                  onTap: () => context.push('/help'),
                 ),
               ],
             ),

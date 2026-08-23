@@ -171,6 +171,7 @@ final dispatchTaskStreamProvider =
     StreamProvider.autoDispose<List<DispatchTaskModel>>((ref) async* {
   final api = ref.read(driverApiProvider);
   final signalR = ref.read(driverSignalRProvider);
+  final hub = ref.read(driverHubProvider);
 
   // Try to fetch real tasks from the API first
   try {
@@ -180,10 +181,11 @@ final dispatchTaskStreamProvider =
     yield [];
   }
 
-  // Merge SignalR ride offer stream with periodic API polling fallback.
+  // Merge SignalR ride offer stream with adaptive API polling fallback.
   // The SignalR stream pushes new ride offers as they arrive in real-time.
-  // The timer polls every 5 seconds as a fallback for when SignalR is not
-  // connected or for non-ride tasks (food delivery, essentials).
+  // When SignalR is connected, we poll every 30 seconds as a safety net.
+  // When SignalR is disconnected, we poll every 5 seconds as the primary
+  // source so the driver doesn't miss offers.
   final controller = StreamController<List<DispatchTaskModel>>.broadcast();
 
   // Subscribe to SignalR dispatch task stream
@@ -192,16 +194,26 @@ final dispatchTaskStreamProvider =
   });
 
   Timer? timer;
-  timer = Timer.periodic(const Duration(seconds: 5), (_) async {
-    try {
-      final tasks = await api.getAvailableTasks();
-      if (!controller.isClosed) {
-        controller.add(tasks);
+  void scheduleNextPoll() {
+    final interval = hub.isConnected
+        ? const Duration(seconds: 30) // Safety net when SignalR is live
+        : const Duration(seconds: 5); // Primary source when SignalR is down
+    timer = Timer(interval, () async {
+      try {
+        final tasks = await api.getAvailableTasks();
+        if (!controller.isClosed) {
+          controller.add(tasks);
+        }
+      } catch (_) {
+        // Ignore network errors, keep stream alive
       }
-    } catch (_) {
-      // Ignore network errors, keep stream alive
-    }
-  });
+      if (!controller.isClosed) {
+        scheduleNextPoll(); // Re-schedule with adaptive interval
+      }
+    });
+  }
+
+  scheduleNextPoll();
 
   ref.onDispose(() {
     timer?.cancel();

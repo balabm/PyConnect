@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/device/location_security.dart';
 import '../core/animations/haptic.dart';
@@ -610,6 +611,12 @@ class _DriverShellState extends ConsumerState<DriverShell> {
       appBar: AppBar(
         title: const Text('PY Connect Captain'),
         actions: [
+          IconButton(
+            icon: Icon(Icons.account_circle_outlined,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+            tooltip: 'Account',
+            onPressed: () => context.push('/profile'),
+          ),
           Container(
             margin: const EdgeInsets.only(right: 16),
             alignment: Alignment.center,
