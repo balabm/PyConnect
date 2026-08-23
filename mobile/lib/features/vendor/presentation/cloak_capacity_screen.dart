@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -160,36 +159,49 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
     );
   }
 
-  void _showClaimCheckQR(String customerName, int bagCount) {
-    // Generate a unique claim check ID
-    final claimCheckId = 'PC-CLM-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
-    final qrPayload = 'pyconnect:claim-check:$claimCheckId';
+  void _showClaimCheckQR(String customerName, int bagCount) async {
+    AppHaptics.medium();
 
-    // TODO: Persist bag drop to backend via vendor API when endpoint is wired.
-    // For now, show the QR claim check to the partner.
-
+    // Show a loading dialog while creating the claim check
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Claim Check QR',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Customer: $customerName · $bagCount ${bagCount == 1 ? 'bag' : 'bags'}',
-                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final api = ref.read(vendorDashboardApiProvider);
+      final result = await api.createClaimCheck(
+        customerName: customerName,
+        bagCount: bagCount,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // dismiss loading
+
+      // Show the QR claim check dialog with real data from the backend
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Claim Check QR',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Customer: ${result.customerName} · ${result.bagCount} ${result.bagCount == 1 ? 'bag' : 'bags'}',
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
               const SizedBox(height: 20),
               QrImageView(
-                data: qrPayload,
+                data: result.qrPayload,
                 version: QrVersions.auto,
                 size: 220,
                 backgroundColor: Colors.white,
@@ -202,39 +214,31 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  claimCheckId,
+                  result.claimCheckId,
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  TextButton.icon(
-                    icon: Icon(Icons.print, size: 18),
-                    label: Text('Print'),
-                    onPressed: () {
-                      // TODO: Implement print/share functionality
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Print support coming soon')),
-                      );
-                    },
-                  ),
-                  FilledButton(
-                    style: FilledButton.styleFrom(),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _loadData();
-                    },
-                    child: Text('Done'),
-                  ),
-                ],
+              FilledButton(
+                style: FilledButton.styleFrom(),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _loadData();
+                },
+                child: Text('Done'),
               ),
             ],
           ),
         ),
       ),
     );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // dismiss loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create claim check: $e'), backgroundColor: AppTheme.danger),
+      );
+    }
   }
 
   Widget _buildCapacityBar() {

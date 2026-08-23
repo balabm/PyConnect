@@ -1,17 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
+import '../application/vendor_providers.dart';
+import '../data/vendor_dashboard_api.dart';
 
 /// One-tap flash promotion bottom sheet for pub/club owners.
 ///
-/// **DEMO MOCKUP**: The "broadcast" action shows a radar animation and a
-/// success message with a fake user count. There is no backend endpoint for
-/// hyper-local push notification broadcasting yet. When the backend is ready,
-/// replace [_broadcast] with a real API call to POST /api/vendor/flash-promo.
-class PromoSheet extends StatefulWidget {
+/// Creates a real flash promo via POST /api/vendor/flash-promos. The
+/// backend records the promo with a discount percentage, duration, and
+/// title. The promo auto-expires after the duration.
+class PromoSheet extends ConsumerStatefulWidget {
   const PromoSheet({super.key});
 
   /// Convenience method to show the sheet as a modal bottom sheet.
@@ -25,18 +27,18 @@ class PromoSheet extends StatefulWidget {
   }
 
   @override
-  State<PromoSheet> createState() => _PromoSheetState();
+  ConsumerState<PromoSheet> createState() => _PromoSheetState();
 }
 
-class _PromoSheetState extends State<PromoSheet>
+class _PromoSheetState extends ConsumerState<PromoSheet>
     with SingleTickerProviderStateMixin {
   late final AnimationController _radarController;
   bool _broadcasting = false;
   bool _broadcastDone = false;
-  int _reachedUsers = 0;
+  String? _errorMessage;
   _PresetPromo? _selectedPromo;
   double _durationMin = 30; // minutes
-  double _radiusKm = 2.0; // kilometers
+  double _discountPct = 20; // percent
 
   static const _presetPromos = [
     _PresetPromo(
@@ -86,22 +88,34 @@ class _PromoSheetState extends State<PromoSheet>
     setState(() {
       _broadcasting = true;
       _broadcastDone = false;
+      _errorMessage = null;
     });
 
     _radarController.reset();
     _radarController.forward();
 
-    // Simulate the broadcast taking 2.5 seconds
-    await Future.delayed(const Duration(milliseconds: 2500));
+    try {
+      final api = ref.read(vendorDashboardApiProvider);
+      await api.createFlashPromo(CreateFlashPromoPayload(
+        discountPercentage: _discountPct,
+        durationMinutes: _durationMin.round(),
+        title: _selectedPromo!.label,
+        description: _selectedPromo!.subtitle,
+      ));
 
-    if (!mounted) return;
-    setState(() {
-      _broadcasting = false;
-      _broadcastDone = true;
-      // Simulate reached users based on radius (more radius = more users)
-      _reachedUsers = (400 * _radiusKm).round() + (DateTime.now().millisecond % 200);
-    });
-    AppHaptics.success();
+      if (!mounted) return;
+      setState(() {
+        _broadcasting = false;
+        _broadcastDone = true;
+      });
+      AppHaptics.success();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _broadcasting = false;
+        _errorMessage = e.toString();
+      });
+    }
   }
 
   @override
@@ -141,7 +155,7 @@ class _PromoSheetState extends State<PromoSheet>
             _RadarBroadcast(controller: _radarController),
             const SizedBox(height: 16),
             Center(
-              child: Text('Broadcasting offer...',
+              child: Text('Creating flash promo...',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -150,15 +164,32 @@ class _PromoSheetState extends State<PromoSheet>
             ),
             const SizedBox(height: 8),
             Center(
-              child: Text('Sending push notification to nearby users',
+              child: Text('Recording promotion with the backend',
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   )),
             ),
+          ] else if (_errorMessage != null) ...[
+            const SizedBox(height: 20),
+            Icon(Icons.error_outline, size: 48, color: AppTheme.danger),
+            const SizedBox(height: 16),
+            Text('Failed to create promo',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.danger)),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: () => setState(() => _errorMessage = null),
+              child: const Text('Try Again'),
+            ),
           ] else if (_broadcastDone) ...[
             _SuccessState(
-              reachedUsers: _reachedUsers,
               onReset: () => setState(() => _broadcastDone = false),
             ),
           ] else ...[
@@ -206,18 +237,18 @@ class _PromoSheetState extends State<PromoSheet>
               ),
               const SizedBox(height: 12),
 
-              // Radius slider
+              // Discount slider
               _SliderRow(
-                icon: Icons.radio_button_checked,
-                label: 'Radius',
-                value: '${_radiusKm.toStringAsFixed(1)} km',
+                icon: Icons.percent,
+                label: 'Discount',
+                value: '${_discountPct.round()}% off',
                 slider: Slider(
-                  value: _radiusKm,
-                  min: 1.0,
-                  max: 5.0,
-                  divisions: 8,
+                  value: _discountPct,
+                  min: 5,
+                  max: 50,
+                  divisions: 9,
                   activeColor: AppTheme.emerald,
-                  onChanged: (v) => setState(() => _radiusKm = v),
+                  onChanged: (v) => setState(() => _discountPct = v),
                 ),
               ),
               const SizedBox(height: 20),
@@ -243,7 +274,7 @@ class _PromoSheetState extends State<PromoSheet>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Promotions auto-expire after the duration. Users within the radius receive a push notification with your venue name and offer.',
+                      'Promotions auto-expire after the duration. The discount is visible to consumers browsing your venue.',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppTheme.emerald,
@@ -576,8 +607,7 @@ class _RadarPainter extends CustomPainter {
 }
 
 class _SuccessState extends StatelessWidget {
-  const _SuccessState({required this.reachedUsers, required this.onReset});
-  final int reachedUsers;
+  const _SuccessState({required this.onReset});
   final VoidCallback onReset;
 
   @override
@@ -595,7 +625,7 @@ class _SuccessState extends StatelessWidget {
           child: Icon(Icons.check_circle, size: 36, color: AppTheme.emerald),
         ),
         const SizedBox(height: 16),
-        Text('Offer Broadcasted!',
+        Text('Flash Promo Created!',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w900,
@@ -603,18 +633,10 @@ class _SuccessState extends StatelessWidget {
             )),
         const SizedBox(height: 8),
         Text(
-          'Sent to $reachedUsers users within 3km',
+          'Your promotion is now live and will auto-expire after the duration.',
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'They have 30 minutes to walk in and claim',
-          style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -624,7 +646,7 @@ class _SuccessState extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: onReset,
             icon: const Icon(Icons.send),
-            label: const Text('Send Another Offer'),
+            label: const Text('Create Another Promo'),
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.emerald,
               foregroundColor: Colors.white,

@@ -85,9 +85,6 @@ class _FleetManagementScreenState extends ConsumerState<FleetManagementScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      // Rate card
-                      _buildRateCard(),
-                      const SizedBox(height: 16),
                       _buildStatRow(activeRentals.length, available.length),
                       const SizedBox(height: 16),
                       Text('Active Rentals',
@@ -108,45 +105,6 @@ class _FleetManagementScreenState extends ConsumerState<FleetManagementScreen> {
                     ],
                   ),
                 ),
-    );
-  }
-
-  Widget _buildRateCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.emerald.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.payments_outlined, color: AppTheme.emerald, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Hourly Rate', style: TextStyle(color: AppTheme.emerald, fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text('\u20B9150/hour', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.emerald)),
-                const SizedBox(height: 2),
-                Text('Daily cap: \u20B9800 · Weekly: \u20B94,500',
-                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              ],
-            ),
-          ),
-          IconButton.outlined(
-            icon: Icon(Icons.edit, size: 18),
-            onPressed: () {
-              AppHaptics.light();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Rate editing coming soon'), duration: Duration(seconds: 1)),
-              );
-            },
-          ),
-        ],
-      ),
     );
   }
 

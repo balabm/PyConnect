@@ -102,5 +102,6 @@ public sealed record VendorVenueResponse(
     double Longitude,
     int MaxCapacity,
     int CurrentCapacity,
+    int CheckedInCount,
     bool IsActive,
     IReadOnlyList<OperatingHoursView> OperatingHours);

@@ -601,20 +601,29 @@ class VendorVenueSummary {
     required this.name,
     required this.category,
     required this.isActive,
+    this.maxCapacity = 0,
+    this.currentCapacity = 0,
+    this.checkedInCount = 0,
   });
 
   factory VendorVenueSummary.fromJson(Map<String, dynamic> json) =>
       VendorVenueSummary(
-        venueId: json['venueId'] as String? ?? '',
+        venueId: json['venueId'] as String? ?? json['id'] as String? ?? '',
         name: json['name'] as String? ?? '',
         category: json['category'] as String? ?? '',
         isActive: json['isActive'] as bool? ?? false,
+        maxCapacity: (json['maxCapacity'] as num?)?.toInt() ?? 0,
+        currentCapacity: (json['currentCapacity'] as num?)?.toInt() ?? 0,
+        checkedInCount: (json['checkedInCount'] as num?)?.toInt() ?? 0,
       );
 
   final String venueId;
   final String name;
   final String category;
   final bool isActive;
+  final int maxCapacity;
+  final int currentCapacity;
+  final int checkedInCount;
 }
 
 // ── Food Order Models ──

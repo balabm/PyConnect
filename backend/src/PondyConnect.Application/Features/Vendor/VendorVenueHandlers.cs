@@ -188,6 +188,7 @@ public sealed class ListVendorVenuesHandler : IRequestHandler<ListVendorVenuesQu
                 v.Location.Longitude,
                 v.MaxCapacity,
                 v.CurrentCapacity,
+                v.CheckedInCount,
                 v.IsActive,
                 v.Availability.OrderBy(a => a.DayOfWeek).Select(a => new OperatingHoursView(
                     a.DayOfWeek,

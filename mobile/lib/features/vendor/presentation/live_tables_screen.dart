@@ -227,10 +227,6 @@ class _LiveTablesScreenState extends ConsumerState<LiveTablesScreen>
 
         // Table cards
         ..._tables.map((table) => _LiveTableCard(table: table)),
-
-        // VIP Escrow reserved table (demo feature)
-        const SizedBox(height: 16),
-        _EscrowReservedCard(),
       ],
     );
   }
@@ -457,93 +453,6 @@ class _CreditColumn extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Shows a VIP table held with an escrow auth-hold. If the guest doesn't
-/// show up by the expiry time, the escrow is captured and the table is
-/// released back into the app. This is a demo UI mockup.
-class _EscrowReservedCard extends StatelessWidget {
-  const _EscrowReservedCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.danger.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3), width: 1.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppTheme.danger.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.lock_clock, color: AppTheme.danger, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'VIP Couch 3',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.danger,
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: const Text(
-                          'RESERVED',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '\u20B95,000 Escrow Held \u2022 Expires 11:00 PM',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.danger,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Auto-releases to pool if no-show',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

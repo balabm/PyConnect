@@ -87,13 +87,22 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
     return AppTheme.danger;
   }
 
-  /// Updates the venue's live occupancy percentage.
-  /// TODO: Replace stub with real venue API call once
-  /// `PUT /api/vendor/venues/{id}/occupancy` endpoint is implemented.
+  /// Updates the venue's live occupancy percentage via the real backend
+  /// endpoint POST /api/vendor/occupancy.
   Future<void> _updateOccupancy(int pct) async {
-    // Stub: no live endpoint yet. Persisted only in local state.
-    // When endpoint exists, call:
-    //   await ref.read(vendorDashboardApiProvider).updateOccupancy(venueId, pct);
+    try {
+      final api = ref.read(vendorDashboardApiProvider);
+      final venues = await api.getVenues();
+      if (venues.isNotEmpty) {
+        await api.updateOccupancy(venues.first.venueId, pct);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update occupancy: $e'), backgroundColor: AppTheme.danger),
+        );
+      }
+    }
   }
 
   @override
@@ -330,6 +339,8 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
   // ── Cover Charge Section ──
 
   Widget _buildCoverChargeSection() {
+    // Cover charges are managed via live-tables check-in. No hardcoded
+    // pricing — the actual cover charge is collected per booking.
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -348,44 +359,10 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _coverChargeRow('Couples Entry', '\u20B91,000', '9 PM - 11 PM'),
-          _coverChargeRow('Stag Entry', '\u20B91,500', '9 PM - 11 PM'),
-          _coverChargeRow('VIP Table', '\u20B95,000', 'Includes 4 drinks'),
-          _coverChargeRow('Ladies Free', 'Free', 'Before 10 PM'),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              icon: Icon(Icons.edit, size: 16),
-              label: Text('Edit Cover Charges'),
-              onPressed: () {
-                AppHaptics.light();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Cover charge editing coming soon'), duration: Duration(seconds: 1)),
-                );
-              },
-            ),
+          Text(
+            'Cover charges are collected per booking via the Live Tables screen. Use the Occupancy tile in Manage Hub to update live crowd percentage.',
+            style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _coverChargeRow(String label, String price, String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w500)),
-                Text(subtitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 12)),
-              ],
-            ),
-          ),
-          Text(price, style: const TextStyle(color: AppTheme.emerald, fontSize: 16, fontWeight: FontWeight.bold)),
         ],
       ),
     );

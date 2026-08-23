@@ -377,6 +377,8 @@ public sealed class VendorController : ControllerBase
             venue.Category.ToString(),
             venue.Address,
             venue.MaxCapacity,
+            venue.CurrentCapacity,
+            venue.CheckedInCount,
             venue.CurrentCapacity > 0));
     }
 
@@ -1465,6 +1467,8 @@ public sealed record VendorVenueResponse(
     string Category,
     string? Address,
     int MaxCapacity,
+    int CurrentCapacity,
+    int CheckedInCount,
     bool IsOpen);
 
 public sealed record FoodOrderDetailResponse(
