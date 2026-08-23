@@ -100,7 +100,7 @@ A 4th web-only entry point `main_admin.dart` builds the Admin web app (not an An
 
 ## Deployment
 - **Git repo**: https://github.com/balabm/PyConnect.git (618 files, zero secrets tracked)
-- **GitHub Actions**: 5 workflows in `.github/workflows/` (see CI/CD section below)
+- **GitHub Actions**: 4 workflows in `.github/workflows/` (see CI/CD section below)
 - **GitHub Secrets**: 12/12 configured (see CI/CD section below)
 - Backend deploys to EC2 via Docker (automated via `deploy-backend.yml`)
 - Web apps deploy to EC2 via SCP + Nginx (automated via `deploy-web.yml`)
@@ -111,20 +111,19 @@ A 4th web-only entry point `main_admin.dart` builds the Admin web app (not an An
 
 ## CI/CD
 
-### Workflows (5)
+### Workflows (4)
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci-backend.yml` | PR + push to main | Build + 288 architecture tests |
-| `ci-mobile.yml` | PR + push to main | Flutter static analysis |
+| `ci.yml` | PR + push to main | Backend build + architecture tests + mobile analyze (parallel jobs) |
 | `deploy-backend.yml` | Push to main (backend changes) | Docker → Docker Hub → EC2 → health check |
 | `deploy-web.yml` | Push to main (mobile changes) | Flutter web → SCP to EC2 → Nginx reload |
-| `deploy-mobile.yml` | Tag push `v*` | Signed APK + AAB builds → GitHub artifacts |
+| `release.yml` | Tag push `v*` | Signed APK + AAB builds → GitHub artifacts |
 
 ### GitHub Secrets (12/12 configured)
 `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, `API_BASE_URL`, `KEYSTORE_BASE64`, `KEY_STORE_PASSWORD`, `KEY_PASSWORD`, `KEY_ALIAS`, `GOOGLE_SERVICES_JSON`, `RAZORPAY_KEY_ID`
 
 ### Branch Protection (Recommended)
-Require `Backend CI` + `Mobile CI` status checks before merging PRs to `main`.
+Require `CI` status checks before merging PRs to `main`.
 
 ## Deployment Status
 

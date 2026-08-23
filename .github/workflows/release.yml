@@ -1,8 +1,7 @@
-name: Build Mobile Apps
+name: Release — Build Signed Mobile Apps
 
 # Builds signed Android APKs and AABs for all 3 flavors
-# (consumer, driver, partner) and uploads them as
-# GitHub Actions artifacts.
+# (consumer, driver, partner) and uploads them as GitHub Actions artifacts.
 #
 # Trigger: tag pushes matching v* (e.g. v1.0.0) or manual run.
 #
@@ -13,6 +12,7 @@ name: Build Mobile Apps
 #   KEY_ALIAS              - Key alias (e.g. "upload")
 #   GOOGLE_SERVICES_JSON   - Content of merged google-services.json
 #   API_BASE_URL           - Production API base URL
+#   RAZORPAY_KEY_ID        - Razorpay public key id
 
 on:
   push:
