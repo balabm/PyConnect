@@ -17,16 +17,12 @@ public sealed class VenuesController : ControllerBase
     private readonly RiskInterceptor? _riskInterceptor;
     private readonly ICurrentUserService? _currentUser;
 
-    public VenuesController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
-
     public VenuesController(
         IMediator mediator,
-        RiskInterceptor riskInterceptor,
-        ICurrentUserService currentUser) : this(mediator)
+        RiskInterceptor? riskInterceptor = null,
+        ICurrentUserService? currentUser = null)
     {
+        _mediator = mediator;
         _riskInterceptor = riskInterceptor;
         _currentUser = currentUser;
     }

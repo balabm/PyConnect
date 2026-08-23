@@ -15,16 +15,12 @@ public sealed class VendorsController : ControllerBase
     private readonly RiskInterceptor? _riskInterceptor;
     private readonly ICurrentUserService? _currentUser;
 
-    public VendorsController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
-
     public VendorsController(
         IMediator mediator,
-        RiskInterceptor riskInterceptor,
-        ICurrentUserService currentUser) : this(mediator)
+        RiskInterceptor? riskInterceptor = null,
+        ICurrentUserService? currentUser = null)
     {
+        _mediator = mediator;
         _riskInterceptor = riskInterceptor;
         _currentUser = currentUser;
     }
