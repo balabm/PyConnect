@@ -13,7 +13,7 @@ class DriverApi {
   final ApiClient _api;
 
   Future<List<DispatchTaskModel>> getAvailableTasks() async {
-    final data = await _api.get('api/driver/tasks');
+    final data = await _api.get('/api/driver/tasks');
     final list = data as List;
     return list
         .map((e) => DispatchTaskModel.fromJson(e as Map<String, dynamic>))
@@ -21,7 +21,7 @@ class DriverApi {
   }
 
   Future<List<DispatchTaskModel>> getBatchedTasks(String batchGroupId) async {
-    final data = await _api.get('api/driver/tasks/batch/$batchGroupId');
+    final data = await _api.get('/api/driver/tasks/batch/$batchGroupId');
     final list = data as List;
     return list
         .map((e) => DispatchTaskModel.fromJson(e as Map<String, dynamic>))
@@ -31,35 +31,35 @@ class DriverApi {
   /// Verifies the 4-digit OTP and starts the ride for a dispatch task.
   /// Called when the driver taps [Start Trip] after arriving at the pickup.
   Future<void> startTask(String taskId, String otp) async {
-    await _api.post('api/driver/tasks/$taskId/start', data: {'otp': otp});
+    await _api.post('/api/driver/tasks/$taskId/start', data: {'otp': otp});
   }
 
   Future<DispatchTaskModel> acceptTask(String taskId) async {
-    final data = await _api.post('api/driver/tasks/$taskId/accept');
+    final data = await _api.post('/api/driver/tasks/$taskId/accept');
     return DispatchTaskModel.fromJson(data as Map<String, dynamic>);
   }
 
   Future<void> completeTask(String taskId) async {
-    await _api.post('api/driver/tasks/$taskId/complete');
+    await _api.post('/api/driver/tasks/$taskId/complete');
   }
 
   /// Emergency release: unassigns the driver from the task and pushes it
   /// back to the dispatch queue for the next nearest driver. Used when the
   /// driver has a breakdown or emergency and cannot complete the trip.
   Future<void> emergencyRelease(String taskId) async {
-    await _api.post('api/driver/tasks/$taskId/emergency-release');
+    await _api.post('/api/driver/tasks/$taskId/emergency-release');
   }
 
   /// Marks the driver as arrived at the store/restaurant for a food or
   /// essentials delivery. Persists the phase for app-restart resume.
   Future<void> markArrivedAtStore(String taskId) async {
-    await _api.post('api/driver/tasks/$taskId/arrived-at-store');
+    await _api.post('/api/driver/tasks/$taskId/arrived-at-store');
   }
 
   /// Marks the order as picked up and the driver as en route to customer.
   /// Persists the phase for app-restart resume.
   Future<void> markOutForDelivery(String taskId) async {
-    await _api.post('api/driver/tasks/$taskId/out-for-delivery');
+    await _api.post('/api/driver/tasks/$taskId/out-for-delivery');
   }
 
   /// Uploads a proof-of-delivery photo for a food/essentials order.
@@ -72,7 +72,7 @@ class DriverApi {
         'photo': await MultipartFile.fromFile(photo.path),
       });
       final response = await _api.post(
-        'api/driver/orders/$orderId/delivery-proof',
+        '/api/driver/orders/$orderId/delivery-proof',
         data: formData,
       );
       return (response as Map<String, dynamic>?)?['proofUrl'] as String?;
@@ -82,21 +82,21 @@ class DriverApi {
   }
 
   Future<DriverWalletModel> getWallet() async {
-    final data = await _api.get('api/driver/wallet');
+    final data = await _api.get('/api/driver/wallet');
     return DriverWalletModel.fromJson(data as Map<String, dynamic>);
   }
 
   /// Fetches the cash-collection ledger wallet (balance, suspended status,
   /// recent transactions) from GET /api/driver/wallet.
   Future<DriverWalletDetailModel> getWalletDetail() async {
-    final data = await _api.get('api/driver/wallet');
+    final data = await _api.get('/api/driver/wallet');
     return DriverWalletDetailModel.fromJson(data as Map<String, dynamic>);
   }
 
   /// Initiates a Razorpay top-up order for settling wallet dues via
   /// POST /api/driver/wallet/topup. Returns the provider order ID.
   Future<WalletTopUpOrderModel> initiateTopUp(double amount) async {
-    final data = await _api.post('api/driver/wallet/topup', data: {
+    final data = await _api.post('/api/driver/wallet/topup', data: {
       'amount': amount,
     });
     return WalletTopUpOrderModel.fromJson(data as Map<String, dynamic>);
@@ -104,7 +104,7 @@ class DriverApi {
 
   /// Requests a wallet withdrawal to the driver's linked UPI/bank.
   Future<DriverWithdrawalModel> requestWithdrawal(double amount) async {
-    final data = await _api.post('api/driver/wallet/withdraw', data: {
+    final data = await _api.post('/api/driver/wallet/withdraw', data: {
       'amount': amount,
     });
     return DriverWithdrawalModel.fromJson(data as Map<String, dynamic>);
@@ -112,7 +112,7 @@ class DriverApi {
 
   /// Returns the driver's withdrawal history.
   Future<List<DriverWithdrawalModel>> getWithdrawals() async {
-    final data = await _api.get('api/driver/wallet/withdrawals');
+    final data = await _api.get('/api/driver/wallet/withdrawals');
     final list = data as List;
     return list
         .map((e) => DriverWithdrawalModel.fromJson(e as Map<String, dynamic>))
@@ -128,7 +128,7 @@ class DriverApi {
     String? signature,
   }) async {
     try {
-      await _api.post('api/driver/wallet/topup/verify', data: {
+      await _api.post('/api/driver/wallet/topup/verify', data: {
         'amount': amount,
         'razorpayPaymentId': paymentId,
         'razorpayOrderId': orderId,
@@ -141,18 +141,18 @@ class DriverApi {
   }
 
   Future<InstantPayoutResultModel> requestInstantPayout() async {
-    final data = await _api.post('api/driver/wallet/instant-payout');
+    final data = await _api.post('/api/driver/wallet/instant-payout');
     return InstantPayoutResultModel.fromJson(data as Map<String, dynamic>);
   }
 
   Future<void> goOnline() async {
-    await _api.post('api/driver/online');
+    await _api.post('/api/driver/online');
   }
 
   /// Fetches the current driver's profile including approval, tutorial and
   /// signature status. Used for router guards and SignalR channel join.
   Future<DriverProfileModel> getProfile() async {
-    final data = await _api.get('api/driver/me');
+    final data = await _api.get('/api/driver/me');
     if (kDebugMode) {
       print('DEBUG DriverProfile: $data');
     }
@@ -160,13 +160,13 @@ class DriverApi {
   }
 
   Future<void> goOffline() async {
-    await _api.post('api/driver/offline');
+    await _api.post('/api/driver/offline');
   }
 
   /// Updates the driver's current GPS location on the backend.
   /// Called periodically while the driver is online for dispatch matching.
   Future<void> updateLocation(double latitude, double longitude) async {
-    await _api.post('api/driver/location', data: {
+    await _api.post('/api/driver/location', data: {
       'latitude': latitude,
       'longitude': longitude,
     });
@@ -176,7 +176,7 @@ class DriverApi {
   /// The driver is flagged for review and forced offline server-side.
   Future<void> reportMockLocation(double latitude, double longitude) async {
     try {
-      await _api.post('api/driver/mock-location-report', data: {
+      await _api.post('/api/driver/mock-location-report', data: {
         'latitude': latitude,
         'longitude': longitude,
       });
@@ -190,7 +190,7 @@ class DriverApi {
   /// flow. After this call, the token is invalid and the driver must sign
   /// out locally.
   Future<void> deleteAccount() async {
-    await _api.post('api/driver/account/delete');
+    await _api.post('/api/driver/account/delete');
   }
 
   /// Uploads all three KYC documents (Aadhaar, Driving License, RC) in a
@@ -221,7 +221,7 @@ class DriverApi {
           filename: 'rc${_ext(rc.path)}'),
       'upiId': upiId,
     });
-    final data = await _api.post('api/driver/upload-kyc', data: formData);
+    final data = await _api.post('/api/driver/upload-kyc', data: formData);
     return KycUploadResult.fromJson(data as Map<String, dynamic>);
   }
 
@@ -238,7 +238,7 @@ class DriverApi {
     String? vehiclePlate,
     String? licenseNumber,
   }) async {
-    await _api.post('api/driver/register', data: {
+    await _api.post('/api/driver/register', data: {
       'name': name,
       'phone': phone,
       'vehicleType': vehicleType,
@@ -249,12 +249,12 @@ class DriverApi {
 
   /// Marks the mandatory safety tutorial as completed.
   Future<void> completeTutorial() async {
-    await _api.post('api/driver/complete-tutorial');
+    await _api.post('/api/driver/complete-tutorial');
   }
 
   /// Records the driver's digital signature on the safety agreement.
   Future<void> signAgreement() async {
-    await _api.post('api/driver/sign-agreement');
+    await _api.post('/api/driver/sign-agreement');
   }
 
   /// Uploads extended KYC documents (insurance + selfie).
@@ -281,6 +281,6 @@ class DriverApi {
     }
 
     final formData = FormData.fromMap(formDataMap);
-    await _api.post('api/driver/upload-extended-kyc', data: formData);
+    await _api.post('/api/driver/upload-extended-kyc', data: formData);
   }
 }
