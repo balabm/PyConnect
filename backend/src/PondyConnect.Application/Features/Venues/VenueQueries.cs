@@ -34,6 +34,7 @@ public sealed record VenueFilterResponse(
     string Category,
     double Latitude,
     double Longitude,
+    int MaxCapacity,
     int Occupancy,
     bool IsOpen,
     string? Address,

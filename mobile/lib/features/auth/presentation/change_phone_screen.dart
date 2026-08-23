@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/auth_controller.dart';
@@ -132,6 +133,8 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
       await api.requestPhoneChange(phone);
       AppHaptics.success();
       if (mounted) setState(() { _otpSent = true; _isSendingOtp = false; });
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message.isNotEmpty ? e.message : 'Could not update phone number. Please try again.'; _isSendingOtp = false; });
     } catch (e) {
       if (mounted) setState(() { _error = 'Could not update phone number. Please try again.'; _isSendingOtp = false; });
     }
@@ -157,6 +160,8 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
         );
         Navigator.of(context).pop();
       }
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message.isNotEmpty ? e.message : 'Could not update phone number. Please try again.'; _isVerifying = false; });
     } catch (e) {
       if (mounted) setState(() { _error = 'Could not update phone number. Please try again.'; _isVerifying = false; });
     }

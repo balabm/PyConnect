@@ -42,9 +42,13 @@ public sealed class GetVenueByIdQueryHandler : IRequestHandler<GetVenueByIdQuery
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new InvalidOperationException("Venue not found or is not active.");
 
-        var occupancy = venue.CurrentCapacity;
+        var currentCapacity = venue.CurrentCapacity;
         var cached = await _availabilityCache.GetVenueOccupancyAsync(venue.Id, cancellationToken);
-        if (cached.HasValue) occupancy = cached.Value;
+        if (cached.HasValue) currentCapacity = cached.Value;
+
+        var occupancyPct = venue.MaxCapacity > 0
+            ? (int)Math.Round((double)currentCapacity / venue.MaxCapacity * 100)
+            : 0;
 
         var now = TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(330)); // IST
         var dayOfWeek = DateTime.UtcNow.DayOfWeek;
@@ -64,7 +68,7 @@ public sealed class GetVenueByIdQueryHandler : IRequestHandler<GetVenueByIdQuery
             venue.Location.Latitude,
             venue.Location.Longitude,
             venue.MaxCapacity,
-            occupancy,
+            occupancyPct,
             isOpen,
             venue.Address,
             venue.Description,

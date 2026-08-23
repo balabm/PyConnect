@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/network/razorpay_payment_service.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
@@ -113,8 +114,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final total = cover * _seats;
     final occupancyPct = venue.occupancy.clamp(0, 100).toInt();
     final isAtCapacity = occupancyPct >= 100;
+    // occupancy is now a percentage (0-100) from the backend.
+    // availableCapacity = maxCapacity * (100 - occupancyPct) / 100
     final availableCapacity = venue.maxCapacity != null
-        ? (venue.maxCapacity! - (venue.maxCapacity! * occupancyPct ~/ 100))
+        ? (venue.maxCapacity! * (100 - occupancyPct) ~/ 100)
         : null;
     final exceedsCapacity = availableCapacity != null && _seats > availableCapacity;
 
@@ -305,6 +308,12 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         amount: total.toDouble(),
         booking: booking,
       );
+    } on ApiException catch (e) {
+      // The backend returns structured error messages for capacity conflicts,
+      // double-bookings, validation failures, etc. Surface them to the user.
+      setState(() {
+        _error = e.message.isNotEmpty ? e.message : 'Booking failed. Please try again.';
+      });
     } catch (e) {
       setState(() {
         _error = 'Booking failed. Please try again.';

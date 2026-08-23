@@ -137,6 +137,10 @@ class ApiClient {
               liveTotalAmount: (data['liveTotalAmount'] as num?)?.toDouble() ?? 0,
             );
           }
+          // 409 — booking conflict (capacity, double-booking, etc.)
+          if (data is Map && data['message'] is String) {
+            throw ApiException(data['message'] as String);
+          }
         }
         attempt++;
         if (!_shouldRetry(e) || attempt > _maxRetries) {

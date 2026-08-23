@@ -675,6 +675,12 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       if (mounted) {
         _handleCartPriceConflict(e, items, paymentMethod, deliveryAddress);
       }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message.isNotEmpty ? e.message : 'Order failed. Please try again.')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order failed: $e')));

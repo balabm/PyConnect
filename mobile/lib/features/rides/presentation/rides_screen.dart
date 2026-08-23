@@ -735,6 +735,10 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
           _requestRide(); // Retry after waiver acceptance
         }
       }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _inlineError = e.message.isNotEmpty ? e.message : 'Could not request ride. Please try again.');
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _inlineError = 'Could not request ride. Please try again.');

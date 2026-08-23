@@ -50,7 +50,10 @@ public sealed class VenueFilterQueryHandler : IRequestHandler<VenueFilterQuery, 
         return venues
             .Select(v =>
             {
-                var occupancy = live.TryGetValue(v.Id, out var cached) ? cached : v.CurrentCapacity;
+                var currentCapacity = live.TryGetValue(v.Id, out var cached) ? cached : v.CurrentCapacity;
+                var occupancyPct = v.MaxCapacity > 0
+                    ? (int)Math.Round((double)currentCapacity / v.MaxCapacity * 100)
+                    : 0;
                 var isOpen = v.Availability.Count == 0 ||
                              v.Availability.Any(a =>
                                  a.DayOfWeek == dayOfWeek &&
@@ -64,7 +67,8 @@ public sealed class VenueFilterQueryHandler : IRequestHandler<VenueFilterQuery, 
                     v.Category.ToString(),
                     v.Location.Latitude,
                     v.Location.Longitude,
-                    occupancy,
+                    v.MaxCapacity,
+                    occupancyPct,
                     IsOpen: isOpen,
                     v.Address,
                     priorityActive,
