@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
 import '../../../core/network/api_client.dart';
 import '../domain/driver_models.dart';
@@ -153,6 +153,9 @@ class DriverApi {
   /// signature status. Used for router guards and SignalR channel join.
   Future<DriverProfileModel> getProfile() async {
     final data = await _api.get('api/driver/me');
+    if (kDebugMode) {
+      print('DEBUG DriverProfile: $data');
+    }
     return DriverProfileModel.fromJson(data as Map<String, dynamic>);
   }
 

@@ -6,6 +6,7 @@ import '../../../core/config/app_flavor.dart';
 import '../../../core/providers/force_update_provider.dart';
 import '../../../features/auth/application/auth_controller.dart';
 import '../../../features/auth/application/vendor_auth_controller.dart';
+import '../../../features/driver/application/driver_providers.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key, required this.flavor});
@@ -48,6 +49,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     }
 
     if (!mounted) return;
+
+    // Eagerly fetch the driver profile so the router has the latest
+    // compliance status before navigating. Without this, the router
+    // sees a null profile (FutureProvider hasn't started yet) and
+    // redirects an approved driver to /register.
+    if (authenticated && widget.flavor == AppFlavor.driver) {
+      try {
+        await ref.read(driverProfileProvider.future);
+      } catch (_) {
+        // If the profile fetch fails, the router will handle routing
+        // based on the error state. Don't block the navigation.
+      }
+      if (!mounted) return;
+    }
 
     context.go(authenticated ? '/' : '/auth');
   }

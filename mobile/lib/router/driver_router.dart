@@ -67,12 +67,21 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
       // Brand-new authenticated drivers with no profile must register first
       // so the onboarding flow has a driver record to attach KYC documents to.
       // We only act on a finished load to avoid flashing /register while the
-      // profile is still being fetched.
+      // profile is still being fetched. We also skip this check when the
+      // provider hasn't started yet (isLoading false + valueOrNull null +
+      // hasError false = never invoked) to avoid a false redirect.
       if (authenticated) {
         final profileAsync = ref.read(driverProfileProvider);
+        // Only redirect to /register if the profile fetch has completed
+        // (not loading) AND returned null (no driver record). If the fetch
+        // errored, don't redirect — let the shell handle it.
         if (!profileAsync.isLoading &&
             profileAsync.valueOrNull == null &&
-            path != '/register') {
+            !profileAsync.hasError &&
+            path != '/register' &&
+            path != '/kyc' &&
+            path != '/tutorial' &&
+            path != '/pending-verification') {
           return '/register';
         }
       }

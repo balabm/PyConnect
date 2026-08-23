@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,11 +9,56 @@ import '../application/driver_providers.dart';
 
 /// Screen shown after a driver submits KYC documents, while their
 /// profile is pending admin verification. Blocks going online until approved.
-class DriverPendingVerificationScreen extends ConsumerWidget {
+///
+/// Auto-polls the backend every 15 seconds so the driver is automatically
+/// routed to the dashboard when admin approval is granted, without needing
+/// to manually tap "Check Status".
+class DriverPendingVerificationScreen extends ConsumerStatefulWidget {
   const DriverPendingVerificationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DriverPendingVerificationScreen> createState() =>
+      _DriverPendingVerificationScreenState();
+}
+
+class _DriverPendingVerificationScreenState
+    extends ConsumerState<DriverPendingVerificationScreen> {
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-poll every 15 seconds to check if admin approval has been granted.
+    // When the profile comes back with isApproved=true, the router redirect
+    // will automatically send the driver to the dashboard.
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) ref.invalidate(driverProfileProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _checkStatus() {
+    ref.invalidate(driverProfileProvider);
+    context.go('/');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Watch the profile so we auto-navigate when approval comes through.
+    final profileAsync = ref.watch(driverProfileProvider);
+    final profile = profileAsync.valueOrNull;
+    if (profile != null && profile.isApproved) {
+      // Admin approved — navigate to dashboard immediately.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/');
+      });
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -103,11 +150,7 @@ class DriverPendingVerificationScreen extends ConsumerWidget {
               const SizedBox(height: 32),
               // Refresh button
               OutlinedButton.icon(
-                onPressed: () {
-                  // Refresh the driver profile to check if approved
-                  ref.invalidate(driverProfileProvider);
-                  context.go('/');
-                },
+                onPressed: _checkStatus,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Check Status'),
                 style: OutlinedButton.styleFrom(
