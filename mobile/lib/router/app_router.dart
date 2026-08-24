@@ -20,9 +20,6 @@ import '../features/events/presentation/party_builder_screen.dart';
 import '../features/food/presentation/food_order_detail_screen.dart';
 import '../features/food/presentation/food_order_history_screen.dart';
 import '../features/food/presentation/food_screen.dart';
-import '../features/food/presentation/restaurant_list_screen.dart';
-import '../features/hub/services_hub_screen.dart';
-import '../features/activity/presentation/activity_hub_screen.dart';
 import '../features/activity/presentation/stay_receipt_screen.dart';
 import '../features/notifications/application/notification_providers.dart';
 import '../features/rides/presentation/ride_history_screen.dart';
@@ -35,7 +32,6 @@ import '../features/rides/presentation/emergency_contacts_screen.dart';
 import '../features/rides/presentation/trip_share_screen.dart';
 import '../features/transit/presentation/transit_screen.dart';
 import '../features/stays/presentation/homestay_detail_screen.dart';
-import '../features/stays/presentation/stays_screen.dart';
 import '../features/support/presentation/help_screen.dart';
 import '../features/venues/data/venue_api.dart';
 import '../features/venues/presentation/venue_detail_screen.dart';
@@ -166,7 +162,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'transit',
-            builder: (_, _) => const TransitScreen(),
+            builder: (_, _) => const HomeShell(),
           ),
           GoRoute(
             path: 'party',
@@ -184,7 +180,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'stays',
-            builder: (_, _) => const StaysScreen(),
+            builder: (_, _) => const HomeShell(),
             routes: [
               GoRoute(
                 path: ':id',
@@ -196,7 +192,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'food',
-            builder: (_, _) => const RestaurantListScreen(),
+            builder: (_, _) => const HomeShell(),
             routes: [
               GoRoute(
                 path: 'vendor/:vendorId',
@@ -297,11 +293,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'hub',
-            builder: (_, _) => const ServicesHubScreen(),
+            builder: (_, _) => const HomeShell(),
           ),
           GoRoute(
             path: 'activity',
-            builder: (_, _) => const ActivityHubScreen(),
+            builder: (_, _) => const HomeShell(),
             routes: [
               GoRoute(
                 path: 'stay/:id',
