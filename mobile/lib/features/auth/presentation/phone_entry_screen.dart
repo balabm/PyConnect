@@ -54,11 +54,12 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
   /// unreachable.
   Future<void> _activateDemoBypass() async {
     AppHaptics.heavy();
-    final isPartner = resolvedAppFlavor == AppFlavor.partner;
-    final isDriver = resolvedAppFlavor == AppFlavor.driver;
+    final flavor = ref.read(appFlavorProvider);
+    final isPartner = flavor == AppFlavor.partner;
+    final isDriver = flavor == AppFlavor.driver;
 
     if (kDebugMode) {
-      print('DEBUG: Demo bypass activated for ${resolvedAppFlavor.name}');
+      print('DEBUG: Demo bypass activated for ${flavor.name}');
     }
 
     if (isPartner) {
@@ -100,8 +101,9 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final phone = ref.watch(phoneNumberProvider);
-    final isPartner = resolvedAppFlavor == AppFlavor.partner;
-    final isDriver = resolvedAppFlavor == AppFlavor.driver;
+    final flavor = ref.watch(appFlavorProvider);
+    final isPartner = flavor == AppFlavor.partner;
+    final isDriver = flavor == AppFlavor.driver;
     final authState = isPartner
         ? ref.watch(vendorAuthControllerProvider)
         : ref.watch(authControllerProvider);

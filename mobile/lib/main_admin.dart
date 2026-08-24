@@ -16,7 +16,10 @@ import 'core/widgets/error_boundary.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   setupAppErrorWidget();
-  runApp(const ProviderScope(
-    child: PondyConnectApp(flavor: AppFlavor.admin),
+  runApp(ProviderScope(
+    overrides: [
+      appFlavorProvider.overrideWithValue(AppFlavor.admin),
+    ],
+    child: const PondyConnectApp(flavor: AppFlavor.admin),
   ));
 }

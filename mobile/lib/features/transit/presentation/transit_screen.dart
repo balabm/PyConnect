@@ -28,53 +28,78 @@ class TransitScreen extends ConsumerStatefulWidget {
   ConsumerState<TransitScreen> createState() => _TransitScreenState();
 }
 
-class _TransitScreenState extends ConsumerState<TransitScreen> {
+class _TransitScreenState extends ConsumerState<TransitScreen>
+    with TickerProviderStateMixin {
   int _index = 0;
+  late final TabController _tabController;
 
-  bool get _authed => ref.read(authTokenProvider) != null;
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() => _index = _tabController.index);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // The Ride tab (index 0) is a full-screen map experience.
-    // Use extendBody so the map extends behind the nav bar,
-    // giving the bottom sheet 100% of vertical real estate.
-    return Scaffold(
-      extendBody: true,
-      body: IndexedStack(
-        index: _index,
-        children: const [
-          RideHailingScreen(),
-          _TripsPickupTab(),
-          _LuggageCloakTab(),
-          _MobilityTab(),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.two_wheeler_outlined),
-            selectedIcon: Icon(Icons.two_wheeler),
-            label: 'Ride',
+    // Sub-tabs are rendered as an in-body TabBar instead of
+    // bottomNavigationBar to avoid overlapping the HomeShell's
+    // FloatingNavBar.
+    return Column(
+      children: [
+        Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: EdgeInsets.zero,
+                    labelColor: AppTheme.emerald,
+                    unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                    indicatorColor: AppTheme.emerald,
+                    labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    unselectedLabelStyle: const TextStyle(fontSize: 13),
+                    tabs: const [
+                      Tab(icon: Icon(Icons.two_wheeler, size: 18), text: 'Ride'),
+                      Tab(icon: Icon(Icons.tour, size: 18), text: 'Pickups'),
+                      Tab(icon: Icon(Icons.luggage, size: 18), text: 'Luggage'),
+                      Tab(icon: Icon(Icons.electric_scooter, size: 18), text: 'Rentals'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.tour_outlined),
-            selectedIcon: Icon(Icons.tour),
-            label: 'Pickups',
+        ),
+        Expanded(
+          child: IndexedStack(
+            index: _index,
+            children: const [
+              RideHailingScreen(),
+              _TripsPickupTab(),
+              _LuggageCloakTab(),
+              _MobilityTab(),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.luggage_outlined),
-            selectedIcon: Icon(Icons.luggage),
-            label: 'Luggage',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.electric_scooter_outlined),
-            selectedIcon: Icon(Icons.electric_scooter),
-            label: 'Rentals',
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

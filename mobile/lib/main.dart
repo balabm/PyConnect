@@ -14,7 +14,10 @@ void main() async {
     // .env is not bundled in release builds — safe to skip.
   }
   setupAppErrorWidget();
-  runApp(const ProviderScope(
-    child: PondyConnectApp(flavor: AppFlavor.consumer),
+  runApp(ProviderScope(
+    overrides: [
+      appFlavorProvider.overrideWithValue(AppFlavor.consumer),
+    ],
+    child: const PondyConnectApp(flavor: AppFlavor.consumer),
   ));
 }

@@ -71,7 +71,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     final phone = ref.read(otpRequestedForProvider);
     if (phone.isEmpty) return;
 
-    final isPartner = resolvedAppFlavor == AppFlavor.partner;
+    final isPartner = ref.read(appFlavorProvider) == AppFlavor.partner;
     _isAutofilling = true;
     try {
       for (var attempt = 0; attempt < 5; attempt++) {
@@ -127,7 +127,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
 
   Future<void> _verify() async {
     final phone = ref.read(otpRequestedForProvider);
-    final isPartner = resolvedAppFlavor == AppFlavor.partner;
+    final isPartner = ref.read(appFlavorProvider) == AppFlavor.partner;
 
     if (isPartner) {
       await ref.read(vendorAuthControllerProvider.notifier).verifyOtp(phone, _otp);
@@ -160,7 +160,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
   @override
   Widget build(BuildContext context) {
     final phone = ref.watch(otpRequestedForProvider);
-    final isPartner = resolvedAppFlavor == AppFlavor.partner;
+    final isPartner = ref.read(appFlavorProvider) == AppFlavor.partner;
     final authState = isPartner
         ? ref.watch(vendorAuthControllerProvider)
         : ref.watch(authControllerProvider);
