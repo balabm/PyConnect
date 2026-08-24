@@ -381,8 +381,8 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                               ),
                             ),
                           const SizedBox(height: 12),
-                          // Continue as Guest (consumer only — vendors must authenticate)
-                          if (!isPartner)
+                          // Continue as Guest (consumer only — vendors and drivers must authenticate)
+                          if (!isPartner && !isDriver)
                             TextButton(
                               onPressed: () {
                                 ref.read(hasSeenAuthScreenProvider.notifier).state = true;
