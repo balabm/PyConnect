@@ -30,7 +30,6 @@ import '../features/rides/presentation/saved_locations_screen.dart';
 import '../features/rides/presentation/scheduled_rides_screen.dart';
 import '../features/rides/presentation/emergency_contacts_screen.dart';
 import '../features/rides/presentation/trip_share_screen.dart';
-import '../features/transit/presentation/transit_screen.dart';
 import '../features/stays/presentation/homestay_detail_screen.dart';
 import '../features/support/presentation/help_screen.dart';
 import '../features/venues/data/venue_api.dart';
@@ -232,7 +231,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'rides',
-            builder: (_, _) => const TransitScreen(),
+            builder: (_, _) => const HomeShell(),
             routes: [
               GoRoute(
                 path: 'history',
@@ -342,7 +341,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'rentals',
-            builder: (_, _) => const TransitScreen(),
+            builder: (_, _) => const HomeShell(),
           ),
           GoRoute(
             path: 'help',

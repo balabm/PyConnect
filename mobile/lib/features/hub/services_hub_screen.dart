@@ -49,7 +49,7 @@ class ServicesHubScreen extends ConsumerWidget {
       icon: Icons.headset_mic_outlined,
       title: 'Help & Support',
       subtitle: 'Disputes, help, contact us',
-      route: '',
+      route: '/help',
     ),
     _HubService(
       icon: Icons.shopping_bag_outlined,

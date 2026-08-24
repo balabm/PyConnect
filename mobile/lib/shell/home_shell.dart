@@ -86,6 +86,8 @@ class _Hub extends ConsumerWidget {
   static int _indexFor(String path) {
     if (path.startsWith('/food')) return 1;
     if (path.startsWith('/transit')) return 2;
+    if (path.startsWith('/rides')) return 2;
+    if (path.startsWith('/rentals')) return 2;
     if (path.startsWith('/stays')) return 3;
     if (path.startsWith('/activity')) return 4;
     if (path.startsWith('/hub')) return 5;
