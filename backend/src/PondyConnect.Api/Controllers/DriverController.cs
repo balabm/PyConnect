@@ -8,6 +8,7 @@ using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Application.Features.Auth;
 using PondyConnect.Application.Features.RideHailing;
 using PondyConnect.Domain.Enums;
+using PondyConnect.Domain.Entities;
 using PondyConnect.Api.Services;
 
 [ApiController]
@@ -421,6 +422,24 @@ public sealed class DriverController : ControllerBase
                 try
                 {
                     await _mediator.Send(new CompleteRideWithMetricsCommand(ride.Id, ride.DistanceKm, ride.EstimatedDurationMin), ct);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return BadRequest(new { Message = ex.Message });
+                }
+            }
+        }
+
+        // For food delivery tasks, mark the associated food order as Delivered.
+        if (task.TaskType == DispatchTaskType.FoodDelivery && task.SourceEntityId.HasValue)
+        {
+            var foodOrder = await _dbContext.FoodOrders
+                .FirstOrDefaultAsync(o => o.Id == task.SourceEntityId.Value, ct);
+            if (foodOrder is not null && foodOrder.Status == FoodOrderStatus.OutForDelivery)
+            {
+                try
+                {
+                    foodOrder.Deliver();
                 }
                 catch (InvalidOperationException ex)
                 {

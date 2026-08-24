@@ -787,6 +787,12 @@ public sealed class RegisterDriverHandler : IRequestHandler<RegisterDriverComman
     {
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("User not authenticated.");
 
+        // Upgrade the user's role to Driver so JWT tokens issued after
+        // re-login include the Driver role claim required by [Authorize(Roles = "Driver")].
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is not null && user.Role != UserRole.Driver && user.Role != UserRole.Admin)
+            user.ChangeRole(UserRole.Driver);
+
         var driver = Driver.Create(userId, request.Name, request.Phone, request.VehicleType, request.VehiclePlate);
         _context.Drivers.Add(driver);
         await _context.SaveChangesAsync(cancellationToken);
