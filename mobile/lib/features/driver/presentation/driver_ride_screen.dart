@@ -308,9 +308,13 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
   Future<void> _completeRide() async {
     AppHaptics.success();
     setState(() => _loading = true);
+    final durationMin = (_tripSeconds / 60).round().clamp(1, 999);
+    final distanceKm = (_ride?['distanceKm'] as num?)?.toDouble() ?? 0.0;
     try {
-      final api = ref.read(driverApiProvider);
-      await api.completeTask(widget.taskId);
+      // Use the ride-specific completion endpoint with metrics so the
+      // backend records actual distance and duration for fare audit.
+      final api = ref.read(ridesApiProvider);
+      await api.completeWithMetrics(widget.rideId, distanceKm, durationMin);
       _loadRide();
     } on DioException catch (e) {
       if (isNetworkError(e)) {
@@ -319,7 +323,11 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
                 QueuedMutation(
                   id: '${widget.taskId}_complete',
                   method: 'POST',
-                  path: 'api/driver/tasks/${widget.taskId}/complete',
+                  path: 'api/rides/${widget.rideId}/complete-with-metrics',
+                  body: {
+                    'actualDistanceKm': distanceKm,
+                    'actualDurationMin': durationMin,
+                  },
                   createdAt: DateTime.now(),
                 ),
               );

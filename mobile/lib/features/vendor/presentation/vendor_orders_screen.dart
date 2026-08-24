@@ -73,6 +73,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
                   (context, i) => _OrderCard(
                     order: active[i],
                     onAdvance: (status) => _advanceOrder(active[i], status),
+                    onConfirmSealed: () => _confirmSealedBag(active[i]),
                   ),
                   childCount: active.length,
                 )),
@@ -211,6 +212,28 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
     }
   }
 
+  Future<void> _confirmSealedBag(VendorOrderModel order) async {
+    AppHaptics.medium();
+    try {
+      await ref.read(vendorOrdersProvider.notifier).confirmSealedBag(order.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sealed bag confirmed. Liability transferred to logistics.'),
+            backgroundColor: AppTheme.emerald,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
+      }
+    }
+  }
+
   String _statusLabel(String status) {
     return switch (status) {
       'Accepted' => 'Accepted',
@@ -224,9 +247,10 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.onAdvance});
+  const _OrderCard({required this.order, required this.onAdvance, this.onConfirmSealed});
   final VendorOrderModel order;
   final void Function(String status) onAdvance;
+  final VoidCallback? onConfirmSealed;
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +359,22 @@ class _OrderCard extends StatelessWidget {
                   child: Text('Cancel'),
                 ),
               ],
+            ),
+          ],
+          if (onConfirmSealed != null &&
+              (order.status == 'Preparing' || order.status == 'OutForDelivery')) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.emerald,
+                  side: BorderSide(color: AppTheme.emerald.withValues(alpha: 0.4)),
+                ),
+                icon: const Icon(Icons.inventory_2),
+                label: const Text('Confirm Sealed Bag'),
+                onPressed: onConfirmSealed,
+              ),
             ),
           ],
         ],

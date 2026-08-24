@@ -20,6 +20,9 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
   final _phoneController = TextEditingController();
   final _openingTimeController = TextEditingController();
   final _closingTimeController = TextEditingController();
+  final _latController = TextEditingController(text: '11.9356');
+  final _lngController = TextEditingController(text: '79.8301');
+  final _capacityController = TextEditingController(text: '50');
   bool _saving = false;
   bool _initialized = false;
 
@@ -31,6 +34,9 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
     _phoneController.dispose();
     _openingTimeController.dispose();
     _closingTimeController.dispose();
+    _latController.dispose();
+    _lngController.dispose();
+    _capacityController.dispose();
     super.dispose();
   }
 
@@ -43,6 +49,109 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
     _openingTimeController.text = venue.openingTime ?? '';
     _closingTimeController.text = venue.closingTime ?? '';
     _initialized = true;
+  }
+
+  Future<void> _createVenue() async {
+    if (_nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Venue name is required'), backgroundColor: AppTheme.danger),
+      );
+      return;
+    }
+    final lat = double.tryParse(_latController.text.trim());
+    final lng = double.tryParse(_lngController.text.trim());
+    final cap = int.tryParse(_capacityController.text.trim());
+    if (lat == null || lng == null || cap == null || cap <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Valid latitude, longitude, and capacity are required'), backgroundColor: AppTheme.danger),
+      );
+      return;
+    }
+    AppHaptics.medium();
+    setState(() => _saving = true);
+    try {
+      final api = ref.read(vendorDashboardApiProvider);
+      await api.createVenue(CreateVenuePayload(
+        name: _nameController.text.trim(),
+        category: 'Restaurant',
+        latitude: lat,
+        longitude: lng,
+        maxCapacity: cap,
+        description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+      ));
+      await ref.read(venueDetailProvider.notifier).load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Venue created!'), backgroundColor: AppTheme.emerald),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _buildCreateVenueForm() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Column(
+              children: [
+                Icon(Icons.store_mall_directory, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
+                const SizedBox(height: 16),
+                Text('Create Your Venue',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('Set up your venue profile so customers can find you.',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 13),
+                    textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildDarkField('Venue Name *', _nameController, 'e.g. The Hidden Bar'),
+          const SizedBox(height: 12),
+          _buildDarkField('Description', _descriptionController, 'Tell customers about your venue...', maxLines: 3),
+          const SizedBox(height: 12),
+          _buildDarkField('Address', _addressController, 'Full address'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildDarkField('Latitude', _latController, '11.9356', keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
+              const SizedBox(width: 12),
+              Expanded(child: _buildDarkField('Longitude', _lngController, '79.8301', keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildDarkField('Max Capacity', _capacityController, '50', keyboardType: TextInputType.number),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _saving ? null : _createVenue,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: _saving
+                    ? SizedBox(
+                        height: 20, width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
+                    : Text('Create Venue', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -131,24 +240,7 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
           _populateFields(venue);
 
           if (venue == null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.store_mall_directory, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
-                    const SizedBox(height: 16),
-                    Text('No venue found',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('Contact admin to set up your venue profile.',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 13),
-                        textAlign: TextAlign.center),
-                  ],
-                ),
-              ),
-            );
+            return _buildCreateVenueForm();
           }
 
           return SingleChildScrollView(

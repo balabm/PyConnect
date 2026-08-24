@@ -255,6 +255,17 @@ class VendorOrdersNotifier extends StateNotifier<AsyncValue<List<VendorOrderMode
       state = AsyncValue.error(e, st);
     }
   }
+
+  /// Confirms the sealed bag is intact before the driver departs.
+  Future<void> confirmSealedBag(String orderId) async {
+    try {
+      final api = _ref.read(vendorDashboardApiProvider);
+      await api.confirmSealedBag(orderId);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
 }
 
 // ── Venue Detail ──

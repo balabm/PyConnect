@@ -270,6 +270,12 @@ class VendorDashboardApi {
     await _api.put('/api/vendor/orders/$orderId/status', data: {'newStatus': newStatus});
   }
 
+  /// Confirms the sealed bag is intact before departure. Transfers transit
+  /// liability from the restaurant to the logistics partner.
+  Future<void> confirmSealedBag(String orderId) async {
+    await _api.post('/api/vendor/orders/$orderId/confirm-sealed');
+  }
+
   // ── Booking Status Management ──
 
   Future<void> updateBookingStatus(String bookingId, String serviceType, String newStatus) async {
@@ -439,6 +445,7 @@ class CreateMenuItemPayload {
     required this.name,
     required this.price,
     required this.category,
+    this.venueId,
     this.description,
     this.imageUrl,
     this.isLateNight = false,
@@ -449,6 +456,7 @@ class CreateMenuItemPayload {
   final String name;
   final double price;
   final String category;
+  final String? venueId;
   final String? description;
   final String? imageUrl;
   final bool isLateNight;
@@ -459,6 +467,7 @@ class CreateMenuItemPayload {
         'name': name,
         'price': price,
         'category': category,
+        if (venueId != null) 'venueId': venueId,
         if (description != null) 'description': description,
         if (imageUrl != null) 'imageUrl': imageUrl,
         'isLateNight': isLateNight,
@@ -816,6 +825,9 @@ class CreateVenuePayload {
   CreateVenuePayload({
     required this.name,
     required this.category,
+    required this.latitude,
+    required this.longitude,
+    required this.maxCapacity,
     this.description,
     this.address,
     this.phone,
@@ -825,6 +837,9 @@ class CreateVenuePayload {
 
   final String name;
   final String category;
+  final double latitude;
+  final double longitude;
+  final int maxCapacity;
   final String? description;
   final String? address;
   final String? phone;
@@ -834,6 +849,9 @@ class CreateVenuePayload {
   Map<String, dynamic> toJson() => {
         'name': name,
         'category': category,
+        'latitude': latitude,
+        'longitude': longitude,
+        'maxCapacity': maxCapacity,
         if (description != null) 'description': description,
         if (address != null) 'address': address,
         if (phone != null) 'phone': phone,
