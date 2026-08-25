@@ -27,6 +27,12 @@ concurrency:
   group: deploy-web-${{ github.ref }}
   cancel-in-progress: true
 
+# NOTE: The backend deploy (deploy-backend.yml) and this web deploy can both
+# trigger on the same push. On the resource-constrained EC2 (~908MB RAM),
+# simultaneous Docker pulls + SCP transfers can freeze the instance.
+# If this becomes a recurring problem, add a workflow_run gate or serialize
+# the deployments via a single orchestrating workflow.
+
 env:
   FLUTTER_VERSION: '3.47.0'
 
