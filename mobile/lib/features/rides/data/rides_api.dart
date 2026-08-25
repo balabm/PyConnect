@@ -45,6 +45,14 @@ class RideHailingApi {
     });
   }
 
+  /// Completes a high-value ride (≥ ₹1000) with a completion OTP collected
+  /// from the customer at drop-off.
+  Future<void> completeWithOtp(String rideId, String otp) async {
+    await _api.post('/api/rides/$rideId/complete-with-otp', data: {
+      'otp': otp,
+    });
+  }
+
   Future<void> completeRide(String rideId) async {
     await _api.post('/api/rides/$rideId/complete');
   }

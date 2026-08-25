@@ -395,7 +395,7 @@ public sealed class DriverController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CompleteTask(Guid taskId, CancellationToken ct)
+    public async Task<IActionResult> CompleteTask(Guid taskId, [FromBody] CompleteTaskRequest? request, CancellationToken ct)
     {
         var driver = await GetCurrentUserDriverAsync(ct);
         if (driver is null)
@@ -421,11 +421,23 @@ public sealed class DriverController : ControllerBase
             {
                 try
                 {
-                    await _mediator.Send(new CompleteRideWithMetricsCommand(ride.Id, ride.DistanceKm, ride.EstimatedDurationMin), ct);
+                    // Use OTP completion for high-value rides
+                    if (ride.CompletionOtp is not null)
+                    {
+                        await _mediator.Send(new CompleteRideWithOtpCommand(ride.Id, request?.Otp), ct);
+                    }
+                    else
+                    {
+                        await _mediator.Send(new CompleteRideWithMetricsCommand(ride.Id, ride.DistanceKm, ride.EstimatedDurationMin), ct);
+                    }
                 }
                 catch (InvalidOperationException ex)
                 {
                     return BadRequest(new { Message = ex.Message });
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return Forbid();
                 }
             }
         }
@@ -676,3 +688,4 @@ public sealed record DriverProfileResponse(
     string? UpiId);
 
 public sealed record StartTaskRequest(string Otp);
+public sealed record CompleteTaskRequest(string? Otp = null);

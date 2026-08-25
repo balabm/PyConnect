@@ -77,6 +77,7 @@ builder.Services.AddHostedService<SettlementWorker>();
 builder.Services.AddHostedService<PondyConnect.Application.Services.SubscriptionWorker>();
 builder.Services.AddHostedService<PondyConnect.Application.Services.RiskScoringWorker>();
 builder.Services.AddHostedService<PondyConnect.Api.Services.DriverSimulationWorker>();
+builder.Services.AddHostedService<PondyConnect.Api.Services.DemandPredictionService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Rental.RentalDepositService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Referral.ReferralService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Invoicing.InvoiceService>();

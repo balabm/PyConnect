@@ -245,6 +245,32 @@ public sealed class RideHailingController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Completes a high-value ride (≥ ₹1000) after verifying the completion
+    /// OTP collected from the customer at drop-off. The driver must enter the
+    /// 4-digit PIN shown on the customer's app to complete the ride.
+    /// </summary>
+    [HttpPost("rides/{id:guid}/complete-with-otp")]
+    [Authorize(Roles = "Driver")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CompleteWithOtp(Guid id, [FromBody] CompleteWithOtpRequest request, CancellationToken ct)
+    {
+        try
+        {
+            await _mediator.Send(new CompleteRideWithOtpCommand(id, request.Otp), ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
     [HttpPost("rides/{id:guid}/cancel-by-rider")]
     [Authorize]
     public async Task<ActionResult<CancelRideResponse>> CancelByRider(Guid id, [FromBody] CancelRideRequest? request, CancellationToken ct)
@@ -612,6 +638,7 @@ public sealed class RideHailingController : ControllerBase
 
 public sealed record VerifyOtpRequest(string Otp);
 public sealed record CompleteWithMetricsRequest(double ActualDistanceKm, int ActualDurationMin);
+public sealed record CompleteWithOtpRequest(string? Otp);
 public sealed record RateRideRequest(int Rating, string? Feedback = null);
 public sealed record TriggerSosRequest(double Latitude, double Longitude);
 public sealed record AddEmergencyContactRequest(string Name, string Phone, string? Relationship = null);

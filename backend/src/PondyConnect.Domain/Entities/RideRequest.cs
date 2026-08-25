@@ -87,6 +87,13 @@ public sealed class RideRequest : BaseEntity
 
     public DateTimeOffset? OtpVerifiedAt { get; private set; }
 
+    /// <summary>
+    /// Completion OTP for high-value rides (> ₹1000). Generated when the
+    /// ride starts. The driver must collect this from the customer and
+    /// submit it to complete the ride. Null for low-value rides.
+    /// </summary>
+    public string? CompletionOtp { get; private set; }
+
     // Two-way ratings
     public int? RatingByRider { get; private set; }
 
@@ -312,6 +319,38 @@ public sealed class RideRequest : BaseEntity
         OtpVerifiedAt = DateTimeOffset.UtcNow;
         Status = RideStatus.EnRoute;
         StartedAt = DateTimeOffset.UtcNow;
+
+        // Generate a 4-digit completion OTP for high-value rides so the
+        // driver must collect it from the customer at drop-off.
+        if (TotalAmount >= 1000m)
+        {
+            CompletionOtp = Random.Shared.Next(1000, 9999).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Completes the ride after verifying the completion OTP. Required for
+    /// high-value rides (≥ ₹1000) where <see cref="CompletionOtp"/> is set.
+    /// </summary>
+    public void CompleteWithOtp(string? otp)
+    {
+        if (Status is RideStatus.Completed or RideStatus.Cancelled)
+            throw new InvalidOperationException("Ride already completed or cancelled.");
+        if (Status != RideStatus.EnRoute)
+            throw new InvalidOperationException("Only en-route rides can be completed.");
+
+        if (CompletionOtp is not null)
+        {
+            if (string.IsNullOrWhiteSpace(otp))
+                throw new InvalidOperationException("Completion OTP is required for high-value rides.");
+            if (!string.Equals(CompletionOtp, otp, StringComparison.Ordinal))
+                throw new InvalidOperationException("Invalid completion OTP. Please ask customer for the correct code.");
+        }
+
+        Status = RideStatus.Completed;
+        CompletedAt = DateTimeOffset.UtcNow;
         MarkUpdated();
     }
 

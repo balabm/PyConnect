@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/modern_animations.dart';
@@ -21,14 +22,110 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isOnline = ref.watch(driverOnlineStatusProvider);
+    final walletAsync = ref.watch(driverWalletDetailProvider);
+
+    // Check if wallet is suspended (dispatch blocked)
+    final walletSuspended = walletAsync.valueOrNull?.suspended ?? false;
 
     return Column(
       children: [
         _OnlineToggle(isOnline: isOnline),
+        if (walletSuspended) const _DispatchBlockedBanner(),
         Expanded(
-          child: _TasksTab(ref: ref, isOnline: isOnline),
+          child: walletSuspended
+              ? _DispatchBlockedView(settleAmount: walletAsync.valueOrNull!.settleAmount)
+              : _TasksTab(ref: ref, isOnline: isOnline),
         ),
       ],
+    );
+  }
+}
+
+/// Red banner shown at the top of the home screen when the driver's wallet
+/// is suspended due to unpaid COD commission. The driver cannot receive new
+/// rides until they settle their dues.
+class _DispatchBlockedBanner extends StatelessWidget {
+  const _DispatchBlockedBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: Colors.red.shade900,
+      child: Row(
+        children: [
+          const Icon(Icons.block, color: Colors.white, size: 20),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'Dispatch Blocked: Settle dues to receive new rides',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+          Icon(Icons.warning_amber_rounded, color: Colors.orange.shade300, size: 20),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-screen dispatch-blocked view shown when the wallet is suspended.
+/// Replaces the task list with a prominent settle-dues call-to-action.
+class _DispatchBlockedView extends ConsumerWidget {
+  const _DispatchBlockedView({required this.settleAmount});
+  final double settleAmount;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.red.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.block_rounded, size: 40, color: Colors.red.shade700),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Dispatch Blocked',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You have outstanding COD commission dues of ₹${settleAmount.toStringAsFixed(2)}.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Settle your dues to start receiving new ride requests.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: () {
+                AppHaptics.light();
+                context.push('/earnings');
+              },
+              icon: const Icon(Icons.payment),
+              label: Text('Settle ₹${settleAmount.toStringAsFixed(2)} Now'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.emerald,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -15,11 +15,13 @@ import '../features/driver/application/driver_signalr_provider.dart';
 import '../features/driver/presentation/driver_home_screen.dart';
 import '../features/driver/presentation/driver_earnings_screen.dart';
 import '../features/driver/presentation/active_trip_screen.dart';
+import '../features/driver/presentation/driver_radar_screen.dart';
 import '../core/services/keep_awake_service.dart';
 import '../core/services/background_location_service.dart';
 import '../core/services/overlay_alert_service.dart';
 import '../core/services/tts_service.dart';
 import '../features/driver/presentation/ride_offer_sheet.dart';
+import '../features/driver/presentation/widgets/sos_button.dart';
 
 /// Root scaffold for the Driver app with bottom navigation.
 class DriverShell extends ConsumerStatefulWidget {
@@ -654,8 +656,10 @@ class _DriverShellState extends ConsumerState<DriverShell> {
           ),
         ],
       ),
-      body: SafeArea(child: Column(
+      body: SafeArea(child: Stack(
         children: [
+          Column(
+            children: [
           if (_isReconnecting)
             Material(
               color: AppTheme.warning,
@@ -693,8 +697,17 @@ class _DriverShellState extends ConsumerState<DriverShell> {
                 DriverHomeScreen(),
                 ActiveTripScreen(),
                 DriverEarningsScreen(),
+                DriverRadarScreen(),
               ],
             ),
+          ),
+        ],
+          ),
+          // Floating SOS button — persistent across all tabs
+          const Positioned(
+            bottom: 16,
+            right: 16,
+            child: SosButton(),
           ),
         ],
       )),
@@ -716,6 +729,11 @@ class _DriverShellState extends ConsumerState<DriverShell> {
             icon: Icons.account_balance_wallet_outlined,
             activeIcon: Icons.account_balance_wallet,
             label: 'Earnings',
+          ),
+          FloatingNavDestination(
+            icon: Icons.radar_outlined,
+            activeIcon: Icons.radar,
+            label: 'Radar',
           ),
         ],
       ),

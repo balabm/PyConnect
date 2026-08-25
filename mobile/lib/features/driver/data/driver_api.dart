@@ -43,6 +43,31 @@ class DriverApi {
     await _api.post('/api/driver/tasks/$taskId/complete');
   }
 
+  /// Completes a high-value task (≥ ₹1000) with a completion OTP collected
+  /// from the customer at drop-off. The backend verifies the OTP before
+  /// marking the ride/delivery as completed.
+  Future<void> completeTaskWithOtp(String taskId, String otp) async {
+    await _api.post('/api/driver/tasks/$taskId/complete', data: {'otp': otp});
+  }
+
+  /// Triggers an SOS alert for the specified ride. Sends the driver's GPS
+  /// coordinates to the backend, which pushes a high-priority alert to the
+  /// admin panel and notifies the fleet manager.
+  Future<void> triggerSos(String rideId, double latitude, double longitude) async {
+    await _api.post('/api/rides/$rideId/sos', data: {
+      'latitude': latitude,
+      'longitude': longitude,
+    });
+  }
+
+  /// Fetches the current surge zones for the driver heatmap. Each zone
+  /// includes the geographic center, demand/supply ratio, surge level,
+  /// and bonus amount.
+  Future<List<Map<String, dynamic>>> getSurgeZones() async {
+    final data = await _api.get('/api/heatmap/surge-zones');
+    return (data as List).cast<Map<String, dynamic>>();
+  }
+
   /// Emergency release: unassigns the driver from the task and pushes it
   /// back to the dispatch queue for the next nearest driver. Used when the
   /// driver has a breakdown or emergency and cannot complete the trip.

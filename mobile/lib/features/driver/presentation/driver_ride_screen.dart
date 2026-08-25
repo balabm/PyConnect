@@ -307,6 +307,20 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
 
   Future<void> _completeRide() async {
     AppHaptics.success();
+
+    // Check if this is a high-value ride requiring completion OTP
+    final completionOtp = _ride?['completionOtp'] as String?;
+    if (completionOtp != null && completionOtp.isNotEmpty) {
+      final otp = await _showCompletionOtpPad();
+      if (otp == null) return; // User cancelled
+      await _completeRideWithOtp(otp);
+      return;
+    }
+
+    _completeRideWithMetrics();
+  }
+
+  Future<void> _completeRideWithMetrics() async {
     setState(() => _loading = true);
     final durationMin = (_tripSeconds / 60).round().clamp(1, 999);
     final distanceKm = (_ride?['distanceKm'] as num?)?.toDouble() ?? 0.0;
@@ -362,6 +376,171 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Completes a high-value ride with a completion OTP.
+  Future<void> _completeRideWithOtp(String otp) async {
+    AppHaptics.success();
+    setState(() => _loading = true);
+    try {
+      final api = ref.read(ridesApiProvider);
+      await api.completeWithOtp(widget.rideId, otp);
+      _loadRide();
+    } on DioException catch (e) {
+      if (isNetworkError(e)) {
+        // Queue offline with OTP
+        try {
+          await ref.read(offlineMutationQueueProvider).enqueue(
+                QueuedMutation(
+                  id: '${widget.taskId}_complete_otp',
+                  method: 'POST',
+                  path: 'api/rides/${widget.rideId}/complete-with-otp',
+                  body: {'otp': otp},
+                  createdAt: DateTime.now(),
+                ),
+              );
+          if (mounted) {
+            _ride?['status'] = 'Completed';
+            _tripTimer?.cancel();
+            if (!_fareSheetShown) {
+              _fareSheetShown = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _showFareCollectionSheet(_ride!);
+              });
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Saved offline. Will sync when connection returns.'),
+                backgroundColor: AppTheme.warning,
+              ),
+            );
+          }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+          }
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${e.message ?? e.toString()}')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Shows a 4-digit PIN pad for the customer to enter their completion OTP.
+  /// Returns null if the user cancels.
+  Future<String?> _showCompletionOtpPad() async {
+    String enteredOtp = '';
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.lock_outline, color: AppTheme.emerald),
+                  const SizedBox(width: 8),
+                  const Text('Completion PIN'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Ask the customer for their 4-digit PIN to complete this high-value ride.',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 20),
+                  // PIN display boxes
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(4, (i) {
+                      final filled = i < enteredOtp.length;
+                      return Container(
+                        width: 48,
+                        height: 56,
+                        margin: EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: filled ? AppTheme.emerald : Colors.grey.shade300,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          filled ? enteredOtp[i] : '',
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 20),
+                  // Number pad
+                  GridView.count(
+                    shrinkWrap: true,
+                    crossAxisCount: 3,
+                    childAspectRatio: 1.5,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    children: [
+                      for (final n in ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
+                        TextButton(
+                          onPressed: () {
+                            if (enteredOtp.length < 4) {
+                              setDialogState(() => enteredOtp += n);
+                            }
+                          },
+                          child: Text(n, style: const TextStyle(fontSize: 24)),
+                        ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Icon(Icons.close, color: Colors.red),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          if (enteredOtp.length < 4) {
+                            setDialogState(() => enteredOtp += '0');
+                          }
+                        },
+                        child: const Text('0', style: TextStyle(fontSize: 24)),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          if (enteredOtp.isNotEmpty) {
+                            setDialogState(() => enteredOtp = enteredOtp.substring(0, enteredOtp.length - 1));
+                          }
+                        },
+                        child: const Icon(Icons.backspace_outlined),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: enteredOtp.length == 4
+                      ? () => Navigator.pop(ctx, enteredOtp)
+                      : null,
+                  child: const Text('Verify & Complete'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   /// Shows the post-trip summary bottom sheet when a ride is completed.

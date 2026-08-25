@@ -546,6 +546,133 @@ public sealed class CompleteRideHandler : IRequestHandler<CompleteRideCommand, U
     }
 }
 
+/// <summary>
+/// Completes a high-value ride after verifying the completion OTP collected
+/// from the customer at drop-off. Delegates the wallet/notification logic to
+/// the same post-completion pipeline as CompleteRideHandler.
+/// </summary>
+public sealed record CompleteRideWithOtpCommand(Guid RideId, string? Otp) : IRequest<Unit>;
+
+public sealed class CompleteRideWithOtpHandler : IRequestHandler<CompleteRideWithOtpCommand, Unit>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService? _notifications;
+    private readonly WalletService? _walletService;
+    private readonly ReferralService? _referralService;
+
+    public CompleteRideWithOtpHandler(
+        IApplicationDbContext context,
+        ICurrentUserService currentUser)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = null;
+        _walletService = null;
+        _referralService = null;
+    }
+
+    public CompleteRideWithOtpHandler(
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        INotificationService notifications,
+        WalletService walletService,
+        ReferralService referralService)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _notifications = notifications;
+        _walletService = walletService;
+        _referralService = referralService;
+    }
+
+    public async Task<Unit> Handle(CompleteRideWithOtpCommand request, CancellationToken cancellationToken)
+    {
+        var ride = await _context.RideRequests.FirstOrDefaultAsync(r => r.Id == request.RideId, cancellationToken)
+            ?? throw new InvalidOperationException("Ride not found.");
+
+        var userId = _currentUser.UserId
+            ?? throw new UnauthorizedAccessException("User not authenticated.");
+        if (ride.DriverId.HasValue)
+        {
+            var isAssigned = await _context.Drivers.AsNoTracking()
+                .AnyAsync(d => d.Id == ride.DriverId.Value && d.UserId == userId, cancellationToken);
+            if (!isAssigned)
+                throw new UnauthorizedAccessException("Only the assigned driver can complete this ride.");
+        }
+
+        // Verify OTP and complete
+        ride.CompleteWithOtp(request.Otp);
+
+        // Clear the driver's active ride state
+        if (ride.DriverId.HasValue)
+        {
+            var driver = await _context.Drivers.FirstOrDefaultAsync(d => d.Id == ride.DriverId.Value, cancellationToken);
+            driver?.EndRide();
+        }
+
+        _context.RideEvents.Add(RideEvent.Create(ride.Id, RideEventType.Completed, ride.DriverId));
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // COD commission — same as CompleteRideHandler
+        if (_walletService is not null
+            && ride.PaymentMethod == PaymentMethod.Cash
+            && ride.DriverId.HasValue
+            && ride.Fare > 0m)
+        {
+            var commission = Math.Round(ride.Fare * 0.1m, 2, MidpointRounding.AwayFromZero);
+            if (commission > 0m)
+            {
+                await _walletService.RecordCommissionAsync(
+                    ride.DriverId.Value,
+                    commission,
+                    ride.Id.ToString(),
+                    $"COD commission for ride {ride.Id}",
+                    cancellationToken);
+
+                await _walletService.CheckAndSuspendIfNeededAsync(ride.DriverId.Value, cancellationToken);
+            }
+        }
+
+        // Push notification to rider
+        if (_notifications is not null)
+        {
+            _ = SendRideCompletedPushAsync(ride, cancellationToken);
+        }
+
+        // Referral payout
+        if (_referralService is not null)
+        {
+            _ = _referralService.ProcessOrderCompletionAsync(ride.UserId, ride.Id, cancellationToken);
+        }
+
+        return Unit.Value;
+    }
+
+    private async Task SendRideCompletedPushAsync(Domain.Entities.RideRequest ride, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notifications!.SendTargetedPushAsync(
+                ride.UserId,
+                "Ride completed!",
+                $"Your ride has been completed. Fare: \u20B9{ride.TotalAmount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}. Rate your experience!",
+                new Dictionary<string, string>
+                {
+                    { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                    { "route", $"/ride/{ride.Id}/receipt" },
+                    { "type", "ride_completed" },
+                    { "ride_id", ride.Id.ToString() },
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort
+        }
+    }
+}
+
 public sealed class CancelRideHandler : IRequestHandler<CancelRideCommand, Unit>
 {
     private readonly IApplicationDbContext _context;

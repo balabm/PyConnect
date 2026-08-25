@@ -16,6 +16,7 @@ import '../features/driver/presentation/driver_ride_screen.dart';
 import '../features/driver/presentation/driver_tutorial_screen.dart';
 import '../features/driver/presentation/driver_safety_settings_screen.dart';
 import '../features/driver/presentation/driver_help_screen.dart';
+import '../features/driver/presentation/driver_radar_screen.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers/force_update_provider.dart';
 import '../features/splash/presentation/force_update_screen.dart';
@@ -139,6 +140,10 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'earnings',
             builder: (_, _) => const DriverEarningsScreen(),
+          ),
+          GoRoute(
+            path: 'radar',
+            builder: (_, _) => const DriverRadarScreen(),
           ),
           GoRoute(
             path: 'kyc',
