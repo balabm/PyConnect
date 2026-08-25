@@ -122,6 +122,7 @@ class _DriverPendingVerificationScreenState
               ),
               const SizedBox(height: 32),
               // Status timeline — uses actual profile state, not hardcoded values.
+              // Onboarding order: Registration → Tutorial → KYC → Admin Review → Ready
               _StatusStep(
                 icon: Icons.check_circle,
                 label: 'Registration Complete',
@@ -129,13 +130,13 @@ class _DriverPendingVerificationScreenState
               ),
               _StatusStep(
                 icon: Icons.check_circle,
-                label: 'KYC Documents Uploaded',
-                isDone: profile?.isKycUploaded ?? false,
+                label: 'Safety Tutorial Completed',
+                isDone: profile?.hasCompletedTutorial ?? false,
               ),
               _StatusStep(
                 icon: Icons.check_circle,
-                label: 'Safety Tutorial Completed',
-                isDone: profile?.hasCompletedTutorial ?? false,
+                label: 'KYC Documents Uploaded',
+                isDone: profile?.isKycUploaded ?? false,
               ),
               _StatusStep(
                 icon: Icons.hourglass_top,

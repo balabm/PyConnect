@@ -155,11 +155,12 @@ class _DriverTutorialScreenState extends ConsumerState<DriverTutorialScreen> {
 
       if (mounted) {
         AppHaptics.success();
-        AppToast.show(context, 'Tutorial completed! You can now go online.',
+        AppToast.show(context, 'Tutorial completed! Now upload your KYC documents.',
             type: ToastType.success);
-        // Refresh the driver profile so the router unlocks the dashboard.
+        // Refresh the driver profile so the router unlocks the next step.
         ref.invalidate(driverProfileProvider);
-        context.go('/');
+        // Onboarding order: Tutorial → KYC → Pending Approval.
+        context.go('/kyc');
       }
     } on Exception catch (e) {
       if (mounted) {

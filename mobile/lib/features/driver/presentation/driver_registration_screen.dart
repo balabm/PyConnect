@@ -81,12 +81,13 @@ class _DriverRegistrationScreenState
           await ref.read(authControllerProvider.notifier).refreshWithToken(newToken);
         }
         AppHaptics.success();
-        AppToast.show(context, 'Registration successful! Complete KYC to start.',
+        AppToast.show(context, 'Registration successful! Complete the safety tutorial to continue.',
             type: ToastType.success);
         // Force the router to re-fetch the driver profile so it no longer
         // treats the user as an unregistered driver and loops back here.
         ref.invalidate(driverProfileProvider);
-        context.go('/kyc');
+        // Onboarding order: Tutorial → KYC → Pending Approval.
+        context.go('/tutorial');
       }
     } on Exception catch (e) {
       if (mounted) {

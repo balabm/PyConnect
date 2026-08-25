@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart' show Icons;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/providers.dart';
 import 'driver_signalr_provider.dart';
 import '../data/driver_api.dart';
@@ -22,11 +23,24 @@ final driverOnlineToggleRequestProvider = StateProvider<bool?>((ref) => null);
 
 /// Fetches the current driver's profile (approval/tutorial/signature status).
 /// Used by the router to guard access to the main shell.
+///
+/// Watches [authTokenProvider] so the provider re-runs when the token changes
+/// (login, logout, token refresh). Returns null immediately when there is no
+/// token — this avoids a pre-auth 401 that would trigger onUnauthorized and
+/// clear any stored session. AuthRequiredException is NOT caught so the
+/// router can distinguish auth failures from "no driver record".
 final driverProfileProvider =
     FutureProvider<DriverProfileModel?>((ref) async {
+  // Watch authTokenProvider so the provider re-runs on login/logout/refresh.
+  final token = ref.watch(authTokenProvider);
+  if (token == null || token.isEmpty) return null;
   try {
     return await ref.read(driverApiProvider).getProfile();
+  } on AuthRequiredException {
+    // Don't catch — let the router and onUnauthorized handle auth failures.
+    rethrow;
   } catch (_) {
+    // 404 (no driver record yet) or network error → return null.
     return null;
   }
 });

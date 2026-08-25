@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/modern_animations.dart';
@@ -31,8 +29,6 @@ class PhoneEntryScreen extends ConsumerStatefulWidget {
 }
 
 class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
-  int _logoTapCount = 0;
-  DateTime? _lastLogoTap;
   final _scrollController = ScrollController();
 
   @override
@@ -41,77 +37,13 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
     super.dispose();
   }
 
-  void _onLogoTap() {
-    final now = DateTime.now();
-    if (_lastLogoTap != null &&
-        now.difference(_lastLogoTap!).inMilliseconds > 800) {
-      // Reset if taps are too slow
-      _logoTapCount = 0;
-    }
-    _lastLogoTap = now;
-    _logoTapCount++;
-    if (_logoTapCount >= 5) {
-      _logoTapCount = 0;
-      _activateDemoBypass();
-    }
-  }
-
-  /// Activates the demo bypass: loads a hardcoded offline profile and
-  /// navigates directly to the dashboard. This skips all authentication
-  /// and uses mock data. Only use during live demos when the backend is
-  /// unreachable.
-  Future<void> _activateDemoBypass() async {
-    AppHaptics.heavy();
-    final flavor = ref.read(appFlavorProvider);
-    final isPartner = flavor == AppFlavor.partner;
-    final isDriver = flavor == AppFlavor.driver;
-
-    if (kDebugMode) {
-      print('DEBUG: Demo bypass activated for ${flavor.name}');
-    }
-
-    if (isPartner) {
-      // Create a mock vendor session and persist it
-      final mockSession = VendorAuthSession(
-        accessToken: 'demo-bypass-token',
-        vendorId: 'demo-vendor-001',
-        vendorName: 'Drunken Daddy',
-        category: 'PubClub',
-        phone: '9000000010',
-        status: 'Approved',
-        businesses: [],
-      );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('partner.vendor_id', mockSession.vendorId);
-      await prefs.setString('partner.vendor_name', mockSession.vendorName);
-      await prefs.setString('partner.category', mockSession.category);
-      await prefs.setString('partner.phone', mockSession.phone);
-      await prefs.setString('partner.status', mockSession.status);
-      // Don't write the token to secure storage — it's a fake token.
-      // The API client will use it in-memory only.
-      ref.read(apiClientProvider).setToken(mockSession.accessToken);
-      ref.read(authTokenProvider.notifier).state = mockSession.accessToken;
-      // Force the controller to reload with the mock session
-      ref.invalidate(vendorAuthControllerProvider);
-    } else if (isDriver) {
-      // For driver, just go to the registration screen which will
-      // show demo data
-      context.go('/register');
-      return;
-    } else {
-      // Consumer — skip to home as guest
-      ref.read(hasSeenAuthScreenProvider.notifier).state = true;
-    }
-
-    if (mounted) context.go('/');
-  }
-
   @override
   Widget build(BuildContext context) {
     final phone = ref.watch(phoneNumberProvider);
-    // Use the compile-time resolved flavor (from --dart-define=APP_FLAVOR)
-    // rather than the provider, which may not be overridden in all scopes.
-    final flavor = resolvedAppFlavor;
+    // Use the Riverpod provider (overridden in main_*.dart) rather than the
+    // compile-time constant, which defaults to consumer when
+    // --dart-define=APP_FLAVOR is not passed at build time.
+    final flavor = ref.read(appFlavorProvider);
     final isPartner = flavor == AppFlavor.partner;
     final isDriver = flavor == AppFlavor.driver;
     final isAdmin = flavor == AppFlavor.admin;
@@ -143,27 +75,23 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                   child: Column(
                     children: [
                       // Logo circle with bounce-in animation
-                      // Hidden demo bypass: tap 5x rapidly to skip login
                       BounceIn(
                         duration: const Duration(milliseconds: 800),
-                        child: GestureDetector(
-                          onTap: _onLogoTap,
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.3),
-                                width: 2,
-                              ),
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 2,
                             ),
-                            child: const Icon(
-                              Icons.waves,
-                              size: 40,
-                              color: Colors.white,
-                            ),
+                          ),
+                          child: const Icon(
+                            Icons.waves,
+                            size: 40,
+                            color: Colors.white,
                           ),
                         ),
                       ),

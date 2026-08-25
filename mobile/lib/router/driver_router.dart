@@ -186,24 +186,38 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
 
 class _DriverAuthRefreshListenable extends ChangeNotifier {
   _DriverAuthRefreshListenable(Ref ref) {
-    ref.listen(authControllerProvider, (_, _) => notifyListeners());
-    ref.listen(driverProfileProvider, (_, _) => notifyListeners());
+    ref.listen(authControllerProvider, (_, _) {
+      // Invalidate the profile when auth state changes so it re-fetches
+      // with the new token (or returns null if logged out).
+      ref.invalidate(driverProfileProvider);
+      notifyMembers();
+    });
+    ref.listen(driverProfileProvider, (_, _) => notifyMembers());
   }
+
+  void notifyMembers() => notifyListeners();
 }
 
 /// Returns a redirect path if the driver has not completed onboarding
-/// compliance steps (tutorial, signature, admin approval). Returns null
-/// if the driver is fully compliant and can access the requested path.
+/// compliance steps. The onboarding order is:
+///   1. Tutorial + safety agreement
+///   2. KYC document upload
+///   3. Admin approval
+/// Returns null if the driver is fully compliant and can access the requested path.
 String? _complianceRedirect(DriverProfileModel profile, String path) {
-  // Tutorial must be completed first.
+  // Step 1: Tutorial must be completed first.
   if (!profile.hasCompletedTutorial && path != '/tutorial') {
     return '/tutorial';
   }
-  // Safety agreement must be signed.
+  // Safety agreement must be signed (part of the tutorial screen).
   if (!profile.hasSignedAgreement && path != '/tutorial') {
     return '/tutorial';
   }
-  // Admin approval (KYC review) must be granted before going online.
+  // Step 2: KYC documents must be uploaded before admin review.
+  if (!profile.isKycUploaded && path != '/kyc' && path != '/tutorial') {
+    return '/kyc';
+  }
+  // Step 3: Admin approval must be granted before going online.
   if (!profile.isApproved &&
       path != '/pending-verification' &&
       path != '/kyc' &&

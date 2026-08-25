@@ -169,7 +169,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
         ref.read(hasSeenAuthScreenProvider.notifier).state = true;
         final session = ref.read(authControllerProvider).valueOrNull;
         final pending = ref.read(pendingAuthRedirectProvider);
-        final flavor = resolvedAppFlavor;
+        final flavor = ref.read(appFlavorProvider);
         // First-time consumer users must complete name/location onboarding
         // before landing on the home screen. Driver and partner apps have
         // their own registration screens that collect name/details, so they
