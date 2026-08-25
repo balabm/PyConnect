@@ -14,7 +14,12 @@ public sealed record CreateMenuItemCommand(
     Guid? VenueId = null,
     string? Description = null,
     string? ImageUrl = null,
-    bool IsLateNight = false) : IRequest<MenuItemResponse>;
+    bool IsLateNight = false,
+    bool IsVeg = true,
+    bool IsVegan = false,
+    bool ContainsNuts = false,
+    int? PrepTimeMinutes = null,
+    decimal PackagingFee = 0) : IRequest<MenuItemResponse>;
 
 public sealed record MenuItemResponse(
     Guid Id,
@@ -26,6 +31,11 @@ public sealed record MenuItemResponse(
     bool IsAvailable,
     bool IsLateNight,
     string? ImageUrl,
+    bool IsVeg = true,
+    bool IsVegan = false,
+    bool ContainsNuts = false,
+    int? PrepTimeMinutes = null,
+    decimal PackagingFee = 0,
     IReadOnlyList<ModifierGroupResponse>? ModifierGroups = null);
 
 public sealed record ModifierGroupResponse(
@@ -89,12 +99,17 @@ public sealed class CreateMenuItemHandler : IRequestHandler<CreateMenuItemComman
             venueId: request.VenueId,
             description: request.Description,
             imageUrl: request.ImageUrl,
-            isLateNight: request.IsLateNight);
+            isLateNight: request.IsLateNight,
+            isVeg: request.IsVeg,
+            isVegan: request.IsVegan,
+            containsNuts: request.ContainsNuts,
+            prepTimeMinutes: request.PrepTimeMinutes,
+            packagingFee: request.PackagingFee);
 
         _context.MenuItems.Add(item);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new MenuItemResponse(item.Id, item.VendorId, item.Name, item.Description, item.Price, item.Category, item.IsAvailable, item.IsLateNight, item.ImageUrl, []);
+        return new MenuItemResponse(item.Id, item.VendorId, item.Name, item.Description, item.Price, item.Category, item.IsAvailable, item.IsLateNight, item.ImageUrl, item.IsVeg, item.IsVegan, item.ContainsNuts, item.PrepTimeMinutes, item.PackagingFee, []);
     }
 }
 
@@ -104,7 +119,12 @@ public sealed record UpdateMenuItemCommand(
     string? Description,
     string Category,
     decimal? NewPrice,
-    string? ImageUrl = null) : IRequest<Unit>;
+    string? ImageUrl = null,
+    bool? IsVeg = null,
+    bool? IsVegan = null,
+    bool? ContainsNuts = null,
+    int? PrepTimeMinutes = null,
+    decimal? PackagingFee = null) : IRequest<Unit>;
 
 public sealed class UpdateMenuItemHandler : IRequestHandler<UpdateMenuItemCommand, Unit>
 {
@@ -120,6 +140,18 @@ public sealed class UpdateMenuItemHandler : IRequestHandler<UpdateMenuItemComman
         if (request.NewPrice.HasValue)
             item.UpdatePrice(request.NewPrice.Value);
         item.UpdateDetails(request.Name, request.Description, request.Category, request.ImageUrl);
+
+        if (request.IsVeg.HasValue || request.IsVegan.HasValue || request.ContainsNuts.HasValue)
+            item.UpdateDietaryTags(
+                request.IsVeg ?? item.IsVeg,
+                request.IsVegan ?? item.IsVegan,
+                request.ContainsNuts ?? item.ContainsNuts);
+
+        if (request.PrepTimeMinutes != null)
+            item.UpdatePrepTime(request.PrepTimeMinutes);
+
+        if (request.PackagingFee.HasValue)
+            item.UpdatePackagingFee(request.PackagingFee.Value);
 
         await _context.SaveChangesAsync(cancellationToken);
         return Unit.Value;
@@ -265,6 +297,11 @@ internal static class MenuItemMapper
             m.IsAvailable,
             m.IsLateNight,
             m.ImageUrl,
+            m.IsVeg,
+            m.IsVegan,
+            m.ContainsNuts,
+            m.PrepTimeMinutes,
+            m.PackagingFee,
             groups);
     }
 }

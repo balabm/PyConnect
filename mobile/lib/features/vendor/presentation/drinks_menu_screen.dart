@@ -8,6 +8,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/vendor_providers.dart';
 import '../data/vendor_dashboard_api.dart';
+import 'manual_door_log_sheet.dart';
 
 /// Guestlist entry for pub/club partners.
 /// Persisted locally via SharedPreferences until backend endpoint is available.
@@ -49,11 +50,24 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
   int _crowdPercent = 25;
   final List<GuestlistEntry> _guestlist = [];
   static const _guestlistKey = 'pub_guestlist';
+  String? _venueId;
 
   @override
   void initState() {
     super.initState();
     _loadGuestlist();
+    _loadVenueId();
+  }
+
+  Future<void> _loadVenueId() async {
+    try {
+      final venues = await ref.read(vendorDashboardApiProvider).getVenues();
+      if (mounted && venues.isNotEmpty) {
+        setState(() => _venueId = venues.first.venueId);
+      }
+    } catch (_) {
+      // Venue will be loaded on next attempt.
+    }
   }
 
   Future<void> _loadGuestlist() async {
@@ -436,6 +450,30 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               },
               icon: Icon(Icons.person_add, size: 18),
               label: Text('Add to Guestlist'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.coral.withValues(alpha: 0.1),
+                foregroundColor: AppTheme.coral,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                AppHaptics.light();
+                if (_venueId != null) {
+                  showManualDoorLogSheet(context, ref, _venueId!);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Venue not loaded yet. Try again.')),
+                  );
+                }
+              },
+              icon: Icon(Icons.door_front_door, size: 18),
+              label: Text('Manual Door Entry'),
             ),
           ),
         ],

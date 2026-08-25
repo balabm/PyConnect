@@ -206,4 +206,64 @@ class EquipmentApi {
         });
     return CompleteReturnResult.fromJson(body as Map<String, dynamic>);
   }
+
+  // ── Maintenance Blocks ──
+
+  Future<MaintenanceBlockModel> blockDates({
+    required String itemId,
+    required DateTime startDate,
+    required DateTime endDate,
+    String reason = 'Maintenance',
+    String? notes,
+  }) async {
+    final body = await _api.post('/api/equipment/items/$itemId/block-dates', data: {
+      'startDate': startDate.toUtc().toIso8601String(),
+      'endDate': endDate.toUtc().toIso8601String(),
+      'reason': reason,
+      'notes': notes,
+    });
+    return MaintenanceBlockModel.fromJson(body as Map<String, dynamic>);
+  }
+
+  Future<List<MaintenanceBlockModel>> getBlocks(String itemId) async {
+    final body = await _api.get('/api/equipment/items/$itemId/block-dates');
+    final list = body as List? ?? [];
+    return list
+        .map((e) => MaintenanceBlockModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> removeBlock({required String itemId, required String blockId}) async {
+    await _api.delete('/api/equipment/items/$itemId/block-dates/$blockId');
+  }
+}
+
+class MaintenanceBlockModel {
+  MaintenanceBlockModel({
+    required this.id,
+    required this.equipmentItemId,
+    required this.startDate,
+    required this.endDate,
+    required this.reason,
+    this.notes,
+  });
+
+  factory MaintenanceBlockModel.fromJson(Map<String, dynamic> json) =>
+      MaintenanceBlockModel(
+        id: json['id'] as String,
+        equipmentItemId: json['equipmentItemId'] as String,
+        startDate: DateTime.tryParse(json['startDate'] as String? ?? '') ??
+            DateTime.now(),
+        endDate: DateTime.tryParse(json['endDate'] as String? ?? '') ??
+            DateTime.now(),
+        reason: json['reason'] as String? ?? 'Maintenance',
+        notes: json['notes'] as String?,
+      );
+
+  final String id;
+  final String equipmentItemId;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String reason;
+  final String? notes;
 }

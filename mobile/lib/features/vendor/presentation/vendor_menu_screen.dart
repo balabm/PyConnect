@@ -496,8 +496,11 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
   final _descriptionController = TextEditingController();
   final _imageUrlController = TextEditingController();
   final _prepTimeController = TextEditingController();
+  final _packagingFeeController = TextEditingController();
   bool _isLateNight = false;
   bool _isVeg = true;
+  bool _isVegan = false;
+  bool _containsNuts = false;
   bool _submitting = false;
 
   @override
@@ -508,6 +511,7 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
     _descriptionController.dispose();
     _imageUrlController.dispose();
     _prepTimeController.dispose();
+    _packagingFeeController.dispose();
     super.dispose();
   }
 
@@ -555,9 +559,12 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
           imageUrl: imageUrl.isEmpty ? null : imageUrl,
           isLateNight: _isLateNight,
           isVeg: _isVeg,
+          isVegan: _isVegan,
+          containsNuts: _containsNuts,
           prepTimeMinutes: _prepTimeController.text.trim().isEmpty
               ? null
               : int.tryParse(_prepTimeController.text.trim()),
+          packagingFee: double.tryParse(_packagingFeeController.text.trim()) ?? 0,
         ),
       );
       if (mounted) Navigator.pop(context);
@@ -657,6 +664,37 @@ class _AddMenuItemSheetState extends ConsumerState<_AddMenuItemSheet> {
               AppHaptics.light();
               setState(() => _isVeg = v.first);
             },
+          ),
+          const SizedBox(height: 12),
+          // Dietary tags
+          Wrap(
+            spacing: 8,
+            children: [
+              FilterChip(
+                label: const Text('Vegan'),
+                selected: _isVegan,
+                onSelected: (v) { AppHaptics.light(); setState(() => _isVegan = v); },
+                selectedColor: AppTheme.emerald.withValues(alpha: 0.2),
+                checkmarkColor: AppTheme.emerald,
+              ),
+              FilterChip(
+                label: const Text('Contains Nuts'),
+                selected: _containsNuts,
+                onSelected: (v) { AppHaptics.light(); setState(() => _containsNuts = v); },
+                selectedColor: AppTheme.warning.withValues(alpha: 0.2),
+                checkmarkColor: AppTheme.warning,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildMenuField(
+            context,
+            _packagingFeeController,
+            'Packaging Fee (₹)',
+            hintText: 'e.g. 10',
+            prefixIcon: Icons.inventory_2_outlined,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
           SwitchListTile(

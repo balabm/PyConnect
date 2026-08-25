@@ -22,6 +22,9 @@ import '../features/vendor/presentation/taxi_rides_screen.dart';
 import '../features/vendor/presentation/cloak_capacity_screen.dart';
 import '../features/vendor/presentation/equipment_inventory_screen.dart';
 import '../features/vendor/presentation/equipment_rentals_screen.dart';
+import '../features/vendor/presentation/equipment_detail_screen.dart';
+import '../features/vendor/presentation/vendor_event_manager_screen.dart';
+import '../features/vendor/data/equipment_api.dart';
 import '../features/vendor/presentation/vendor_registration_screen.dart';
 import '../features/vendor/presentation/printer_settings_screen.dart';
 import '../features/vendor/presentation/claim_check_screen.dart';
@@ -177,6 +180,17 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'equipment-rentals',
             builder: (_, _) => const EquipmentRentalsScreen(),
+          ),
+          GoRoute(
+            path: 'equipment-detail',
+            builder: (_, state) => EquipmentDetailScreen(
+              item: state.extra as EquipmentItemModel,
+            ),
+          ),
+          // ── Pub/Club event manager ──
+          GoRoute(
+            path: 'events',
+            builder: (_, _) => const VendorEventManagerScreen(),
           ),
           GoRoute(
             path: 'printer-settings',

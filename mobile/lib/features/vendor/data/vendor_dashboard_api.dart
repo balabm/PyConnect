@@ -201,6 +201,49 @@ class VendorDashboardApi {
     return json['isAcceptingOrders'] as bool? ?? isAcceptingOrders;
   }
 
+  /// Toggles kitchen busy mode. When enabled, adds +30 min prep buffer
+  /// to all consumer-facing ETAs.
+  Future<Map<String, dynamic>> toggleBusyMode(bool isBusy) async {
+    final body = await _api.post('/api/vendor/kds/busy-mode', data: {
+      'isBusy': isBusy,
+    });
+    return body as Map<String, dynamic>;
+  }
+
+  /// Sets a custom prep-time buffer (0–120 minutes) shown to consumers.
+  Future<Map<String, dynamic>> setPrepBuffer(int bufferMinutes) async {
+    final body = await _api.put('/api/vendor/kds/prep-buffer', data: {
+      'bufferMinutes': bufferMinutes,
+    });
+    return body as Map<String, dynamic>;
+  }
+
+  /// Logs a manual door entry for Pub/Club venues (cash/VIP walk-ins).
+  Future<Map<String, dynamic>> manualDoorLog({
+    required String venueId,
+    required String guestType,
+    required String entryType,
+    double coverCollected = 0,
+    String? notes,
+  }) async {
+    final body = await _api.post('/api/vendor/door-log/manual', data: {
+      'venueId': venueId,
+      'guestType': guestType,
+      'entryType': entryType,
+      'coverCollected': coverCollected,
+      if (notes != null) 'notes': notes,
+    });
+    return body as Map<String, dynamic>;
+  }
+
+  /// Fetches recent manual door-log entries.
+  Future<List<Map<String, dynamic>>> getDoorLog({String? venueId}) async {
+    final qs = venueId != null ? '?venueId=$venueId' : '';
+    final body = await _api.get('/api/vendor/door-log$qs');
+    final list = body as List? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
   /// Fetches the vendor's venue list to resolve the real venue ID.
   Future<List<VendorVenueSummary>> getVenues() async {
     final body = await _api.get('/api/vendor/venues');
@@ -412,7 +455,10 @@ class MenuItemModel {
     this.imageUrl,
     this.isLateNight = false,
     this.isVeg = false,
+    this.isVegan = false,
+    this.containsNuts = false,
     this.prepTimeMinutes,
+    this.packagingFee = 0,
   });
 
   factory MenuItemModel.fromJson(Map<String, dynamic> json) => MenuItemModel(
@@ -425,7 +471,10 @@ class MenuItemModel {
         imageUrl: json['imageUrl'] as String?,
         isLateNight: json['isLateNight'] as bool? ?? false,
         isVeg: json['isVeg'] as bool? ?? false,
+        isVegan: json['isVegan'] as bool? ?? false,
+        containsNuts: json['containsNuts'] as bool? ?? false,
         prepTimeMinutes: json['prepTimeMinutes'] as int?,
+        packagingFee: (json['packagingFee'] as num?)?.toDouble() ?? 0,
       );
 
   final String id;
@@ -437,7 +486,10 @@ class MenuItemModel {
   final String? imageUrl;
   final bool isLateNight;
   final bool isVeg;
+  final bool isVegan;
+  final bool containsNuts;
   final int? prepTimeMinutes;
+  final double packagingFee;
 }
 
 class CreateMenuItemPayload {
@@ -450,7 +502,10 @@ class CreateMenuItemPayload {
     this.imageUrl,
     this.isLateNight = false,
     this.isVeg = false,
+    this.isVegan = false,
+    this.containsNuts = false,
     this.prepTimeMinutes,
+    this.packagingFee = 0,
   });
 
   final String name;
@@ -461,7 +516,10 @@ class CreateMenuItemPayload {
   final String? imageUrl;
   final bool isLateNight;
   final bool isVeg;
+  final bool isVegan;
+  final bool containsNuts;
   final int? prepTimeMinutes;
+  final double packagingFee;
 
   Map<String, dynamic> toJson() => {
         'name': name,
@@ -472,7 +530,10 @@ class CreateMenuItemPayload {
         if (imageUrl != null) 'imageUrl': imageUrl,
         'isLateNight': isLateNight,
         'isVeg': isVeg,
+        'isVegan': isVegan,
+        'containsNuts': containsNuts,
         if (prepTimeMinutes != null) 'prepTimeMinutes': prepTimeMinutes,
+        'packagingFee': packagingFee,
       };
 }
 
@@ -483,7 +544,10 @@ class UpdateMenuItemPayload {
     this.category,
     this.newPrice,
     this.isVeg,
+    this.isVegan,
+    this.containsNuts,
     this.prepTimeMinutes,
+    this.packagingFee,
     this.imageUrl,
   });
 
@@ -492,7 +556,10 @@ class UpdateMenuItemPayload {
   final String? category;
   final double? newPrice;
   final bool? isVeg;
+  final bool? isVegan;
+  final bool? containsNuts;
   final int? prepTimeMinutes;
+  final double? packagingFee;
   final String? imageUrl;
 
   Map<String, dynamic> toJson() => {
@@ -501,7 +568,10 @@ class UpdateMenuItemPayload {
         if (category != null) 'category': category,
         if (newPrice != null) 'newPrice': newPrice,
         if (isVeg != null) 'isVeg': isVeg,
+        if (isVegan != null) 'isVegan': isVegan,
+        if (containsNuts != null) 'containsNuts': containsNuts,
         if (prepTimeMinutes != null) 'prepTimeMinutes': prepTimeMinutes,
+        if (packagingFee != null) 'packagingFee': packagingFee,
         if (imageUrl != null) 'imageUrl': imageUrl,
       };
 }

@@ -13,6 +13,7 @@ import '../../auth/application/vendor_auth_controller.dart';
 import '../application/vendor_providers.dart';
 import '../domain/kds_models.dart';
 import '../services/thermal_printer_service.dart';
+import 'quick_toggles_sheet.dart';
 
 /// Kitchen Display System screen — dark Kanban-style order board with
 /// stage progression. Uses kdsApiProvider for authenticated API access.
@@ -544,31 +545,49 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
         ? _buildPrinterErrorBanner()
         : const SizedBox.shrink();
 
+    // Quick-toggles gear button in the top-right corner.
+    final quickTogglesBtn = Positioned(
+      top: 8, right: 8,
+      child: IconButton(
+        icon: Icon(Icons.tune, color: Colors.white.withValues(alpha: 0.6)),
+        onPressed: () {
+          AppHaptics.light();
+          showQuickTogglesSheet(context, ref);
+        },
+        tooltip: 'Quick Toggles',
+      ),
+    );
+
     if (activeOrders.isEmpty) {
       // No active orders — ensure any lingering chime is stopped.
       _stopChime();
-      return Column(
+      return Stack(
         children: [
-          printerErrorBanner,
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.kitchen, size: 64, color: Colors.white.withValues(alpha: 0.2)),
-                  const SizedBox(height: 16),
-                  Text('No active orders',
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text('New orders will appear here automatically',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
-                ],
+          Column(
+            children: [
+              printerErrorBanner,
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.kitchen, size: 64, color: Colors.white.withValues(alpha: 0.2)),
+                      const SizedBox(height: 16),
+                      Text('No active orders',
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Text('New orders will appear here automatically',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
+          quickTogglesBtn,
         ],
       );
     }
@@ -577,29 +596,34 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
     final preparing = activeOrders.where((o) => o.stage == KdsStage.preparing).toList();
     final ready = activeOrders.where((o) => o.stage == KdsStage.ready).toList();
 
-    return Column(
+    return Stack(
       children: [
-        printerErrorBanner,
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width < 900
-                  ? MediaQuery.of(context).size.width
-                  : 900,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _buildColumn('New', incoming, AppTheme.info)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildColumn('Preparing', preparing, AppTheme.emerald)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildColumn('Ready / Waiting for Driver', ready, AppTheme.success, isDropTarget: true)),
-                ],
+        Column(
+          children: [
+            printerErrorBanner,
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width < 900
+                      ? MediaQuery.of(context).size.width
+                      : 900,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildColumn('New', incoming, AppTheme.info)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _buildColumn('Preparing', preparing, AppTheme.emerald)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _buildColumn('Ready / Waiting for Driver', ready, AppTheme.success, isDropTarget: true)),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
+        quickTogglesBtn,
       ],
     );
   }

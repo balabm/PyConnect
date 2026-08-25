@@ -130,6 +130,8 @@ public interface IApplicationDbContext
     DbSet<EquipmentRental> EquipmentRentals { get; }
     DbSet<P2pEvent> P2pEvents { get; }
     DbSet<P2pEventTicket> P2pEventTickets { get; }
+    DbSet<DoorLogEntry> DoorLogEntries { get; }
+    DbSet<EquipmentMaintenanceBlock> EquipmentMaintenanceBlocks { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

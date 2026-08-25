@@ -983,6 +983,122 @@ public sealed class VendorController : ControllerBase
         return Ok(new { Message = "Occupancy updated.", venue.Id, OccupancyPercentage = request.OccupancyPercentage });
     }
 
+    // ── Manual door log (Pub/Club vendors) ──
+
+    /// <summary>
+    /// Logs a manual guest entry at the door when a guest walks in without
+    /// a digital ticket. Updates the venue's live occupancy headcount and
+    /// provides an audit trail for cash/VIP entries.
+    /// </summary>
+    [HttpPost("door-log/manual")]
+    [ProducesResponseType(typeof(ManualDoorLogResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ManualDoorLogResponse>> ManualDoorLogEntry(
+        [FromBody] ManualDoorLogRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendor = await _context.Vendors
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        var venue = await _context.Venues
+            .FirstOrDefaultAsync(v => v.VendorId == vendor.Id && v.Id == request.VenueId, cancellationToken);
+        if (venue is null)
+            return NotFound(new { Message = "Venue not found for this vendor." });
+
+        var headcount = request.GuestType.Equals("Couple", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
+        var cover = request.EntryType.Equals("VIP", StringComparison.OrdinalIgnoreCase) ? 0 : request.CoverCollected;
+
+        var entry = DoorLogEntry.Create(
+            venueId: venue.Id,
+            vendorId: vendor.Id,
+            guestType: request.GuestType,
+            entryType: request.EntryType,
+            headcount: headcount,
+            coverCollected: cover,
+            notes: request.Notes);
+
+        _context.DoorLogEntries.Add(entry);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new ManualDoorLogResponse(entry.Id, entry.Headcount, entry.CoverCollected, entry.EnteredAt));
+    }
+
+    /// <summary>
+    /// Returns recent manual door-log entries for the vendor's venue.
+    /// </summary>
+    [HttpGet("door-log")]
+    [ProducesResponseType(typeof(List<DoorLogEntryResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<DoorLogEntryResponse>>> GetDoorLog(
+        [FromQuery] Guid? venueId,
+        CancellationToken cancellationToken = default)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendorId = await _context.Vendors.AsNoTracking()
+            .Where(v => v.ContactPhone == phone)
+            .Select(v => v.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (vendorId == Guid.Empty)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        var query = _context.DoorLogEntries.AsNoTracking()
+            .Where(e => e.VendorId == vendorId);
+
+        if (venueId.HasValue)
+            query = query.Where(e => e.VenueId == venueId.Value);
+
+        var entries = await query
+            .OrderByDescending(e => e.EnteredAt)
+            .Take(100)
+            .Select(e => new DoorLogEntryResponse(
+                e.Id, e.VenueId, e.GuestType, e.EntryType, e.Headcount, e.CoverCollected, e.Notes, e.EnteredAt))
+            .ToListAsync(cancellationToken);
+
+        return Ok(entries);
+    }
+
+    // ── Custom prep-time buffer (Restaurant/Cafe/Pizzeria vendors) ──
+
+    /// <summary>
+    /// Sets a custom dynamic prep-time buffer (in minutes) shown to consumers
+    /// as part of the ETA. Use 0 to reset to normal. Busy mode adds +30 min
+    /// on top of this buffer.
+    /// </summary>
+    [HttpPut("kds/prep-buffer")]
+    [ProducesResponseType(typeof(PrepBufferResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PrepBufferResponse>> SetPrepBuffer(
+        [FromBody] SetPrepBufferRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var phone = _currentUser.Phone;
+        if (string.IsNullOrWhiteSpace(phone))
+            return Unauthorized(new { Message = "Vendor not authenticated." });
+
+        var vendor = await _context.Vendors
+            .FirstOrDefaultAsync(v => v.ContactPhone == phone && v.IsApproved, cancellationToken);
+        if (vendor is null)
+            return NotFound(new { Message = "Vendor profile not found." });
+
+        if (request.BufferMinutes < 0 || request.BufferMinutes > 120)
+            return BadRequest(new { Message = "Buffer must be between 0 and 120 minutes." });
+
+        vendor.SetDynamicPrepBuffer(request.BufferMinutes);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new PrepBufferResponse(vendor.Id, vendor.DynamicPrepBufferMinutes, vendor.IsBusyMode));
+    }
+
     // ── Claim check generation (luggage cloak vendors) ──
 
     /// <summary>
@@ -1481,3 +1597,27 @@ public sealed record FoodOrderDetailResponse(
     DateTimeOffset? DeliveredAt);
 
 public sealed record UploadImageResponse(string ImageUrl);
+
+// --- Door log & prep buffer DTOs ---
+
+public sealed record ManualDoorLogRequest(
+    Guid VenueId,
+    string GuestType,
+    string EntryType,
+    decimal CoverCollected = 0,
+    string? Notes = null);
+
+public sealed record ManualDoorLogResponse(Guid Id, int Headcount, decimal CoverCollected, DateTimeOffset EnteredAt);
+
+public sealed record DoorLogEntryResponse(
+    Guid Id,
+    Guid VenueId,
+    string GuestType,
+    string EntryType,
+    int Headcount,
+    decimal CoverCollected,
+    string? Notes,
+    DateTimeOffset EnteredAt);
+
+public sealed record SetPrepBufferRequest(int BufferMinutes);
+public sealed record PrepBufferResponse(Guid VendorId, int PrepBufferMinutes, bool IsBusyMode);

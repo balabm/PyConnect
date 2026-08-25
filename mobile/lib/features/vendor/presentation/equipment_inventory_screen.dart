@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
@@ -187,6 +188,10 @@ class _EquipmentInventoryScreenState
                             item: item,
                             onMinus: () => _adjustStock(item, -1),
                             onPlus: () => _adjustStock(item, 1),
+                            onTap: () {
+                              AppHaptics.light();
+                              context.push('/equipment-detail', extra: item);
+                            },
                           );
                         },
                       ),
@@ -207,18 +212,23 @@ class _EquipmentCard extends StatelessWidget {
     required this.item,
     required this.onMinus,
     required this.onPlus,
+    this.onTap,
   });
 
   final EquipmentItemModel item;
   final VoidCallback onMinus;
   final VoidCallback onPlus;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final soldOut = item.availableUnits == 0;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,6 +353,7 @@ class _EquipmentCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

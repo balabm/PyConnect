@@ -139,6 +139,10 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<P2pEventTicket> P2pEventTickets => Set<P2pEventTicket>();
 
+    public DbSet<DoorLogEntry> DoorLogEntries => Set<DoorLogEntry>();
+
+    public DbSet<EquipmentMaintenanceBlock> EquipmentMaintenanceBlocks => Set<EquipmentMaintenanceBlock>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

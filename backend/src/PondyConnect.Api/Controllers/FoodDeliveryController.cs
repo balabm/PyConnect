@@ -188,7 +188,12 @@ public sealed class FoodDeliveryController : ControllerBase
             request.VenueId,
             request.Description,
             request.ImageUrl,
-            request.IsLateNight);
+            request.IsLateNight,
+            request.IsVeg,
+            request.IsVegan,
+            request.ContainsNuts,
+            request.PrepTimeMinutes,
+            request.PackagingFee);
         var result = await _mediator.Send(cmd, ct);
         return Ok(result);
     }
@@ -197,7 +202,7 @@ public sealed class FoodDeliveryController : ControllerBase
     [Authorize(Roles = "Vendor")]
     public async Task<IActionResult> UpdateMenuItem(Guid id, [FromBody] UpdateMenuItemRequest request, CancellationToken ct)
     {
-        await _mediator.Send(new UpdateMenuItemCommand(id, request.Name, request.Description, request.Category, request.NewPrice), ct);
+        await _mediator.Send(new UpdateMenuItemCommand(id, request.Name, request.Description, request.Category, request.NewPrice, request.ImageUrl, request.IsVeg, request.IsVegan, request.ContainsNuts, request.PrepTimeMinutes, request.PackagingFee), ct);
         return NoContent();
     }
 
@@ -589,9 +594,24 @@ public sealed record CreateMenuItemRequest(
     Guid? VenueId = null,
     string? Description = null,
     string? ImageUrl = null,
-    bool IsLateNight = false);
+    bool IsLateNight = false,
+    bool IsVeg = true,
+    bool IsVegan = false,
+    bool ContainsNuts = false,
+    int? PrepTimeMinutes = null,
+    decimal PackagingFee = 0);
 
-public sealed record UpdateMenuItemRequest(string Name, string? Description, string Category, decimal? NewPrice);
+public sealed record UpdateMenuItemRequest(
+    string Name,
+    string? Description,
+    string Category,
+    decimal? NewPrice,
+    string? ImageUrl = null,
+    bool? IsVeg = null,
+    bool? IsVegan = null,
+    bool? ContainsNuts = null,
+    int? PrepTimeMinutes = null,
+    decimal? PackagingFee = null);
 
 public sealed record CreateModifierGroupRequest(
     string Name,

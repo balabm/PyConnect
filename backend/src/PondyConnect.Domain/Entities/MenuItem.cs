@@ -25,6 +25,16 @@ public sealed class MenuItem : BaseEntity
 
     public bool IsLateNight { get; private set; }
 
+    public bool IsVeg { get; private set; } = true;
+
+    public bool IsVegan { get; private set; }
+
+    public bool ContainsNuts { get; private set; }
+
+    public int? PrepTimeMinutes { get; private set; }
+
+    public decimal PackagingFee { get; private set; }
+
     private readonly List<ModifierGroup> _modifierGroups = [];
     public IReadOnlyCollection<ModifierGroup> ModifierGroups => _modifierGroups.AsReadOnly();
 
@@ -40,13 +50,20 @@ public sealed class MenuItem : BaseEntity
         Guid? venueId = null,
         string? description = null,
         string? imageUrl = null,
-        bool isLateNight = false)
+        bool isLateNight = false,
+        bool isVeg = true,
+        bool isVegan = false,
+        bool containsNuts = false,
+        int? prepTimeMinutes = null,
+        decimal packagingFee = 0)
     {
         if (vendorId == Guid.Empty)
             throw new ArgumentException("Vendor ID is required.", nameof(vendorId));
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(category);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(price, nameof(price));
+        if (packagingFee < 0)
+            throw new ArgumentOutOfRangeException(nameof(packagingFee), "Packaging fee cannot be negative.");
 
         return new MenuItem
         {
@@ -57,7 +74,12 @@ public sealed class MenuItem : BaseEntity
             Category = category,
             Description = description,
             ImageUrl = imageUrl,
-            IsLateNight = isLateNight
+            IsLateNight = isLateNight,
+            IsVeg = isVeg,
+            IsVegan = isVegan,
+            ContainsNuts = containsNuts,
+            PrepTimeMinutes = prepTimeMinutes,
+            PackagingFee = packagingFee
         };
     }
 
@@ -77,6 +99,30 @@ public sealed class MenuItem : BaseEntity
         Category = category;
         if (imageUrl != null)
             ImageUrl = imageUrl;
+        MarkUpdated();
+    }
+
+    public void UpdateDietaryTags(bool isVeg, bool isVegan, bool containsNuts)
+    {
+        IsVeg = isVeg;
+        IsVegan = isVegan;
+        ContainsNuts = containsNuts;
+        MarkUpdated();
+    }
+
+    public void UpdatePrepTime(int? prepTimeMinutes)
+    {
+        if (prepTimeMinutes.HasValue && prepTimeMinutes.Value <= 0)
+            throw new ArgumentOutOfRangeException(nameof(prepTimeMinutes), "Prep time must be positive.");
+        PrepTimeMinutes = prepTimeMinutes;
+        MarkUpdated();
+    }
+
+    public void UpdatePackagingFee(decimal packagingFee)
+    {
+        if (packagingFee < 0)
+            throw new ArgumentOutOfRangeException(nameof(packagingFee), "Packaging fee cannot be negative.");
+        PackagingFee = packagingFee;
         MarkUpdated();
     }
 
