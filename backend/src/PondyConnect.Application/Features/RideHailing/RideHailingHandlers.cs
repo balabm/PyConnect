@@ -895,36 +895,55 @@ public sealed class GetNearbyDriversHandler : IRequestHandler<GetNearbyDriversQu
     }
 }
 
-public sealed record RegisterDriverCommand(string Name, string Phone, VehicleType VehicleType, string? VehiclePlate = null) : IRequest<DriverResponse>;
+public sealed record RegisterDriverCommand(string Name, string Phone, VehicleType VehicleType, string? VehiclePlate = null, string? LicenseNumber = null) : IRequest<RegisterDriverResponse>;
 
 public sealed record DriverResponse(Guid Id, string Name, string Phone, string VehicleType, string? VehiclePlate, bool IsApproved, bool IsOnline, double Rating, int TotalRides);
 
-public sealed class RegisterDriverHandler : IRequestHandler<RegisterDriverCommand, DriverResponse>
+public sealed record RegisterDriverResponse(Guid Id, string Name, string Phone, string VehicleType, string? VehiclePlate, bool IsApproved, bool IsOnline, double Rating, int TotalRides, string? AccessToken = null);
+
+public sealed class RegisterDriverHandler : IRequestHandler<RegisterDriverCommand, RegisterDriverResponse>
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IJwtTokenFactory? _jwtTokenFactory;
 
-    public RegisterDriverHandler(IApplicationDbContext context, ICurrentUserService currentUser)
+    public RegisterDriverHandler(IApplicationDbContext context, ICurrentUserService currentUser, IJwtTokenFactory? jwtTokenFactory = null)
     {
         _context = context;
         _currentUser = currentUser;
+        _jwtTokenFactory = jwtTokenFactory;
     }
 
-    public async Task<DriverResponse> Handle(RegisterDriverCommand request, CancellationToken cancellationToken)
+    public async Task<RegisterDriverResponse> Handle(RegisterDriverCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("User not authenticated.");
 
-        // Upgrade the user's role to Driver so JWT tokens issued after
-        // re-login include the Driver role claim required by [Authorize(Roles = "Driver")].
+        // Use the authenticated user's phone if the request phone doesn't match.
+        // This prevents a user from registering as a driver with someone else's phone.
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is not null && user.Role != UserRole.Driver && user.Role != UserRole.Admin)
             user.ChangeRole(UserRole.Driver);
 
-        var driver = Driver.Create(userId, request.Name, request.Phone, request.VehicleType, request.VehiclePlate);
+        // Use the authenticated user's phone for the driver record to ensure
+        // consistency between the user account and the driver profile.
+        var driverPhone = user?.Phone ?? request.Phone;
+
+        var driver = Driver.Create(userId, request.Name, driverPhone, request.VehicleType, request.VehiclePlate);
+
+        // Store the license number if provided during registration.
+        if (!string.IsNullOrWhiteSpace(request.LicenseNumber))
+            driver.SetKycLicenseNumber(request.LicenseNumber);
+
         _context.Drivers.Add(driver);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new DriverResponse(driver.Id, driver.Name, driver.Phone, driver.VehicleType.ToString(), driver.VehiclePlate, driver.IsApproved, driver.IsOnline, driver.Rating, driver.TotalRides);
+        // Issue a fresh JWT with the Driver role so the client doesn't need
+        // to re-authenticate to get a token with the correct role claim.
+        string? newToken = null;
+        if (_jwtTokenFactory is not null && user is not null)
+            newToken = _jwtTokenFactory.CreateAccessToken(user.Id, user.Phone, user.Role.ToString());
+
+        return new RegisterDriverResponse(driver.Id, driver.Name, driver.Phone, driver.VehicleType.ToString(), driver.VehiclePlate, driver.IsApproved, driver.IsOnline, driver.Rating, driver.TotalRides, newToken);
     }
 }
 

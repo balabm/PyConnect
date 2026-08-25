@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/driver_providers.dart';
 
 /// Driver self-registration screen.
@@ -34,6 +35,21 @@ class _DriverRegistrationScreenState
   static const _vehicleTypes = ['Bike', 'Auto', 'Car'];
 
   @override
+  void initState() {
+    super.initState();
+    // Pre-fill the phone number from the authenticated session so the
+    // driver record's phone matches the JWT phone. This prevents a
+    // mismatch where the user could register with someone else's number.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final session = ref.read(authControllerProvider).valueOrNull;
+      if (session != null && session.phone.isNotEmpty && mounted) {
+        _phoneController.text = session.phone;
+        _nameController.text = session.name;
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
@@ -50,7 +66,7 @@ class _DriverRegistrationScreenState
 
     try {
       final api = ref.read(driverApiProvider);
-      await api.registerDriver(
+      final newToken = await api.registerDriver(
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
         vehicleType: _vehicleType,
@@ -59,6 +75,11 @@ class _DriverRegistrationScreenState
       );
 
       if (mounted) {
+        // If the backend issued a fresh JWT with the Driver role, update
+        // the local session so subsequent API calls carry the correct role.
+        if (newToken != null && newToken.isNotEmpty) {
+          await ref.read(authControllerProvider.notifier).refreshWithToken(newToken);
+        }
         AppHaptics.success();
         AppToast.show(context, 'Registration successful! Complete KYC to start.',
             type: ToastType.success);
@@ -171,13 +192,15 @@ class _DriverRegistrationScreenState
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               maxLength: 10,
+              readOnly: true,
               decoration: const InputDecoration(
-                labelText: 'Phone Number',
-                hintText: '10-digit mobile number',
+                labelText: 'Phone Number (from your login)',
+                hintText: 'Authenticated phone number',
                 prefixText: '+91 ',
                 prefixIcon: Icon(Icons.phone_outlined),
                 border: OutlineInputBorder(),
                 counterText: '',
+                helperText: 'This is the phone number you verified with OTP.',
               ),
               validator: (value) {
                 final digits = (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');

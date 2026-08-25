@@ -338,20 +338,27 @@ class DriverApi {
   }
 
   /// Registers a new driver profile. Creates a pending driver record.
-  Future<void> registerDriver({
+  /// Returns the new JWT access token (with Driver role) if the backend
+  /// issued one, so the client can update its session without re-login.
+  Future<String?> registerDriver({
     required String name,
     required String phone,
     required String vehicleType,
     String? vehiclePlate,
     String? licenseNumber,
   }) async {
-    await _api.post('/api/driver/register', data: {
+    final data = await _api.post('/api/driver/register', data: {
       'name': name,
       'phone': phone,
       'vehicleType': vehicleType,
       if (vehiclePlate != null) 'vehiclePlate': vehiclePlate,
       if (licenseNumber != null) 'licenseNumber': licenseNumber,
     });
+    // The response includes an accessToken with the Driver role.
+    if (data is Map<String, dynamic>) {
+      return data['accessToken'] as String?;
+    }
+    return null;
   }
 
   /// Marks the mandatory safety tutorial as completed.

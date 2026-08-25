@@ -121,7 +121,7 @@ class _DriverPendingVerificationScreenState
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              // Status timeline
+              // Status timeline — uses actual profile state, not hardcoded values.
               _StatusStep(
                 icon: Icons.check_circle,
                 label: 'Registration Complete',
@@ -130,22 +130,24 @@ class _DriverPendingVerificationScreenState
               _StatusStep(
                 icon: Icons.check_circle,
                 label: 'KYC Documents Uploaded',
-                isDone: true,
+                isDone: profile?.isKycUploaded ?? false,
               ),
               _StatusStep(
                 icon: Icons.check_circle,
                 label: 'Safety Tutorial Completed',
-                isDone: true,
+                isDone: profile?.hasCompletedTutorial ?? false,
               ),
               _StatusStep(
                 icon: Icons.hourglass_top,
                 label: 'Admin Review',
-                isDone: false,
+                isDone: profile?.isApproved ?? false,
               ),
               _StatusStep(
                 icon: Icons.lock_clock,
                 label: 'Ready to Drive',
-                isDone: false,
+                isDone: (profile?.isApproved ?? false) &&
+                    (profile?.hasCompletedTutorial ?? false) &&
+                    (profile?.hasSignedAgreement ?? false),
               ),
               const SizedBox(height: 32),
               // Refresh button

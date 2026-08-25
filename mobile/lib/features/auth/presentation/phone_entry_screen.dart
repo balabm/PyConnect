@@ -8,6 +8,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/animations/modern_animations.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/config/app_flavor.dart';
+import '../../../core/design/app_toast.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/auth_controller.dart';
@@ -32,6 +33,13 @@ class PhoneEntryScreen extends ConsumerStatefulWidget {
 class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
   int _logoTapCount = 0;
   DateTime? _lastLogoTap;
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   void _onLogoTap() {
     final now = DateTime.now();
@@ -213,6 +221,7 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                       ),
                     ),
                     child: SingleChildScrollView(
+                      controller: _scrollController,
                       padding: const EdgeInsets.all(AppSpacing.xxl),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -435,8 +444,20 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                                 if (isAuthenticated) {
                                   context.go('/register');
                                 } else {
+                                  // Set pending redirect so after OTP verification
+                                  // the user lands on the registration screen.
                                   ref.read(pendingAuthRedirectProvider.notifier).state = '/register';
-                                  context.go('/auth');
+                                  AppToast.show(
+                                    context,
+                                    'Enter your phone number below to start registration.',
+                                    type: ToastType.info,
+                                  );
+                                  // Focus the phone input by scrolling to it.
+                                  _scrollController.animateTo(
+                                    _scrollController.position.maxScrollExtent,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeOut,
+                                  );
                                 }
                               },
                               icon: const Icon(Icons.two_wheeler_outlined, size: 18),

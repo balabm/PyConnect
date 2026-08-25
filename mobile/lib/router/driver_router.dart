@@ -45,11 +45,10 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
         return '/force-update';
       }
 
-      // Allow /register for unauthenticated users (self-onboarding)
-      if (!authenticated && path == '/register') {
-        return null;
-      }
-
+      // /register requires authentication — the registration API needs a JWT
+      // to resolve the current user. Unauthenticated users are sent to /auth
+      // first; the "Become a Captain" button sets a pending redirect so they
+      // land on /register after OTP verification.
       if (!authenticated && path != '/auth' && !path.startsWith('/auth')) {
         return '/auth';
       }
@@ -58,14 +57,14 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
         // After auth, check driver compliance status before routing to '/'.
         final profileAsync = ref.read(driverProfileProvider);
         final profile = profileAsync.valueOrNull;
-        if (!profileAsync.isLoading && profile == null) {
-          // No driver record exists yet — finish registration first.
-          return '/register';
+        if (profileAsync.isLoading) {
+          // Profile is still loading — stay on /auth (which shows a loading
+          // indicator via the auth state) rather than flashing the dashboard.
+          return null;
         }
         if (profile == null) {
-          // Profile is still loading — avoid a blank screen by landing on the
-          // shell, which will redirect once the profile resolves.
-          return '/';
+          // No driver record exists yet — finish registration first.
+          return '/register';
         }
         return _complianceRedirect(profile, path) ?? '/';
       }

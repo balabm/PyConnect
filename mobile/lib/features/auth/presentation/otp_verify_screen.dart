@@ -171,10 +171,14 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
         ref.read(hasSeenAuthScreenProvider.notifier).state = true;
         final session = ref.read(authControllerProvider).valueOrNull;
         final pending = ref.read(pendingAuthRedirectProvider);
-        // First-time users must complete name/location onboarding before landing
-        // on the home screen or their intended destination. Keep the pending
-        // redirect so they can be returned after finishing onboarding.
-        if (session != null && session.name.trim().isEmpty) {
+        final flavor = resolvedAppFlavor;
+        // First-time consumer users must complete name/location onboarding
+        // before landing on the home screen. Driver and partner apps have
+        // their own registration screens that collect name/details, so they
+        // skip the consumer onboarding step.
+        if (flavor == AppFlavor.consumer &&
+            session != null &&
+            session.name.trim().isEmpty) {
           ref.read(pendingAuthRedirectProvider.notifier).state = pending;
           context.go('/onboarding');
         } else {

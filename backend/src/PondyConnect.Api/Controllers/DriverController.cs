@@ -91,11 +91,11 @@ public sealed class DriverController : ControllerBase
 
     [HttpPost("register")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(DriverResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RegisterDriverResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<DriverResponse>> Register([FromBody] RegisterDriverRequest request, CancellationToken ct)
+    public async Task<ActionResult<RegisterDriverResponse>> Register([FromBody] RegisterDriverRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new RegisterDriverCommand(request.Name, request.Phone, request.VehicleType, request.VehiclePlate), ct);
+        var result = await _mediator.Send(new RegisterDriverCommand(request.Name, request.Phone, request.VehicleType, request.VehiclePlate, request.LicenseNumber), ct);
         return Ok(result);
     }
 
@@ -1028,7 +1028,7 @@ public sealed record InitiateCallResponse(
     long ExpiresAtUnix,
     string Message);
 
-public sealed record RegisterDriverRequest(string Name, string Phone, VehicleType VehicleType, string? VehiclePlate = null);
+public sealed record RegisterDriverRequest(string Name, string Phone, VehicleType VehicleType, string? VehiclePlate = null, string? LicenseNumber = null);
 public sealed record UpdateLocationRequest(double Latitude, double Longitude);
 
 public sealed record MockLocationReportRequest(double Latitude, double Longitude);

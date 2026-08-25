@@ -264,6 +264,14 @@ public sealed class Driver : BaseEntity
         MarkUpdated();
     }
 
+    /// <summary>Sets the license number captured during self-registration.</summary>
+    public void SetKycLicenseNumber(string licenseNumber)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(licenseNumber);
+        KycLicenseNumber = licenseNumber;
+        MarkUpdated();
+    }
+
     public void SetEmergencyContact(string name, string phone)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
