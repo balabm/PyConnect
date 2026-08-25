@@ -350,6 +350,18 @@ class _ReceiptDialogState extends ConsumerState<_ReceiptDialog> {
     final vehicleType = data['vehicleType'] as String? ?? '';
     final paymentMethod = data['paymentMethod'] as String? ?? '';
 
+    // Itemized breakdown fields from the receipt API
+    final baseFare = _parseNum(data['baseFare']);
+    final distanceFare = _parseNum(data['distanceFare']);
+    final timeFare = _parseNum(data['timeFare']);
+    final surgeMultiplier = _parseNum(data['surgeMultiplier']);
+    final surgeReason = data['surgeReason'] as String?;
+    final fare = _parseNum(data['fare']);
+    final platformFee = _parseNum(data['platformBookingFee']);
+    final tipAmount = _parseNum(data['tipAmount']);
+    final totalAmount = _parseNum(data['totalAmount']);
+    final hasItemized = baseFare > 0 || distanceFare > 0 || timeFare > 0;
+
     return AlertDialog(
       title: const Text('Ride Receipt'),
       content: _loading
@@ -359,9 +371,50 @@ class _ReceiptDialogState extends ConsumerState<_ReceiptDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ReceiptRow(label: 'Earnings', value: '\u20B9$earnings'),
-                  _ReceiptRow(label: 'Distance', value: '$distance km'),
-                  _ReceiptRow(label: 'Duration', value: '$duration min'),
+                  // Itemized breakdown (if available from receipt API)
+                  if (hasItemized) ...[
+                    const Text('Earnings Breakdown', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    if (baseFare > 0)
+                      _ReceiptRow(label: 'Base Fare', value: '\u20B9${baseFare.toStringAsFixed(0)}'),
+                    if (distanceFare > 0)
+                      _ReceiptRow(label: 'Distance Pay (${_parseNum(distance)} km)', value: '\u20B9${distanceFare.toStringAsFixed(0)}'),
+                    if (timeFare > 0)
+                      _ReceiptRow(label: 'Time Pay (${_parseNum(duration)} mins)', value: '\u20B9${timeFare.toStringAsFixed(0)}'),
+                    if (surgeMultiplier > 1.0)
+                      _ReceiptRow(
+                        label: 'Surge${surgeReason != null ? ' ($surgeReason)' : ''}',
+                        value: '+${surgeMultiplier.toStringAsFixed(1)}x',
+                        valueColor: AppTheme.warning,
+                      ),
+                    if (tipAmount > 0)
+                      _ReceiptRow(
+                        label: 'Customer Tip',
+                        value: '+\u20B9${tipAmount.toStringAsFixed(0)}',
+                        valueColor: AppTheme.emerald,
+                        icon: Icons.celebration,
+                      ),
+                    if (platformFee > 0)
+                      _ReceiptRow(
+                        label: 'PY Connect Fee',
+                        value: '-\u20B9${platformFee.toStringAsFixed(2)}',
+                        valueColor: AppTheme.danger,
+                      ),
+                    const Divider(height: 16),
+                    _ReceiptRow(
+                      label: 'Net Payout',
+                      value: '\u20B9${(fare - platformFee + tipAmount).toStringAsFixed(2)}',
+                      bold: true,
+                      valueColor: AppTheme.emerald,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  // Summary fields
+                  if (!hasItemized) ...[
+                    _ReceiptRow(label: 'Earnings', value: '\u20B9$earnings'),
+                  ],
+                  _ReceiptRow(label: 'Distance', value: '${_parseNum(distance)} km'),
+                  _ReceiptRow(label: 'Duration', value: '${_parseNum(duration)} min'),
                   if (vehicleType.isNotEmpty) _ReceiptRow(label: 'Vehicle', value: vehicleType),
                   if (paymentMethod.isNotEmpty) _ReceiptRow(label: 'Payment', value: paymentMethod),
                   _ReceiptRow(label: 'Pickup', value: pickup),
@@ -384,6 +437,12 @@ class _ReceiptDialogState extends ConsumerState<_ReceiptDialog> {
     );
   }
 
+  double _parseNum(dynamic v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0;
+    return 0;
+  }
+
   String _formatDate(String iso) {
     try {
       final dt = DateTime.parse(iso);
@@ -395,9 +454,18 @@ class _ReceiptDialogState extends ConsumerState<_ReceiptDialog> {
 }
 
 class _ReceiptRow extends StatelessWidget {
-  const _ReceiptRow({required this.label, required this.value});
+  const _ReceiptRow({
+    required this.label,
+    required this.value,
+    this.bold = false,
+    this.valueColor,
+    this.icon,
+  });
   final String label;
   final String value;
+  final bool bold;
+  final Color? valueColor;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -406,8 +474,35 @@ class _ReceiptRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 80, child: Text(label, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant))),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 14, color: valueColor ?? AppTheme.emerald),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: bold ? FontWeight.bold : FontWeight.w500,
+                    color: valueColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -89,6 +89,10 @@ public interface IApplicationDbContext
 
     DbSet<DriverWithdrawal> DriverWithdrawals { get; }
 
+    DbSet<DriverVehicle> DriverVehicles { get; }
+
+    DbSet<DriverPreferences> DriverPreferences { get; }
+
     DbSet<DispatchTask> DispatchTasks { get; }
 
     DbSet<Homestay> Homestays { get; }

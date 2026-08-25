@@ -17,6 +17,8 @@ import '../features/driver/presentation/driver_tutorial_screen.dart';
 import '../features/driver/presentation/driver_safety_settings_screen.dart';
 import '../features/driver/presentation/driver_help_screen.dart';
 import '../features/driver/presentation/driver_radar_screen.dart';
+import '../features/driver/presentation/garage_screen.dart';
+import '../features/driver/presentation/driver_preferences_screen.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers/force_update_provider.dart';
 import '../features/splash/presentation/force_update_screen.dart';
@@ -168,6 +170,14 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'help',
             builder: (_, _) => const DriverHelpScreen(),
+          ),
+          GoRoute(
+            path: 'garage',
+            builder: (_, _) => const GarageScreen(),
+          ),
+          GoRoute(
+            path: 'preferences',
+            builder: (_, _) => const DriverPreferencesScreen(),
           ),
         ],
       ),

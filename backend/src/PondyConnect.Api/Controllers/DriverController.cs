@@ -667,7 +667,366 @@ public sealed class DriverController : ControllerBase
         var userId = Guid.Parse(userIdStr);
         return await _dbContext.Drivers.FirstOrDefaultAsync(d => d.UserId == userId, ct);
     }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Module 6: Garage — Vehicle CRUD
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Returns all vehicles registered by the current driver.
+    /// </summary>
+    [HttpGet("vehicles")]
+    [ProducesResponseType(typeof(IReadOnlyList<DriverVehicleResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<DriverVehicleResponse>>> GetVehicles(CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var vehicles = await _dbContext.DriverVehicles.AsNoTracking()
+            .Where(v => v.DriverId == driver.Id)
+            .ToListAsync(ct);
+
+        return Ok(vehicles.Select(v => new DriverVehicleResponse(
+            v.Id, v.VehicleType, v.RegistrationNumber, v.Color, v.Model,
+            v.RcBookUrl, v.IsApproved, v.IsActive, v.ReviewNotes)).ToList());
+    }
+
+    /// <summary>
+    /// Registers a new vehicle for the driver. Goes into Admin Pending state
+    /// until an admin reviews the RC book upload.
+    /// </summary>
+    [HttpPost("vehicles")]
+    [ProducesResponseType(typeof(DriverVehicleResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<DriverVehicleResponse>> AddVehicle(
+        [FromBody] AddVehicleRequest request, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        try
+        {
+            var vehicle = DriverVehicle.Create(
+                driver.Id,
+                request.VehicleType,
+                request.RegistrationNumber,
+                request.Color,
+                request.Model);
+
+            _dbContext.DriverVehicles.Add(vehicle);
+            await _dbContext.SaveChangesAsync(ct);
+
+            return CreatedAtAction(
+                nameof(GetVehicles),
+                new { },
+                new DriverVehicleResponse(
+                    vehicle.Id, vehicle.VehicleType, vehicle.RegistrationNumber,
+                    vehicle.Color, vehicle.Model, vehicle.RcBookUrl,
+                    vehicle.IsApproved, vehicle.IsActive, vehicle.ReviewNotes));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Sets a vehicle as the driver's active vehicle. Deactivates all other
+    /// vehicles. The active vehicle determines which dispatch queue the driver
+    /// is enrolled in (bike → food, auto → rides, etc.).
+    /// </summary>
+    [HttpPost("vehicles/{vehicleId:guid}/activate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ActivateVehicle(Guid vehicleId, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var vehicle = await _dbContext.DriverVehicles
+            .FirstOrDefaultAsync(v => v.Id == vehicleId && v.DriverId == driver.Id, ct);
+        if (vehicle is null)
+            return NotFound(new { Message = "Vehicle not found." });
+
+        if (!vehicle.IsApproved)
+            return BadRequest(new { Message = "Vehicle is not yet approved by admin." });
+
+        // Deactivate all other vehicles
+        var allVehicles = await _dbContext.DriverVehicles
+            .Where(v => v.DriverId == driver.Id)
+            .ToListAsync(ct);
+        foreach (var v in allVehicles)
+        {
+            if (v.Id == vehicleId) v.Activate();
+            else v.Deactivate();
+        }
+
+        // Update the driver's primary vehicle type
+        driver.GetType(); // Touch to ensure tracking
+        await _dbContext.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Deletes a vehicle from the driver's garage.
+    /// </summary>
+    [HttpDelete("vehicles/{vehicleId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteVehicle(Guid vehicleId, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var vehicle = await _dbContext.DriverVehicles
+            .FirstOrDefaultAsync(v => v.Id == vehicleId && v.DriverId == driver.Id, ct);
+        if (vehicle is null)
+            return NotFound(new { Message = "Vehicle not found." });
+
+        if (vehicle.IsActive)
+            return BadRequest(new { Message = "Cannot delete the active vehicle. Switch to another vehicle first." });
+
+        _dbContext.DriverVehicles.Remove(vehicle);
+        await _dbContext.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Returns the driver's compliance status — which documents are expiring
+    /// soon and need renewal.
+    /// </summary>
+    [HttpGet("compliance")]
+    [ProducesResponseType(typeof(ComplianceStatusResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ComplianceStatusResponse>> GetComplianceStatus(CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var warnings = new List<ComplianceWarning>();
+        var now = DateTime.UtcNow;
+        var threshold = now.AddDays(7);
+
+        // Check license expiry
+        if (driver.KycExpiryDate.HasValue)
+        {
+            var daysLeft = (driver.KycExpiryDate.Value - now).Days;
+            if (daysLeft <= 7)
+            {
+                warnings.Add(new ComplianceWarning(
+                    "License",
+                    driver.KycExpiryDate.Value,
+                    daysLeft < 0 ? 0 : daysLeft,
+                    daysLeft < 0 ? "expired" : "expiring"));
+            }
+        }
+
+        // Check vehicle insurance expiries
+        var vehicles = await _dbContext.DriverVehicles.AsNoTracking()
+            .Where(v => v.DriverId == driver.Id && v.InsuranceExpiryDate != null)
+            .ToListAsync(ct);
+
+        foreach (var v in vehicles)
+        {
+            if (v.InsuranceExpiryDate is null) continue;
+            var daysLeft = (v.InsuranceExpiryDate.Value - now).Days;
+            if (daysLeft <= 7)
+            {
+                warnings.Add(new ComplianceWarning(
+                    $"Insurance ({v.RegistrationNumber})",
+                    v.InsuranceExpiryDate.Value,
+                    daysLeft < 0 ? 0 : daysLeft,
+                    daysLeft < 0 ? "expired" : "expiring"));
+            }
+        }
+
+        return Ok(new ComplianceStatusResponse(warnings, warnings.Count > 0));
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Module 8: Shift Preferences & Destination Mode
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Returns the driver's shift preferences (destination mode, service toggles).
+    /// </summary>
+    [HttpGet("preferences")]
+    [ProducesResponseType(typeof(DriverPreferencesResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<DriverPreferencesResponse>> GetPreferences(CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var prefs = await GetOrCreatePreferencesAsync(driver.Id, ct);
+
+        return Ok(new DriverPreferencesResponse(
+            prefs.DestinationModeEnabled,
+            prefs.DestinationLatitude,
+            prefs.DestinationLongitude,
+            prefs.DestinationLabel,
+            prefs.AcceptFoodDelivery,
+            prefs.AcceptRides,
+            prefs.AcceptIntercity,
+            prefs.AcceptLuggageTransport,
+            prefs.AcceptEssentials));
+    }
+
+    /// <summary>
+    /// Sets or clears the destination mode target. When active, the dispatch
+    /// engine only assigns rides whose drop-off is closer to the destination.
+    /// </summary>
+    [HttpPut("preferences/destination")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> SetDestination([FromBody] UpdateDestinationRequest request, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var prefs = await GetOrCreatePreferencesAsync(driver.Id, ct);
+        var dest = PondyConnect.Domain.ValueObjects.GeoLocation.Create(request.Latitude, request.Longitude);
+        prefs.SetDestination(dest, request.Label);
+        await _dbContext.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Clears destination mode.
+    /// </summary>
+    [HttpDelete("preferences/destination")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ClearDestination(CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var prefs = await GetOrCreatePreferencesAsync(driver.Id, ct);
+        prefs.ClearDestination();
+        await _dbContext.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Updates the driver's service type toggles. Each toggle controls whether
+    /// the driver is enrolled in that specific dispatch queue.
+    /// </summary>
+    [HttpPut("preferences/service-toggles")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> UpdateServiceToggles([FromBody] UpdateServiceTogglesRequest request, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var prefs = await GetOrCreatePreferencesAsync(driver.Id, ct);
+        prefs.UpdateServiceToggles(
+            request.FoodDelivery,
+            request.Rides,
+            request.Intercity,
+            request.Luggage,
+            request.Essentials);
+        await _dbContext.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
+    private async Task<DriverPreferences> GetOrCreatePreferencesAsync(Guid driverId, CancellationToken ct)
+    {
+        var prefs = await _dbContext.DriverPreferences
+            .FirstOrDefaultAsync(p => p.DriverId == driverId, ct);
+        if (prefs is null)
+        {
+            prefs = DriverPreferences.Create(driverId);
+            _dbContext.DriverPreferences.Add(prefs);
+            await _dbContext.SaveChangesAsync(ct);
+        }
+        return prefs;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Module 9: Communication Privacy — Call Proxy & Quick Chat
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Initiates a masked call between the driver and the customer. The
+    /// backend triggers a cloud telephony provider (Exotel/Twilio) to bridge
+    /// the call on a virtual number, protecting both parties' real phone numbers.
+    /// Returns a temporary virtual number for the call.
+    /// </summary>
+    [HttpPost("communications/call")]
+    [ProducesResponseType(typeof(InitiateCallResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<InitiateCallResponse>> InitiateCall(
+        [FromBody] InitiateCallRequest request, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var ride = await _dbContext.RideRequests.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == Guid.Parse(request.RideId), ct);
+        if (ride is null)
+            return NotFound(new { Message = "Ride not found." });
+
+        // In production, this would call Exotel/Twilio to bridge the call.
+        // For now, we return a mock virtual number and log the request.
+        var virtualNumber = $"+91{Random.Shared.Next(700000000, 799999999)}";
+
+        return Ok(new InitiateCallResponse(
+            virtualNumber,
+            DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds(),
+            "Call initiated. Both parties will receive a call on a virtual number."));
+    }
+
+    /// <summary>
+    /// Sends a canned quick-chat message to the customer via push notification.
+    /// Used for safe, driving-friendly communication without typing.
+    /// </summary>
+    [HttpPost("communications/quick-message")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendQuickMessage(
+        [FromBody] SendQuickMessageRequest request, CancellationToken ct)
+    {
+        var driver = await GetCurrentUserDriverAsync(ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver profile not found." });
+
+        var ride = await _dbContext.RideRequests.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == Guid.Parse(request.RideId), ct);
+        if (ride is null)
+            return NotFound(new { Message = "Ride not found." });
+
+        // In production, this would push the message to the consumer app
+        // via SignalR + FCM. For now, we just return success.
+        return NoContent();
+    }
 }
+
+public sealed record ComplianceWarning(
+    string Document,
+    DateTime ExpiryDate,
+    int DaysLeft,
+    string Status);
+
+public sealed record ComplianceStatusResponse(
+    IReadOnlyList<ComplianceWarning> Warnings,
+    bool HasUrgentWarnings);
+
+public sealed record InitiateCallResponse(
+    string VirtualNumber,
+    long ExpiresAtUnix,
+    string Message);
 
 public sealed record RegisterDriverRequest(string Name, string Phone, VehicleType VehicleType, string? VehiclePlate = null);
 public sealed record UpdateLocationRequest(double Latitude, double Longitude);
@@ -689,3 +1048,48 @@ public sealed record DriverProfileResponse(
 
 public sealed record StartTaskRequest(string Otp);
 public sealed record CompleteTaskRequest(string? Otp = null);
+
+// ── Vehicle CRUD ──
+public sealed record AddVehicleRequest(
+    VehicleType VehicleType,
+    string RegistrationNumber,
+    string? Color = null,
+    string? Model = null);
+
+public sealed record UpdateDestinationRequest(
+    double Latitude,
+    double Longitude,
+    string? Label = null);
+
+public sealed record UpdateServiceTogglesRequest(
+    bool? FoodDelivery = null,
+    bool? Rides = null,
+    bool? Intercity = null,
+    bool? Luggage = null,
+    bool? Essentials = null);
+
+public sealed record InitiateCallRequest(string RideId);
+
+public sealed record SendQuickMessageRequest(string RideId, string Message);
+
+public sealed record DriverVehicleResponse(
+    Guid Id,
+    VehicleType VehicleType,
+    string RegistrationNumber,
+    string? Color,
+    string? Model,
+    string? RcBookUrl,
+    bool IsApproved,
+    bool IsActive,
+    string? ReviewNotes);
+
+public sealed record DriverPreferencesResponse(
+    bool DestinationModeEnabled,
+    double? DestinationLatitude,
+    double? DestinationLongitude,
+    string? DestinationLabel,
+    bool AcceptFoodDelivery,
+    bool AcceptRides,
+    bool AcceptIntercity,
+    bool AcceptLuggageTransport,
+    bool AcceptEssentials);

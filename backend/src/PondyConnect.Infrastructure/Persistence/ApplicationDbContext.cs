@@ -93,6 +93,10 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<DriverWithdrawal> DriverWithdrawals => Set<DriverWithdrawal>();
 
+    public DbSet<DriverVehicle> DriverVehicles => Set<DriverVehicle>();
+
+    public DbSet<DriverPreferences> DriverPreferences => Set<DriverPreferences>();
+
     public DbSet<DispatchTask> DispatchTasks => Set<DispatchTask>();
 
     public DbSet<Homestay> Homestays => Set<Homestay>();

@@ -16,6 +16,7 @@ import '../application/driver_providers.dart';
 import '../domain/driver_models.dart';
 import 'driver_ride_screen.dart';
 import 'post_trip_summary_sheet.dart';
+import 'widgets/quick_chat_sheet.dart';
 
 /// The Active Trip tab for the Captain app.
 ///
@@ -957,13 +958,13 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _CustomerContactCard extends StatelessWidget {
+class _CustomerContactCard extends ConsumerWidget {
   const _CustomerContactCard({required this.task});
 
   final DispatchTaskModel task;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -990,18 +991,18 @@ class _CustomerContactCard extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.phone, color: AppTheme.emerald),
-                tooltip: 'Call customer',
+                tooltip: 'Call customer (masked)',
                 onPressed: () {
                   AppHaptics.light();
-                  // In production: launch tel: URI
+                  QuickChatSheet.show(context, ref);
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.message, color: AppTheme.emerald),
-                tooltip: 'SMS customer',
+                icon: const Icon(Icons.chat_bubble_outline, color: AppTheme.emerald),
+                tooltip: 'Quick message',
                 onPressed: () {
                   AppHaptics.light();
-                  // In production: launch sms: URI
+                  QuickChatSheet.show(context, ref);
                 },
               ),
             ],

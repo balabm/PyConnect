@@ -68,6 +68,88 @@ class DriverApi {
     return (data as List).cast<Map<String, dynamic>>();
   }
 
+  // ── Module 6: Garage ──
+
+  Future<List<Map<String, dynamic>>> getVehicles() async {
+    final data = await _api.get('/api/driver/vehicles');
+    return (data as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> addVehicle({
+    required String vehicleType,
+    required String registrationNumber,
+    String? color,
+    String? model,
+  }) async {
+    return await _api.post('/api/driver/vehicles', data: {
+      'vehicleType': vehicleType,
+      'registrationNumber': registrationNumber,
+      if (color != null) 'color': color,
+      if (model != null) 'model': model,
+    }) as Map<String, dynamic>;
+  }
+
+  Future<void> activateVehicle(String vehicleId) async {
+    await _api.post('/api/driver/vehicles/$vehicleId/activate');
+  }
+
+  Future<void> deleteVehicle(String vehicleId) async {
+    await _api.delete('/api/driver/vehicles/$vehicleId');
+  }
+
+  Future<Map<String, dynamic>> getComplianceStatus() async {
+    return await _api.get('/api/driver/compliance') as Map<String, dynamic>;
+  }
+
+  // ── Module 8: Preferences ──
+
+  Future<Map<String, dynamic>> getPreferences() async {
+    return await _api.get('/api/driver/preferences') as Map<String, dynamic>;
+  }
+
+  Future<void> setDestination(double latitude, double longitude, String? label) async {
+    await _api.put('/api/driver/preferences/destination', data: {
+      'latitude': latitude,
+      'longitude': longitude,
+      if (label != null) 'label': label,
+    });
+  }
+
+  Future<void> clearDestination() async {
+    await _api.delete('/api/driver/preferences/destination');
+  }
+
+  Future<void> updateServiceToggles({
+    bool? foodDelivery,
+    bool? rides,
+    bool? intercity,
+    bool? luggage,
+    bool? essentials,
+  }) async {
+    await _api.put('/api/driver/preferences/service-toggles', data: {
+      if (foodDelivery != null) 'foodDelivery': foodDelivery,
+      if (rides != null) 'rides': rides,
+      if (intercity != null) 'intercity': intercity,
+      if (luggage != null) 'luggage': luggage,
+      if (essentials != null) 'essentials': essentials,
+    });
+  }
+
+  // ── Module 9: Communication ──
+
+  Future<Map<String, dynamic>> initiateCall(String rideId) async {
+    return await _api.post('/api/driver/communications/call', data: {
+      'rideId': rideId,
+    }) as Map<String, dynamic>;
+  }
+
+  Future<void> sendQuickMessage(String rideId, String message) async {
+    await _api.post('/api/driver/communications/quick-message', data: {
+      'rideId': rideId,
+      'message': message,
+    });
+  }
+
   /// Emergency release: unassigns the driver from the task and pushes it
   /// back to the dispatch queue for the next nearest driver. Used when the
   /// driver has a breakdown or emergency and cannot complete the trip.

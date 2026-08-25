@@ -8,8 +8,15 @@ import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/driver_providers.dart';
+import '../data/driver_api.dart';
 import '../domain/driver_models.dart';
 import 'widgets/dispatch_task_card.dart';
+
+/// Fetches the driver's compliance status (document expiry warnings).
+final driverComplianceProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final api = ref.watch(driverApiProvider);
+  return await api.getComplianceStatus();
+});
 
 class DriverHomeScreen extends ConsumerStatefulWidget {
   const DriverHomeScreen({super.key});
@@ -23,14 +30,23 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   Widget build(BuildContext context) {
     final isOnline = ref.watch(driverOnlineStatusProvider);
     final walletAsync = ref.watch(driverWalletDetailProvider);
+    final complianceAsync = ref.watch(driverComplianceProvider);
 
     // Check if wallet is suspended (dispatch blocked)
     final walletSuspended = walletAsync.valueOrNull?.suspended ?? false;
+
+    // Check for compliance warnings (document expiry)
+    final compliance = complianceAsync.valueOrNull;
+    final hasComplianceWarnings = compliance != null &&
+        (compliance['hasUrgentWarnings'] as bool? ?? false);
+    final warnings = (compliance?['warnings'] as List<dynamic>?) ?? [];
 
     return Column(
       children: [
         _OnlineToggle(isOnline: isOnline),
         if (walletSuspended) const _DispatchBlockedBanner(),
+        if (hasComplianceWarnings && !walletSuspended)
+          _ComplianceWarningBanner(warnings: warnings.cast<Map<String, dynamic>>()),
         Expanded(
           child: walletSuspended
               ? _DispatchBlockedView(settleAmount: walletAsync.valueOrNull!.settleAmount)
@@ -65,6 +81,52 @@ class _DispatchBlockedBanner extends StatelessWidget {
           ),
           Icon(Icons.warning_amber_rounded, color: Colors.orange.shade300, size: 20),
         ],
+      ),
+    );
+  }
+}
+
+/// Orange warning banner shown when a driver's KYC document (license or
+/// vehicle insurance) is expiring within 7 days or has already expired.
+/// Tapping the banner navigates to the KYC upload screen.
+class _ComplianceWarningBanner extends StatelessWidget {
+  const _ComplianceWarningBanner({required this.warnings});
+  final List<Map<String, dynamic>> warnings;
+
+  @override
+  Widget build(BuildContext context) {
+    final firstWarning = warnings.isNotEmpty ? warnings.first : null;
+    final document = firstWarning?['document'] as String? ?? 'Document';
+    final daysLeft = firstWarning?['daysLeft'] as int? ?? 0;
+    final isExpired = (firstWarning?['status'] as String?) == 'expired';
+
+    final message = isExpired
+        ? '$document expired. Upload new document to avoid account suspension.'
+        : '$document expires in $daysLeft day${daysLeft == 1 ? '' : 's'}. Upload new document to avoid suspension.';
+
+    return GestureDetector(
+      onTap: () => context.push('/kyc'),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        color: isExpired ? Colors.red.shade800 : Colors.orange.shade700,
+        child: Row(
+          children: [
+            Icon(
+              isExpired ? Icons.dangerous : Icons.warning_amber_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white70, size: 20),
+          ],
+        ),
       ),
     );
   }
