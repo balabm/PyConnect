@@ -132,6 +132,7 @@ public interface IApplicationDbContext
     DbSet<P2pEventTicket> P2pEventTickets { get; }
     DbSet<DoorLogEntry> DoorLogEntries { get; }
     DbSet<EquipmentMaintenanceBlock> EquipmentMaintenanceBlocks { get; }
+    DbSet<VendorStaff> VendorStaffs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

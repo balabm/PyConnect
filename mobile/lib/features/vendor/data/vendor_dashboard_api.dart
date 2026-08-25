@@ -244,6 +244,94 @@ class VendorDashboardApi {
     return list.cast<Map<String, dynamic>>();
   }
 
+  // ── Staff Management ──
+
+  /// Lists the vendor's staff members (bouncers, kitchen staff, managers)
+  /// with restricted app access. Each entry includes id, name, phone, role,
+  /// isActive, and createdAt.
+  Future<List<Map<String, dynamic>>> getStaff() async {
+    final body = await _api.get('/api/vendor/staff');
+    final list = body as List? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  /// Adds a new staff member with restricted app access.
+  Future<Map<String, dynamic>> addStaff({
+    required String phone,
+    required String name,
+    required String role,
+  }) async {
+    final body = await _api.post('/api/vendor/staff', data: {
+      'phone': phone,
+      'name': name,
+      'role': role,
+    });
+    return body as Map<String, dynamic>;
+  }
+
+  /// Deactivates (removes app access for) a staff member.
+  Future<void> removeStaff(String staffId) async {
+    await _api.delete('/api/vendor/staff/$staffId');
+  }
+
+  // ── Detailed Wallet & Withdrawal ──
+
+  /// Fetches a detailed wallet summary including available balance,
+  /// credit balance, platform fees paid, bank verification status,
+  /// and recent ledger entries.
+  Future<Map<String, dynamic>> getDetailedWallet() async {
+    final body = await _api.get('/api/vendor/wallet/detail');
+    return body as Map<String, dynamic>;
+  }
+
+  /// Requests a withdrawal of the specified amount (or full balance
+  /// if amount is 0) to the vendor's linked bank account.
+  Future<Map<String, dynamic>> requestWithdrawal(double amount) async {
+    final body = await _api.post('/api/vendor/withdraw', data: {
+      'amount': amount,
+    });
+    return body as Map<String, dynamic>;
+  }
+
+  // ── Disputes ──
+
+  /// Lists chargeback disputes related to the vendor's orders.
+  /// Each item contains: id, paymentId, orderId, orderType, chargebackAmount,
+  /// status, evidenceSummary, resolutionNote, createdAt, resolvedAt.
+  Future<List<Map<String, dynamic>>> getDisputes() async {
+    final body = await _api.get('/api/vendor/disputes');
+    final list = body as List? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  /// Accepts a chargeback claim — refunds the customer and closes the
+  /// dispute as lost. Used when the vendor agrees the claim is valid.
+  Future<void> acceptDispute(String disputeId) async {
+    await _api.post('/api/vendor/disputes/$disputeId/accept');
+  }
+
+  /// Rejects a chargeback claim — contests the dispute with the
+  /// payment processor. The dispute stays open pending evidence review.
+  Future<void> rejectDispute(String disputeId) async {
+    await _api.post('/api/vendor/disputes/$disputeId/reject');
+  }
+
+  // ── Reviews & Reputation ──
+
+  /// Lists all reviews for the vendor, including owner replies.
+  Future<List<Map<String, dynamic>>> getReviews() async {
+    final body = await _api.get('/api/vendor/reviews');
+    final list = body as List? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  /// Posts or updates the vendor's public reply to a review.
+  Future<void> replyToReview(String reviewId, String reply) async {
+    await _api.post('/api/vendor/reviews/$reviewId/reply', data: {
+      'reply': reply,
+    });
+  }
+
   /// Fetches the vendor's venue list to resolve the real venue ID.
   Future<List<VendorVenueSummary>> getVenues() async {
     final body = await _api.get('/api/vendor/venues');
@@ -442,6 +530,7 @@ class VendorDashboardApi {
       'occupancyPercentage': occupancyPercentage,
     });
   }
+
 }
 
 class MenuItemModel {

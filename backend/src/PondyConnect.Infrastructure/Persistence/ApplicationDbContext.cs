@@ -143,6 +143,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<EquipmentMaintenanceBlock> EquipmentMaintenanceBlocks => Set<EquipmentMaintenanceBlock>();
 
+    public DbSet<VendorStaff> VendorStaffs => Set<VendorStaff>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

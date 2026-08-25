@@ -138,6 +138,34 @@ class ManageHubScreen extends ConsumerWidget {
         color: AppTheme.info,
         onTap: () { AppHaptics.light(); context.push('/printer-settings'); },
       ),
+      _ManageTile(
+        icon: Icons.people,
+        label: 'Manage Staff',
+        subtitle: 'Bouncers, chefs & managers',
+        color: AppTheme.coral,
+        onTap: () { AppHaptics.light(); context.push('/staff'); },
+      ),
+      _ManageTile(
+        icon: Icons.account_balance,
+        label: 'Finance',
+        subtitle: 'Ledger & withdrawals',
+        color: AppTheme.emerald,
+        onTap: () { AppHaptics.light(); context.push('/finance'); },
+      ),
+      _ManageTile(
+        icon: Icons.reviews,
+        label: 'Reviews',
+        subtitle: 'Ratings & replies',
+        color: AppTheme.warning,
+        onTap: () { AppHaptics.light(); context.push('/reviews'); },
+      ),
+      _ManageTile(
+        icon: Icons.gavel,
+        label: 'Disputes',
+        subtitle: 'Chargebacks & claims',
+        color: AppTheme.danger,
+        onTap: () { AppHaptics.light(); context.push('/disputes'); },
+      ),
     ];
 
     // Category-specific tiles

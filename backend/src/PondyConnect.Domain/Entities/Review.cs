@@ -18,6 +18,12 @@ public class Review : BaseEntity
     public decimal? TipAmount { get; private set; } // Optional tip
     public string? TipReference { get; private set; } // Razorpay reference
 
+    /// <summary>Owner's public reply to this review (vendor or driver).</summary>
+    public string? OwnerReply { get; private set; }
+
+    /// <summary>When the owner submitted their reply.</summary>
+    public DateTimeOffset? OwnerReplyedAt { get; private set; }
+
     private Review() { }
 
     public static Review Create(
@@ -37,5 +43,19 @@ public class Review : BaseEntity
             Feedback = feedback,
             TipAmount = tipAmount,
         };
+    }
+
+    /// <summary>
+    /// Sets the owner's public reply to this review. Only one reply
+    /// is allowed per review; calling this again overwrites the previous reply.
+    /// </summary>
+    public void SetOwnerReply(string reply)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reply);
+        if (reply.Length > 1000)
+            throw new ArgumentException("Reply must be under 1000 characters.", nameof(reply));
+        OwnerReply = reply;
+        OwnerReplyedAt = DateTimeOffset.UtcNow;
+        MarkUpdated();
     }
 }

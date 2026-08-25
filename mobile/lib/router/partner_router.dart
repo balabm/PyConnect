@@ -24,6 +24,10 @@ import '../features/vendor/presentation/equipment_inventory_screen.dart';
 import '../features/vendor/presentation/equipment_rentals_screen.dart';
 import '../features/vendor/presentation/equipment_detail_screen.dart';
 import '../features/vendor/presentation/vendor_event_manager_screen.dart';
+import '../features/vendor/presentation/staff_management_screen.dart';
+import '../features/vendor/presentation/vendor_finance_screen.dart';
+import '../features/vendor/presentation/vendor_disputes_screen.dart';
+import '../features/vendor/presentation/vendor_reviews_screen.dart';
 import '../features/vendor/data/equipment_api.dart';
 import '../features/vendor/presentation/vendor_registration_screen.dart';
 import '../features/vendor/presentation/printer_settings_screen.dart';
@@ -191,6 +195,23 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'events',
             builder: (_, _) => const VendorEventManagerScreen(),
+          ),
+          // ── Staff, Finance, Disputes, Reviews ──
+          GoRoute(
+            path: 'staff',
+            builder: (_, _) => const StaffManagementScreen(),
+          ),
+          GoRoute(
+            path: 'finance',
+            builder: (_, _) => const VendorFinanceScreen(),
+          ),
+          GoRoute(
+            path: 'disputes',
+            builder: (_, _) => const VendorDisputesScreen(),
+          ),
+          GoRoute(
+            path: 'reviews',
+            builder: (_, _) => const VendorReviewsScreen(),
           ),
           GoRoute(
             path: 'printer-settings',
