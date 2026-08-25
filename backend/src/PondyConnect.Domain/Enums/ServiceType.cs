@@ -7,5 +7,7 @@ public enum ServiceType
     Luggage = 3,
     Rental = 4,
     Experience = 5,
-    Homestay = 6
+    Homestay = 6,
+    EquipmentRental = 7,
+    P2pEvent = 8
 }

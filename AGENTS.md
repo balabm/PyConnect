@@ -79,7 +79,7 @@ A 4th web-only entry point `main_admin.dart` builds the Admin web app (not an An
 - Controllers use `[ApiController]` and `[Route("api/...")]`.
 - Swagger annotations with `[ProducesResponseType]` for all response types.
 - Rate limiting: `AuthPolicy` (5/60s), `OrderPolicy` (10/60s).
-- Service area validation: 3km radius around Pondicherry center (11.9356, 79.8301).
+- Service area validation: 50km radius around Pondicherry center (11.9356, 79.8301).
 
 ## Authentication
 - JWT Bearer tokens (60-min access tokens).
@@ -155,7 +155,9 @@ Require `CI` status checks before merging PRs to `main`.
 | Path | Serves |
 |------|--------|
 | `/` | Admin Flutter web app (`/var/www/admin/`) |
+| `/app/` | Consumer Flutter web app (`/var/www/app/`) |
 | `/partner/` | Partner Flutter web app (`/var/www/partner/`) |
+| `/driver/` | Driver Flutter web app (`/var/www/driver/`) |
 | `/api/` | Backend proxy → `localhost:5000` |
 | `/hubs/` | SignalR WebSocket proxy → `localhost:5000` |
 | `/health` | Backend health check |
@@ -175,7 +177,9 @@ Require `CI` status checks before merging PRs to `main`.
 
 ### Web app directories on EC2
 - `/var/www/admin/` — Admin Flutter web build (base href `/`)
+- `/var/www/app/` — Consumer Flutter web build (base href `/app/`)
 - `/var/www/partner/` — Partner Flutter web build (base href `/partner/`)
+- `/var/www/driver/` — Driver Flutter web build (base href `/driver/`)
 - `/var/www/static/` — Static pages (privacy policy)
 
 ### Deploy web apps manually
@@ -202,12 +206,22 @@ ssh -i s1bucket.pem ubuntu@16.16.120.192 "sudo cp -r /tmp/partner-web/* /var/www
 - **CORS origins**: ✅ Fixed — `Cors__AllowedOrigins__0=https://pyconnect.run.place` (verified in container env).
 - **JWT issuer/audience**: ✅ Fixed — `Jwt__Issuer` and `Jwt__Audience` both `https://pyconnect.run.place` (verified via freshly minted token payload). Container was recreated ~2026-08-15; existing browser tokens minted with the old `http://16.16.120.192` issuer are rejected with 401 — users must log out and back in once to get a valid token.
 
-## QA Status (Local)
+### Known app fixes
+- **Admin "Continue as Guest" bug**: ✅ Fixed — `PhoneEntryScreen` was using `appFlavorProvider` (which was not being overridden at runtime in web builds) instead of the compile-time `resolvedAppFlavor` constant. Fixed by using `resolvedAppFlavor` directly and checking `flavor == AppFlavor.consumer` before showing the guest button. Admin and Partner/Driver apps no longer show "Continue as Guest".
+
+## QA Status (Local + Deployed)
 - **Backend build**: 0 errors, 0 warnings
-- **Architecture tests**: 288/288 pass
-- **Flutter analyze**: 0 errors (28 info/warnings — pre-existing, non-blocking)
-- **Release APKs**: 3 built (Consumer, Driver, Partner — 76.5 MB each)
-- **Web apps**: Admin + Partner deployed & verified on EC2
+- **Architecture tests**: 289/289 pass
+- **Flutter analyze**: 0 errors (120 info/warnings — pre-existing, non-blocking)
+- **Release APKs**: Consumer/Driver/Partner 81.7MB each built & installed on emulator
+- **Web apps**: Admin, Partner, Consumer (/app/), Driver (/driver/) all deployed & verified on EC2
+- **Emulator QA**: Consumer, Driver, Partner apps launched & verified on emulator-5554
+- **Admin web QA**: Dashboard, Drivers, Vendors, Live Ops (Live Map), SOS, Tickets, Users, KYC, Audit Logs, Finance all verified via Playwright
+- **Partner web QA**: Auth, Dashboard, KDS, Food Menu, Scanner, Manage all verified via Playwright
+- **Consumer web QA**: Auth, Home (Nightlife), Party Builder (NEW), Create Event (NEW), Events List (NEW - 404 pending backend), Food, Transit, Stays, Activity, More Services, Venue Detail all verified via Playwright
+- **Driver web QA**: Registration screen verified via Playwright
+- **Comprehensive QA Report**: `qa-reports/QA_REPORT_V2.md` (35 tests, 32 pass, 3 warn, 0 fail, 6 bugs found)
+- **NEW Features (pending backend deploy)**: Equipment Rental, P2P Events, QR Scanner, Host Payouts
 
 ## Testing Notes
 - Integration tests (`PondyConnect.Api.Tests`) hit the deployed backend and may fail with 429 (rate limiting).

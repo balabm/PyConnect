@@ -5,6 +5,7 @@ import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
 import '../../../core/design/design.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/skeleton_loaders.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/waiver_sheet.dart';
@@ -128,14 +129,10 @@ class _TripsPickupTab extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         hubs.when(
-          loading: () => const Center(child: Padding(
-            padding: EdgeInsets.all(24),
-            child: CircularProgressIndicator(),
-          )),
-          error: (e, _) => Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-            child: Text('Could not load transit hubs: $e', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+          loading: () => const SkeletonList(type: SkeletonType.booking, count: 3),
+          error: (e, _) => ErrorState(
+            message: 'Could not load transit hubs: $e',
+            onRetry: () => ref.invalidate(transitHubsProvider),
           ),
           data: (hubs) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -194,11 +191,10 @@ class _TripsPickupTab extends ConsumerWidget {
           Text('Your Pickups', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
           trips.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-              child: Text('$e', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+            loading: () => const SkeletonList(type: SkeletonType.booking, count: 2),
+            error: (e, _) => ErrorState(
+              message: '$e',
+              onRetry: () => ref.invalidate(userTripsProvider),
             ),
             data: (items) => items.isEmpty
                 ? Center(
@@ -283,7 +279,7 @@ class _TripCard extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: AppTheme.emerald.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: Icon(
                     trip.arrivalMode == 'Flight' ? Icons.flight_takeoff
@@ -395,7 +391,7 @@ class _TripBookingSheetState extends ConsumerState<_TripBookingSheet> {
             controller: _from,
             decoration: InputDecoration(
               labelText: 'Arriving from (e.g. Bengaluru)',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
           ),
           const SizedBox(height: 12),
@@ -454,7 +450,7 @@ class _TripBookingSheetState extends ConsumerState<_TripBookingSheet> {
             controller: _dropoff,
             decoration: InputDecoration(
               labelText: 'Drop-off (hotel / area) — optional',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
           ),
           const SizedBox(height: 12),
@@ -466,7 +462,7 @@ class _TripBookingSheetState extends ConsumerState<_TripBookingSheet> {
             Container(
               margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppRadius.md)),
               child: Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13)),
             ),
           const SizedBox(height: 16),
@@ -545,7 +541,7 @@ class _LuggageCloakTab extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.emerald.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.2)),
             ),
             child: Row(
@@ -560,14 +556,10 @@ class _LuggageCloakTab extends ConsumerWidget {
         else ...[
           // Vendor list
           vendors.when(
-            loading: () => const Center(child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
-            )),
-            error: (e, _) => Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-              child: Text('Could not load cloak points: $e', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+            loading: () => const SkeletonList(type: SkeletonType.booking, count: 3),
+            error: (e, _) => ErrorState(
+              message: 'Could not load cloak points: $e',
+              onRetry: () => ref.invalidate(luggageCloakVendorsProvider),
             ),
             data: (vendorList) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -651,11 +643,10 @@ class _LuggageCloakTab extends ConsumerWidget {
           Text('Your Bookings', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
           dropOffs.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-              child: Text('$e', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+            loading: () => const SkeletonList(type: SkeletonType.booking, count: 2),
+            error: (e, _) => ErrorState(
+              message: '$e',
+              onRetry: () => ref.invalidate(userLuggageProvider),
             ),
             data: (items) => items.isEmpty
                 ? Center(
@@ -745,7 +736,7 @@ class _LuggageBookingCard extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: AppTheme.emerald.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: const Icon(Icons.luggage, color: AppTheme.emerald, size: 22),
                 ),
@@ -876,7 +867,7 @@ class _LuggageBookingSheetState extends ConsumerState<_LuggageBookingSheet> {
             Container(
               margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppRadius.md)),
               child: Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13)),
             ),
           const SizedBox(height: 16),
@@ -940,7 +931,7 @@ class _MobilityTab extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.emerald.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.2)),
             ),
             child: Row(
@@ -954,14 +945,10 @@ class _MobilityTab extends ConsumerWidget {
           )
         else ...[
           vendors.when(
-            loading: () => const Center(child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
-            )),
-            error: (e, _) => Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-              child: Text('Could not load rental partners: $e', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+            loading: () => const SkeletonList(type: SkeletonType.booking, count: 3),
+            error: (e, _) => ErrorState(
+              message: 'Could not load rental partners: $e',
+              onRetry: () => ref.invalidate(scooterRentalVendorsProvider),
             ),
             data: (vendorList) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1044,11 +1031,10 @@ class _MobilityTab extends ConsumerWidget {
           Text('Your Rentals', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
           rentals.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-              child: Text('$e', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+            loading: () => const SkeletonList(type: SkeletonType.booking, count: 2),
+            error: (e, _) => ErrorState(
+              message: '$e',
+              onRetry: () => ref.invalidate(userRentalsProvider),
             ),
             data: (items) => items.isEmpty
                 ? Center(
@@ -1117,7 +1103,7 @@ class _RentalCard extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: AppTheme.emerald.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: const Icon(Icons.two_wheeler, color: AppTheme.emerald, size: 22),
                 ),
@@ -1236,7 +1222,7 @@ class _RentalBookingSheetState extends ConsumerState<_RentalBookingSheet> {
             Container(
               margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppRadius.md)),
               child: Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13)),
             ),
           const SizedBox(height: 16),

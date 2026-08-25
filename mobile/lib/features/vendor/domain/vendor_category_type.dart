@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 ///
 /// Backend values (PondyConnect.Domain.Enums.VendorCategory):
 ///   LuggageCloak = 1, ScooterRental = 2, TaxiOperator = 3,
-///   PubClub = 4, Restaurant = 5, Cafe = 6, Pizzeria = 7
+///   PubClub = 4, Restaurant = 5, Cafe = 6, Pizzeria = 7,
+///   PartySupplier = 8
 enum VendorCategoryType {
   luggageCloak('LuggageCloak', 'Luggage Cloak', Icons.luggage),
   scooterRental('ScooterRental', 'Scooter Rental', Icons.electric_scooter),
@@ -13,7 +14,8 @@ enum VendorCategoryType {
   pubClub('PubClub', 'Pub & Club', Icons.nightlife),
   restaurant('Restaurant', 'Restaurant', Icons.restaurant),
   cafe('Cafe', 'Cafe', Icons.coffee),
-  pizzeria('Pizzeria', 'Pizzeria', Icons.local_pizza);
+  pizzeria('Pizzeria', 'Pizzeria', Icons.local_pizza),
+  partySupplier('PartySupplier', 'Equipment Rental', Icons.speaker);
 
   const VendorCategoryType(this.backendName, this.displayName, this.icon);
 
@@ -52,6 +54,9 @@ enum VendorCategoryType {
   /// Luggage cloak vendors get capacity management + bookings.
   bool get isCloakVendor => this == luggageCloak;
 
+  /// Equipment/party suppliers get inventory + rental asset tracking.
+  bool get isEquipmentVendor => this == partySupplier;
+
   /// Whether this category uses the Kitchen Display System.
   bool get hasKds => isFoodVendor || isBeverageVendor;
 
@@ -64,6 +69,9 @@ enum VendorCategoryType {
   /// Whether this category has bookings (non-food, non-beverage).
   bool get hasBookings => isCloakVendor;
 
+  /// Whether this category has equipment inventory management.
+  bool get hasEquipmentInventory => isEquipmentVendor;
+
   /// The label for the second tab (category-specific).
   String get secondaryTabLabel => switch (this) {
         restaurant || cafe || pizzeria => 'KDS',
@@ -71,6 +79,7 @@ enum VendorCategoryType {
         scooterRental => 'Active Rentals',
         taxiOperator => 'Live Rides',
         luggageCloak => 'Storage Intake',
+        partySupplier => 'Active Rentals',
       };
 
   /// The label for the third tab (category-specific).
@@ -80,5 +89,6 @@ enum VendorCategoryType {
         scooterRental => 'Fleet',
         taxiOperator => 'Taxi Fleet',
         luggageCloak => 'Capacity',
+        partySupplier => 'Inventory',
       };
 }

@@ -96,7 +96,7 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
                   ? [const Color(0xFF1A2E1F), const Color(0xFF0D1A12)]
                   : [const Color(0xFF0D5C3F), const Color(0xFF0A4A33)],
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             boxShadow: [BoxShadow(color: AppTheme.emerald.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 4))],
           ),
           child: Row(
@@ -105,7 +105,7 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: const Icon(Icons.celebration, color: Colors.white, size: 28),
               ),
@@ -340,42 +340,48 @@ class _VenueCard extends StatelessWidget {
         ? venue.imageUrl!
         : fallbackImage;
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.light();
-        context.push('/venues/${venue.id}', extra: venue);
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Theme.of(context).brightness == Brightness.dark
-              ? Border.all(color: AppTheme.darkBorder)
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black.withValues(alpha: 0.3)
-                  : AppTheme.cardShadow,
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image section with overlaid pills
-            Stack(
-              children: [
-                AppNetworkImage(
-                  imageUrl: imageUrl,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  fallbackIcon: Icons.local_bar_outlined,
-                ),
+    return Semantics(
+      button: true,
+      label: '${venue.name}, ${venue.isOpen ? 'open' : 'closed'} now, ${occupancyPct}% busy',
+      hint: 'Tap to view venue details',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.light();
+          context.push('/venues/${venue.id}', extra: venue);
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Theme.of(context).brightness == Brightness.dark
+                ? Border.all(color: AppTheme.darkBorder)
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : AppTheme.cardShadow,
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image section with overlaid pills
+              Stack(
+                children: [
+                  ExcludeSemantics(
+                    child: AppNetworkImage(
+                      imageUrl: imageUrl,
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      fallbackIcon: Icons.local_bar_outlined,
+                    ),
+                  ),
                 // Bottom gradient for pill readability
                 Positioned(
                   bottom: 0,
@@ -402,7 +408,7 @@ class _VenueCard extends StatelessWidget {
                       color: venue.isOpen
                           ? AppTheme.emerald
                           : AppTheme.danger,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -434,7 +440,7 @@ class _VenueCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: AppTheme.emerald,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
@@ -462,7 +468,7 @@ class _VenueCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -489,7 +495,7 @@ class _VenueCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -560,6 +566,7 @@ class _VenueCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

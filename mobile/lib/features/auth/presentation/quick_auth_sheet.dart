@@ -235,7 +235,7 @@ class _QuickAuthSheetState extends ConsumerState<QuickAuthSheet> {
           decoration: InputDecoration(
             prefixText: '+91 ',
             labelText: 'Mobile Number',
-            hintText: '98765 43210',
+            hintText: '90000 00000',
             counterText: '',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),

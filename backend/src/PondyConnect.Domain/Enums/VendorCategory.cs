@@ -8,5 +8,6 @@ public enum VendorCategory
     PubClub = 4,
     Restaurant = 5,
     Cafe = 6,
-    Pizzeria = 7
+    Pizzeria = 7,
+    PartySupplier = 8
 }

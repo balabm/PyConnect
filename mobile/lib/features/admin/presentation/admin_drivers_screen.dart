@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/design/app_network_image.dart';
@@ -21,12 +23,25 @@ class _AdminDriversScreenState extends ConsumerState<AdminDriversScreen> {
   static const int _pageSize = 20;
   String _search = '';
   final TextEditingController _searchCtrl = TextEditingController();
+  Timer? _debounce;
   _DriverFilter _filter = _DriverFilter.all;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      setState(() {
+        _search = value.trim();
+        _resetPage();
+      });
+    });
   }
 
   AdminListParams get _params => AdminListParams(
@@ -162,6 +177,7 @@ class _AdminDriversScreenState extends ConsumerState<AdminDriversScreen> {
                 _search = v.trim();
                 _resetPage();
               }),
+              onChanged: _onSearchChanged,
             ),
           ),
           // Filter chips

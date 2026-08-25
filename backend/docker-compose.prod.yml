@@ -58,6 +58,11 @@ services:
         # --- CORS: production allowed origins (localhost removed for security) ---
       Cors__AllowedOrigins__0: "https://pyconnect.run.place"
 
+        # --- Service area (radius around Pondicherry center) ---
+      ServiceArea__CenterLatitude: "${SERVICE_AREA_CENTER_LAT:-11.9356}"
+      ServiceArea__CenterLongitude: "${SERVICE_AREA_CENTER_LNG:-79.8301}"
+      ServiceArea__RadiusKm: "${SERVICE_AREA_RADIUS_KM:-50.0}"
+
         # --- WhatsApp Business API ---
       WhatsApp__AccessToken: "${WHATSAPP_ACCESS_TOKEN:-}"
       WhatsApp__PhoneNumberId: "${WHATSAPP_PHONE_NUMBER_ID:-}"
@@ -88,6 +93,9 @@ services:
       # Upload to ~/firebase-service-account.json on the EC2 host, then set
       # FIREBASE_IS_ENABLED=true in .env to activate push notifications.
       - ~/firebase-service-account.json:/app/firebase-service-account.json:ro
+      # Persist uploaded files (KYC docs, venue images, delivery proofs) to the host.
+      # Nginx serves /uploads/ directly from /var/www/uploads.
+      - /var/www/uploads:/app/wwwroot/uploads
     depends_on:
       redis:
         condition: service_healthy

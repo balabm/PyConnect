@@ -1,13 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../auth/application/vendor_auth_controller.dart';
 import '../data/vendor_dashboard_api.dart';
+import '../data/equipment_api.dart';
 import '../data/kds_api.dart';
 import '../services/thermal_printer_service.dart';
 import '../../scanner/data/scanner_api.dart';
 
 final vendorDashboardApiProvider = Provider<VendorDashboardApi>((ref) {
   return VendorDashboardApi(ref.read(apiClientProvider));
+});
+
+final equipmentApiProvider = Provider<EquipmentApi>((ref) {
+  return EquipmentApi(ref.read(apiClientProvider));
 });
 
 final kdsApiProvider = Provider<KdsApi>((ref) {
@@ -277,6 +283,8 @@ final venueDetailProvider =
 
 class VenueDetailNotifier extends StateNotifier<AsyncValue<VendorVenueDetail?>> {
   VenueDetailNotifier(this._ref) : super(const AsyncValue.loading()) {
+    // Reload venue data whenever the vendor auth session changes (login, sign out, vendor switch).
+    _ref.listen(vendorAuthControllerProvider, (_, __) => load());
     load();
   }
 

@@ -21,6 +21,8 @@ import '../features/vendor/presentation/active_rentals_screen.dart';
 import '../features/vendor/presentation/taxi_fleet_screen.dart';
 import '../features/vendor/presentation/taxi_rides_screen.dart';
 import '../features/vendor/presentation/cloak_capacity_screen.dart';
+import '../features/vendor/presentation/equipment_inventory_screen.dart';
+import '../features/vendor/presentation/equipment_rentals_screen.dart';
 import '../features/vendor/presentation/crowd_dashboard_screen.dart';
 import '../features/vendor/presentation/promo_sheet.dart';
 import '../features/scanner/presentation/scanner_screen.dart';
@@ -171,6 +173,13 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
             ScannerScreen(),
             ManageHubScreen(),
           ],
+        VendorCategoryType.partySupplier => const [
+            VendorDashboardScreen(),
+            EquipmentRentalsScreen(),
+            EquipmentInventoryScreen(),
+            ScannerScreen(),
+            ManageHubScreen(),
+          ],
       };
 
   List<NavigationDestination> _buildDestinations(BuildContext context) {
@@ -205,6 +214,11 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           selectedIcon: Icon(Icons.luggage, color: selectedColor),
           label: 'Storage Intake',
         ),
+      VendorCategoryType.partySupplier => NavigationDestination(
+          icon: Icon(Icons.inventory_2_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.inventory_2, color: selectedColor),
+          label: 'Active Rentals',
+        ),
     };
 
     final tertiary = switch (_category) {
@@ -234,6 +248,11 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           icon: Icon(Icons.event_outlined, color: inactiveColor),
           selectedIcon: Icon(Icons.event, color: selectedColor),
           label: 'Capacity',
+        ),
+      VendorCategoryType.partySupplier => NavigationDestination(
+          icon: Icon(Icons.speaker_outlined, color: inactiveColor),
+          selectedIcon: Icon(Icons.speaker, color: selectedColor),
+          label: 'Inventory',
         ),
     };
 

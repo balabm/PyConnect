@@ -900,6 +900,156 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                     b.ToTable("emergency_contacts", (string)null);
                 });
 
+            modelBuilder.Entity("PondyConnect.Domain.Entities.EquipmentItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AvailableUnits")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<decimal>("DailyRentalPrice")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<decimal>("SecurityDepositAmount")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<int>("TotalUnits")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("VendorId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsAvailable");
+
+                    b.HasIndex("VendorId");
+
+                    b.ToTable("equipment_items", (string)null);
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.EquipmentRental", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ActualReturnAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("ConditionPhotosJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<decimal>("DailyRate")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("DeliveryAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("DepositPaymentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("DepositPenalty")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal>("DepositRefunded")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("EquipmentItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<DateTimeOffset>("RentalEnd")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<DateTimeOffset>("RentalStart")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("ReturnConditionPhotosJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<decimal>("SecurityDeposit")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<int>("UnitsBooked")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VendorId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("VendorId");
+
+                    b.HasIndex("VendorId", "Status");
+
+                    b.ToTable("equipment_rentals", (string)null);
+                });
+
             modelBuilder.Entity("PondyConnect.Domain.Entities.FoodOrder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1416,6 +1566,147 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                     b.HasIndex("MenuItemId");
 
                     b.ToTable("modifier_groups", (string)null);
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.P2pEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("CapacityLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<decimal>("EntryPrice")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("HostUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("PlatformFeePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("TicketsSold")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("WhatsOffered")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HostUserId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("p2p_events", (string)null);
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.P2pEventTicket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BuyerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CheckedInAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<decimal>("HostPayout")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("P2pEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PassToken")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<decimal>("PlatformFee")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal>("PricePaid")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTimeOffset>("PurchasedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("P2pEventId");
+
+                    b.HasIndex("PassToken")
+                        .IsUnique()
+                        .HasFilter("\"PassToken\" IS NOT NULL");
+
+                    b.HasIndex("P2pEventId", "BuyerUserId");
+
+                    b.ToTable("p2p_event_tickets", (string)null);
                 });
 
             modelBuilder.Entity("PondyConnect.Domain.Entities.Payment", b =>
@@ -3747,6 +4038,33 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("MenuItem");
+                });
+
+            modelBuilder.Entity("PondyConnect.Domain.Entities.P2pEvent", b =>
+                {
+                    b.OwnsOne("PondyConnect.Domain.ValueObjects.GeoLocation", "Location", b1 =>
+                        {
+                            b1.Property<Guid>("P2pEventId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<double>("Latitude")
+                                .HasColumnType("double precision")
+                                .HasColumnName("location_lat");
+
+                            b1.Property<double>("Longitude")
+                                .HasColumnType("double precision")
+                                .HasColumnName("location_lng");
+
+                            b1.HasKey("P2pEventId");
+
+                            b1.ToTable("p2p_events");
+
+                            b1.WithOwner()
+                                .HasForeignKey("P2pEventId");
+                        });
+
+                    b.Navigation("Location")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PondyConnect.Domain.Entities.PaymentSettlement", b =>

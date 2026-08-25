@@ -127,7 +127,7 @@ public sealed class WalletService
         _ = await GetOrCreateWalletAsync(driverId, ct);
 
         var receipt = $"wallet-topup-{driverId.ToString().Substring(0, 8)}-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-        var order = await _paymentGateway.CreateOrderAsync(amount, "INR", receipt, ct);
+        var order = await _paymentGateway.CreateOrderAsync(amount, "INR", receipt, cancellationToken: ct);
 
         if (!order.Success || order.OrderId is null)
             throw new InvalidOperationException(order.ErrorMessage ?? "Failed to create Razorpay order for wallet top-up.");
@@ -297,6 +297,36 @@ public sealed class WalletService
             wallet.Suspended,
             wallet.LastSettledAt,
             transactions);
+    }
+
+    /// <summary>
+    /// Credits a P2P event host payout (95% of ticket price) to the
+    /// host's UserWallet real balance. Creates the wallet if it does
+    /// not yet exist. The remaining 5% platform fee is retained by the
+    /// platform and recorded via the ledger service.
+    /// </summary>
+    public async Task CreditHostPayoutAsync(
+        Guid hostUserId,
+        decimal amount,
+        string reference,
+        string description,
+        CancellationToken cancellationToken = default)
+    {
+        if (hostUserId == Guid.Empty)
+            throw new ArgumentException("Host user ID is required.", nameof(hostUserId));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount, nameof(amount));
+
+        var wallet = await _context.UserWallets
+            .FirstOrDefaultAsync(w => w.UserId == hostUserId, cancellationToken);
+
+        if (wallet is null)
+        {
+            wallet = UserWallet.Create(hostUserId);
+            _context.UserWallets.Add(wallet);
+        }
+
+        wallet.CreditReal(amount);
+        _logger.LogInformation("P2P host payout credited: {Amount} to user {HostUserId} (ref: {Reference})", amount, hostUserId, reference);
     }
 }
 

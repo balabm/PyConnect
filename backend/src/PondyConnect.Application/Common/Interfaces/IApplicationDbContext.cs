@@ -125,6 +125,12 @@ public interface IApplicationDbContext
 
     DbSet<GuestKyc> GuestKycs { get; }
 
+    // ── Party Ecosystem ──
+    DbSet<EquipmentItem> EquipmentItems { get; }
+    DbSet<EquipmentRental> EquipmentRentals { get; }
+    DbSet<P2pEvent> P2pEvents { get; }
+    DbSet<P2pEventTicket> P2pEventTickets { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

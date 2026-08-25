@@ -57,40 +57,46 @@ class _HomestayCardState extends State<HomestayCard> {
   Widget build(BuildContext context) {
     final images = _images;
     final homestay = widget.homestay;
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black.withValues(alpha: 0.3)
-                  : AppTheme.cardShadow,
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
+    return Semantics(
+      button: true,
+      label: '${homestay.name}, ${homestay.locationArea}, ₹${homestay.nightlyRate.toInt()} per night',
+      hint: 'Tap to view stay details',
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : AppTheme.cardShadow,
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
               children: [
                 // 16:9 image carousel
-                AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: images.length,
-                    onPageChanged: (i) => setState(() => _currentPage = i),
-                    itemBuilder: (context, index) => AppNetworkImage(
-                      imageUrl: images[index],
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      fallbackIcon: Icons.home_work_outlined,
+                ExcludeSemantics(
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: images.length,
+                      onPageChanged: (i) => setState(() => _currentPage = i),
+                      itemBuilder: (context, index) => AppNetworkImage(
+                        imageUrl: images[index],
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        fallbackIcon: Icons.home_work_outlined,
+                      ),
                     ),
                   ),
                 ),
@@ -239,6 +245,7 @@ class _HomestayCardState extends State<HomestayCard> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

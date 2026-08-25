@@ -245,7 +245,7 @@ class ServicesHubScreen extends ConsumerWidget {
                     const SnackBar(content: Text('Support chat is coming soon.')),
                   );
                 } else {
-                  context.go(service.route);
+                  context.push(service.route);
                 }
               },
             ),

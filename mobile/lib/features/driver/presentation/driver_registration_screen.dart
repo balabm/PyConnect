@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,6 +23,7 @@ class DriverRegistrationScreen extends ConsumerStatefulWidget {
 
 class _DriverRegistrationScreenState
     extends ConsumerState<DriverRegistrationScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _plateController = TextEditingController();
@@ -40,18 +42,8 @@ class _DriverRegistrationScreenState
     super.dispose();
   }
 
-  bool get _isValid =>
-      _nameController.text.trim().isNotEmpty &&
-      _phoneController.text.trim().length >= 10 &&
-      _plateController.text.trim().isNotEmpty &&
-      _licenseController.text.trim().isNotEmpty;
-
   Future<void> _submit() async {
-    if (!_isValid) {
-      AppToast.show(context, 'Please fill in all required fields',
-          type: ToastType.warning);
-      return;
-    }
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _isSubmitting = true);
     AppHaptics.medium();
@@ -108,15 +100,17 @@ class _DriverRegistrationScreenState
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Header
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppTheme.emerald.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
               child: Row(
                 children: [
@@ -124,7 +118,7 @@ class _DriverRegistrationScreenState
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppTheme.emerald.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: Icon(Icons.two_wheeler,
                         color: AppTheme.emerald, size: 28),
@@ -157,7 +151,7 @@ class _DriverRegistrationScreenState
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-            TextField(
+            TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Full Name',
@@ -165,17 +159,36 @@ class _DriverRegistrationScreenState
                 prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter your full name';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: AppSpacing.md),
-            TextField(
+            TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
+              maxLength: 10,
               decoration: const InputDecoration(
                 labelText: 'Phone Number',
                 hintText: '10-digit mobile number',
+                prefixText: '+91 ',
                 prefixIcon: Icon(Icons.phone_outlined),
                 border: OutlineInputBorder(),
+                counterText: '',
               ),
+              validator: (value) {
+                final digits = (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+                if (digits.length != 10) {
+                  return 'Enter a valid 10-digit phone number';
+                }
+                return null;
+              },
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+              ],
             ),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<String>(
@@ -194,7 +207,7 @@ class _DriverRegistrationScreenState
               onChanged: (v) => setState(() => _vehicleType = v ?? 'Bike'),
             ),
             const SizedBox(height: AppSpacing.md),
-            TextField(
+            TextFormField(
               controller: _plateController,
               decoration: const InputDecoration(
                 labelText: 'Vehicle Plate Number',
@@ -202,9 +215,15 @@ class _DriverRegistrationScreenState
                 prefixIcon: Icon(Icons.numbers),
                 border: OutlineInputBorder(),
               ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter your vehicle plate number';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: AppSpacing.md),
-            TextField(
+            TextFormField(
               controller: _licenseController,
               decoration: const InputDecoration(
                 labelText: 'Driving License Number',
@@ -212,6 +231,12 @@ class _DriverRegistrationScreenState
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter your driving license number';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: AppSpacing.xl),
             FilledButton(
@@ -225,7 +250,33 @@ class _DriverRegistrationScreenState
                     )
                   : const Text('Register as Captain'),
             ),
+            const SizedBox(height: AppSpacing.lg),
+            // Login link for existing captains
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  AppHaptics.light();
+                  context.go('/auth');
+                },
+                child: RichText(
+                  text: TextSpan(
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    children: [
+                      const TextSpan(text: 'Already a captain? '),
+                      TextSpan(
+                        text: 'Login',
+                        style: TextStyle(
+                          color: AppTheme.emerald,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
+        ),
         ),
       ),
     );

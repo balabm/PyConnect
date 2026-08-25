@@ -101,9 +101,12 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final phone = ref.watch(phoneNumberProvider);
-    final flavor = ref.watch(appFlavorProvider);
+    // Use the compile-time resolved flavor (from --dart-define=APP_FLAVOR)
+    // rather than the provider, which may not be overridden in all scopes.
+    final flavor = resolvedAppFlavor;
     final isPartner = flavor == AppFlavor.partner;
     final isDriver = flavor == AppFlavor.driver;
+    final isAdmin = flavor == AppFlavor.admin;
     final authState = isPartner
         ? ref.watch(vendorAuthControllerProvider)
         : ref.watch(authControllerProvider);
@@ -128,7 +131,7 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
               Expanded(
                 flex: 2,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 40),
+                  padding: const EdgeInsets.only(top: AppSpacing.xxl),
                   child: Column(
                     children: [
                       // Logo circle with bounce-in animation
@@ -156,7 +159,7 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.lg),
                       // Brand name with fade-in
                       FadeSlideIn(
                         delay: const Duration(milliseconds: 200),
@@ -172,13 +175,13 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       FadeSlideIn(
                         delay: const Duration(milliseconds: 350),
                         duration: const Duration(milliseconds: 500),
                         offset: const Offset(0, 0.1),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
                           child: Text(
                             'Your all-in-one Pondicherry companion.\nFrom arrival to departure.',
                             textAlign: TextAlign.center,
@@ -210,11 +213,11 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                       ),
                     ),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(28),
+                      padding: const EdgeInsets.all(AppSpacing.xxl),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppSpacing.sm),
                           Text(
                             isGoogleLinking ? 'Finish with Google' : 'Welcome',
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -232,14 +235,14 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                               fontSize: 14,
                             ),
                           ),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: AppSpacing.xxl),
                           // Error message
                           if (error != null) ...[
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(AppSpacing.md),
                               decoration: BoxDecoration(
                                 color: AppTheme.danger.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                                 border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
                               ),
                               child: Row(
@@ -255,18 +258,18 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: AppSpacing.lg),
                           ],
                           // Phone input with +91 prefix
                           Container(
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
                               border: Border.all(color: Theme.of(context).dividerColor),
                             ),
                             child: Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
                                   child: Row(
                                     children: [
                                       Text(
@@ -277,7 +280,7 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                                           color: Theme.of(context).colorScheme.onSurface,
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: AppSpacing.sm),
                                       Container(width: 1, height: 24, color: Theme.of(context).dividerColor),
                                     ],
                                   ),
@@ -292,12 +295,12 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                                       letterSpacing: 1.5,
                                     ),
                                     decoration: const InputDecoration(
-                                      hintText: '98765 43210',
+                                      hintText: '90000 00000',
                                       counterText: '',
                                       border: InputBorder.none,
                                       enabledBorder: InputBorder.none,
                                       focusedBorder: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
                                     ),
                                     onChanged: (v) =>
                                         ref.read(phoneNumberProvider.notifier).state = v.replaceAll(RegExp(r'[^0-9]'), ''),
@@ -306,7 +309,7 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppSpacing.xxl),
                           // Get OTP button — uses theme default (charcoal in light, light grey in dark)
                           FilledButton(
                             style: FilledButton.styleFrom(
@@ -336,13 +339,13 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                                   )
                                 : const Text('Get OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: AppSpacing.xl),
                           // Divider
                           Row(
                             children: [
                               Expanded(child: Divider(color: Theme.of(context).dividerColor)),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                                 child: Text(
                                   'or',
                                   style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
@@ -351,7 +354,7 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                               Expanded(child: Divider(color: Theme.of(context).dividerColor)),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: AppSpacing.xl),
                           // Google sign-in (consumer only — vendors must authenticate)
                           if (_kShowGoogleSignIn && !isPartner)
                             OutlinedButton.icon(
@@ -380,9 +383,9 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                                 ),
                               ),
                             ),
-                          const SizedBox(height: 12),
-                          // Continue as Guest (consumer only — vendors and drivers must authenticate)
-                          if (!isPartner && !isDriver)
+                          const SizedBox(height: AppSpacing.md),
+                          // Continue as Guest (consumer only — vendors, drivers, and admins must authenticate)
+                          if (flavor == AppFlavor.consumer)
                             TextButton(
                               onPressed: () {
                                 ref.read(hasSeenAuthScreenProvider.notifier).state = true;

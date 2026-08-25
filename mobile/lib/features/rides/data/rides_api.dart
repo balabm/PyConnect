@@ -121,7 +121,7 @@ class RideHailingApi {
     return await _api.get('/api/rides', queryParameters: {'page': page, 'pageSize': pageSize}) as List<dynamic>;
   }
 
-  Future<List<dynamic>> nearbyDrivers(double lat, double lng, {double radius = 3.0}) async {
+  Future<List<dynamic>> nearbyDrivers(double lat, double lng, {double radius = 50.0}) async {
     return await _api.get('/api/rides/nearby-drivers', queryParameters: {'lat': lat, 'lng': lng, 'radius': radius}) as List<dynamic>;
   }
 

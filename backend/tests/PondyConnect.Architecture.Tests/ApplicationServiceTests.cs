@@ -222,7 +222,7 @@ public sealed class ServiceAreaValidatorTests
         {
             CenterLatitude = 11.9356,
             CenterLongitude = 79.8301,
-            RadiusKm = radiusKm ?? 3.0
+            RadiusKm = radiusKm ?? 50.0
         };
         return new ServiceAreaValidator(Options.Create(options));
     }
@@ -234,7 +234,7 @@ public sealed class ServiceAreaValidatorTests
         var result = validator.ValidateLocation(GeoLocation.Create(11.936, 79.831));
 
         result.IsWithinZone.Should().BeTrue();
-        result.DistanceKm.Should().BeLessThan(3.0);
+        result.DistanceKm.Should().BeLessThan(50.0);
     }
 
     [Fact]
@@ -244,7 +244,7 @@ public sealed class ServiceAreaValidatorTests
         var result = validator.ValidateLocation(GeoLocation.Create(12.5, 80.0));
 
         result.IsWithinZone.Should().BeFalse();
-        result.DistanceKm.Should().BeGreaterThan(3.0);
+        result.DistanceKm.Should().BeGreaterThan(50.0);
     }
 
     [Fact]
@@ -263,7 +263,7 @@ public sealed class ServiceAreaValidatorTests
 
         validator.Center.Latitude.Should().Be(11.9356);
         validator.Center.Longitude.Should().Be(79.8301);
-        validator.RadiusKm.Should().Be(3.0);
+        validator.RadiusKm.Should().Be(50.0);
     }
 }
 

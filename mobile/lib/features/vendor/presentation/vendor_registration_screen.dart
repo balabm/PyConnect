@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -364,13 +365,32 @@ class _VendorRegistrationScreenState
         TextField(
           controller: _phoneController,
           keyboardType: TextInputType.phone,
+          maxLength: 10,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: const InputDecoration(
             labelText: 'Contact Phone',
             hintText: '10-digit mobile number',
+            prefixText: '+91 ',
             prefixIcon: Icon(Icons.phone_outlined),
             border: OutlineInputBorder(),
+            counterText: '',
+            errorText: null,
           ),
+          onChanged: (value) {
+            if (value.isNotEmpty && value.length != 10) {
+              // Show inline error via decoration rebuild
+              setState(() {});
+            }
+          },
         ),
+        if (_phoneController.text.isNotEmpty && _phoneController.text.length != 10)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 12),
+            child: Text(
+              'Enter a valid 10-digit phone number',
+              style: TextStyle(color: AppTheme.danger, fontSize: 12),
+            ),
+          ),
         const SizedBox(height: AppSpacing.md),
         TextField(
           controller: _addressController,

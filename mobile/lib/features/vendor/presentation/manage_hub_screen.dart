@@ -299,6 +299,24 @@ class ManageHubScreen extends ConsumerWidget {
           ),
         ]);
         break;
+      case VendorCategoryType.partySupplier:
+        categoryTiles.addAll([
+          _ManageTile(
+            icon: Icons.speaker,
+            label: 'Equipment Inventory',
+            subtitle: 'Speakers, lights & gear',
+            color: AppTheme.emerald,
+            onTap: () { AppHaptics.light(); context.push('/equipment-inventory'); },
+          ),
+          _ManageTile(
+            icon: Icons.inventory_2,
+            label: 'Active Rentals',
+            subtitle: 'Asset tracking Kanban',
+            color: AppTheme.info,
+            onTap: () { AppHaptics.light(); context.push('/equipment-rentals'); },
+          ),
+        ]);
+        break;
     }
 
     return [...categoryTiles, ...commonTiles];
@@ -356,6 +374,16 @@ class ManageHubScreen extends ConsumerWidget {
               subtitle: 'Check cloak occupancy and stored items',
               color: AppTheme.emerald,
               onTap: () { AppHaptics.light(); context.push('/capacity'); }),
+          const SizedBox(height: 8),
+        ];
+      case VendorCategoryType.partySupplier:
+        return [
+          _buildQuickAction(context,
+              icon: Icons.speaker,
+              label: 'Add Equipment',
+              subtitle: 'Add a new item to your rental inventory',
+              color: AppTheme.emerald,
+              onTap: () { AppHaptics.light(); context.push('/equipment-inventory'); }),
           const SizedBox(height: 8),
         ];
     }

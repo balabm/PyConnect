@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -32,7 +34,10 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     _startCooldown();
     // Attempt OTP autofill for testing. The backend only returns the code
     // when Sms:UseMock is true (test mode). In production this is a no-op.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _autofillOtp());
+    // Only attempt autofill in debug mode to avoid unnecessary network calls in production.
+    if (kDebugMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _autofillOtp());
+    }
   }
 
   @override
@@ -122,6 +127,29 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
   void _onDigitBackspace(int index) {
     if (_controllers[index].text.isEmpty && index > 0) {
       _focusNodes[index - 1].requestFocus();
+    }
+  }
+
+  /// Paste a 6-digit OTP from the clipboard. Extracts digits from the
+  /// clipboard text and fills the boxes if exactly 6 digits are found.
+  Future<void> _pasteOtp() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text == null) return;
+    final digits = data!.text!.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length == 6 && mounted) {
+      for (var i = 0; i < 6; i++) {
+        _controllers[i].text = digits[i];
+      }
+      setState(() {});
+      if (!_hasSubmitted) {
+        _hasSubmitted = true;
+        _focusNodes[5].unfocus();
+        _verify();
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Clipboard does not contain a 6-digit OTP.')),
+      );
     }
   }
 
@@ -242,13 +270,13 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Test mode hint — visible while OTP autofill is attempting
-              if (_isAutofilling)
+              // Test mode hint — visible while OTP autofill is attempting (debug only)
+              if (kDebugMode && _isAutofilling)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppTheme.info.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                     border: Border.all(color: AppTheme.info.withValues(alpha: 0.3)),
                   ),
                   child: Row(
@@ -281,7 +309,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.danger.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
                   ),
                   child: Row(
@@ -327,11 +355,11 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                           counterText: '',
                           contentPadding: const EdgeInsets.symmetric(vertical: 16),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                             borderSide: BorderSide(color: Theme.of(context).dividerColor),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                             borderSide: const BorderSide(color: AppTheme.emerald, width: 2),
                           ),
                         ),
@@ -352,6 +380,15 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                 ),
               ),
               const SizedBox(height: 28),
+              // Paste OTP button
+              if (_otp.length < 6)
+                Center(
+                  child: TextButton.icon(
+                    onPressed: _pasteOtp,
+                    icon: const Icon(Icons.content_paste, size: 18),
+                    label: const Text('Paste OTP'),
+                  ),
+                ),
               // Verify button
               FilledButton(
                 style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14),

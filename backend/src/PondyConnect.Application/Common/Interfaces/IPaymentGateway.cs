@@ -5,12 +5,34 @@ using PondyConnect.Domain.Enums;
 public interface IPaymentGateway
 {
     /// <summary>
-    /// Creates a payment order with the provider.
+    /// Creates a payment order with the provider. When <paramref name="capture"/>
+    /// is false, the payment is only authorized (auth-hold) and must be
+    /// captured later via <see cref="CapturePaymentAsync"/>. Used for
+    /// security deposit holds on equipment rentals.
     /// </summary>
     Task<PaymentOrderResult> CreateOrderAsync(
         decimal amount,
         string currency,
         string receiptId,
+        bool capture = true,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Captures a previously authorized (uncaptured) payment. Used to
+    /// collect damage penalties from a security deposit auth-hold.
+    /// </summary>
+    Task<CaptureResult> CapturePaymentAsync(
+        string providerPaymentId,
+        decimal amount,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Releases an uncaptured authorization, returning the held funds
+    /// to the customer. Used when a security deposit is refunded with
+    /// no damage penalties.
+    /// </summary>
+    Task<ReleaseResult> ReleasePaymentAsync(
+        string providerPaymentId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -98,4 +120,12 @@ public sealed record PayoutResult(
     bool Success,
     string? PayoutId = null,
     string? Utr = null,
+    string? ErrorMessage = null);
+
+public sealed record CaptureResult(
+    bool Success,
+    string? ErrorMessage = null);
+
+public sealed record ReleaseResult(
+    bool Success,
     string? ErrorMessage = null);

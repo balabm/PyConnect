@@ -77,29 +77,33 @@ class _FloatingNavBarState extends State<FloatingNavBar>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: AppDecorations.floatingPill(context),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(widget.destinations.length, (i) {
-                final dest = widget.destinations[i];
-                final isSelected = i == widget.selectedIndex;
-                final controller = _controllers[i];
+    return Semantics(
+      container: true,
+      label: 'Main navigation',
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: AppDecorations.floatingPill(context),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(widget.destinations.length, (i) {
+                  final dest = widget.destinations[i];
+                  final isSelected = i == widget.selectedIndex;
+                  final controller = _controllers[i];
 
-                return _NavItem(
-                  destination: dest,
-                  isSelected: isSelected,
-                  scaleAnimation: controller,
-                  onTap: () => widget.onDestinationSelected(i),
-                );
-              }),
+                  return _NavItem(
+                    destination: dest,
+                    isSelected: isSelected,
+                    scaleAnimation: controller,
+                    onTap: () => widget.onDestinationSelected(i),
+                  );
+                }),
+              ),
             ),
           ),
         ),
@@ -127,10 +131,15 @@ class _NavItem extends StatelessWidget {
     final activeColor = AppTheme.emerald;
     final inactiveColor = isDark ? AppTheme.darkTextSecondary : AppTheme.slate;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: destination.label,
+      hint: isSelected ? 'Currently selected' : 'Tap to navigate to ${destination.label}',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.symmetric(
@@ -179,6 +188,7 @@ class _NavItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

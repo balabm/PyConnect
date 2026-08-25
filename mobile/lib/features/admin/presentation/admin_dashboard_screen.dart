@@ -36,7 +36,7 @@ class AdminDashboardScreen extends ConsumerWidget {
       ),
       body: statsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AdminColors.accent)),
-        error: (e, _) => _ErrorCard(message: e.toString()),
+        error: (e, _) => _ErrorCard(message: e.toString(), onRetry: () => ref.invalidate(adminDashboardStatsProvider)),
         data: (stats) => ListView(
           padding: const EdgeInsets.all(24),
           children: [
@@ -380,8 +380,9 @@ class _LiveRidesCard extends StatelessWidget {
 }
 
 class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.message});
+  const _ErrorCard({required this.message, this.onRetry});
   final String message;
+  final VoidCallback? onRetry;
   @override
   Widget build(BuildContext context) {
     return Center(child: Card(
@@ -395,6 +396,14 @@ class _ErrorCard extends StatelessWidget {
             const Text('Connection Error', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AdminColors.textPrimary)),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AdminColors.textMuted)),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
           ],
         ),
       ),

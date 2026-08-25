@@ -23,6 +23,14 @@ class VenueListController extends AsyncNotifier<List<Venue>> {
   Future<List<Venue>> build() async {
     ref.onDispose(() => _poller?.cancel());
     _poller = Timer.periodic(const Duration(seconds: 30), (_) => refresh());
+    // Retry up to 3 times if the venue list comes back empty — this guards
+    // against a race condition where the auth token isn't ready yet on the
+    // very first load after login, causing the API to return an empty list.
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final venues = await ref.watch(venueApiProvider).list();
+      if (venues.isNotEmpty) return venues;
+      await Future.delayed(const Duration(milliseconds: 800));
+    }
     return ref.watch(venueApiProvider).list();
   }
 

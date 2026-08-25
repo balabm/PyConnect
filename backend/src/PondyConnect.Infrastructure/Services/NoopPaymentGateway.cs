@@ -13,6 +13,7 @@ public sealed class NoopPaymentGateway : IPaymentGateway
         decimal amount,
         string currency,
         string receiptId,
+        bool capture = true,
         CancellationToken cancellationToken = default)
     {
         var orderId = $"order_noop_{Guid.NewGuid():N}";
@@ -20,6 +21,21 @@ public sealed class NoopPaymentGateway : IPaymentGateway
             Success: true,
             OrderId: orderId,
             ShortUrl: $"https://dev.pay/noop/{orderId}"));
+    }
+
+    public Task<CaptureResult> CapturePaymentAsync(
+        string providerPaymentId,
+        decimal amount,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new CaptureResult(Success: true));
+    }
+
+    public Task<ReleaseResult> ReleasePaymentAsync(
+        string providerPaymentId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new ReleaseResult(Success: true));
     }
 
     public Task<PaymentVerificationResult> VerifyWebhookAsync(

@@ -7,7 +7,7 @@ public sealed class ServiceAreaOptions
 {
     public double CenterLatitude { get; set; } = 11.9356;
     public double CenterLongitude { get; set; } = 79.8301;
-    public double RadiusKm { get; set; } = 3.0;
+    public double RadiusKm { get; set; } = 50.0;
 }
 
 public sealed class ServiceAreaValidator
@@ -43,8 +43,8 @@ public sealed class ServiceAreaException : Exception
     public double RadiusKm { get; }
 
     public ServiceAreaException(double distanceKm, double radiusKm)
-        : base($"Service currently restricted to White Town and Heritage Town for fast fulfillment. " +
-               $"You are {distanceKm:F1}km away (max {radiusKm:F1}km).")
+        : base($"Service is currently available within {radiusKm:F0}km of Pondicherry. " +
+               $"You are {distanceKm:F1}km away.")
     {
         DistanceKm = distanceKm;
         RadiusKm = radiusKm;

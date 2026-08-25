@@ -20,6 +20,8 @@ import '../features/vendor/presentation/active_rentals_screen.dart';
 import '../features/vendor/presentation/taxi_fleet_screen.dart';
 import '../features/vendor/presentation/taxi_rides_screen.dart';
 import '../features/vendor/presentation/cloak_capacity_screen.dart';
+import '../features/vendor/presentation/equipment_inventory_screen.dart';
+import '../features/vendor/presentation/equipment_rentals_screen.dart';
 import '../features/vendor/presentation/vendor_registration_screen.dart';
 import '../features/vendor/presentation/printer_settings_screen.dart';
 import '../features/vendor/presentation/claim_check_screen.dart';
@@ -166,6 +168,15 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'capacity',
             builder: (_, _) => const CloakCapacityScreen(),
+          ),
+          // ── Equipment vendor screens ──
+          GoRoute(
+            path: 'equipment-inventory',
+            builder: (_, _) => const EquipmentInventoryScreen(),
+          ),
+          GoRoute(
+            path: 'equipment-rentals',
+            builder: (_, _) => const EquipmentRentalsScreen(),
           ),
           GoRoute(
             path: 'printer-settings',

@@ -20,33 +20,44 @@ final _unifiedActivityProvider =
     final list = response as List<dynamic>;
     return list.cast<Map<String, dynamic>>();
   } catch (_) {
-    // Fallback: return empty list, separate providers will fill in
+    // Fallback: return empty list, sequential fallback provider will fill in
     return [];
   }
 });
 
-/// Fallback providers that fetch food orders, ride history, stays, and rentals in parallel.
-final _foodOrdersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+/// Sequential fallback provider that fetches food orders, ride history, stays,
+/// and rentals ONE AT A TIME to avoid DbContext concurrency issues on the backend.
+/// The backend's scoped DbContext throws InvalidOperationException when multiple
+/// parallel requests hit different endpoints simultaneously.
+final _sequentialFallbackProvider =
+    FutureProvider.autoDispose<({List<dynamic> food, List<dynamic> rides, List<Map<String, dynamic>> stays, List<dynamic> rentals})>((ref) async {
   ref.watch(authTokenProvider);
-  final api = ref.watch(foodApiProvider);
-  return await api.listOrders();
-});
 
-final _rideHistoryProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  ref.watch(authTokenProvider);
-  final api = ref.watch(ridesApiProvider);
-  return await api.listRides();
-});
+  // Fetch sequentially to avoid concurrent DbContext operations on the backend
+  final foodApi = ref.watch(foodApiProvider);
+  final ridesApi = ref.watch(ridesApiProvider);
+  final staysApi = ref.watch(staysApiProvider);
+  final rentalApi = ref.watch(rentalApiProvider);
 
-final _staysBookingsProvider =
-    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  ref.watch(authTokenProvider);
-  return ref.watch(staysApiProvider).listMyBookings();
-});
+  List<dynamic> food = [];
+  List<dynamic> rides = [];
+  List<Map<String, dynamic>> stays = [];
+  List<dynamic> rentals = [];
 
-final _rentalsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  ref.watch(authTokenProvider);
-  return ref.watch(rentalApiProvider).listRentals();
+  try {
+    food = await foodApi.listOrders();
+  } catch (_) {}
+  try {
+    rides = await ridesApi.listRides();
+  } catch (_) {}
+  try {
+    stays = await staysApi.listMyBookings();
+  } catch (_) {}
+  try {
+    rentals = await rentalApi.listRentals();
+  } catch (_) {}
+
+  return (food: food, rides: rides, stays: stays, rentals: rentals);
 });
 
 /// A unified activity feed aggregating food orders, ride history, stays,
@@ -63,15 +74,22 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final token = ref.watch(authTokenProvider);
+    final isGuest = token == null;
     final unifiedAsync = ref.watch(_unifiedActivityProvider);
-    final foodAsync = ref.watch(_foodOrdersProvider);
-    final rideAsync = ref.watch(_rideHistoryProvider);
-    final staysAsync = ref.watch(_staysBookingsProvider);
-    final rentalsAsync = ref.watch(_rentalsProvider);
+    final fallbackAsync = ref.watch(_sequentialFallbackProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Your Activity')),
-      body: Column(
+      body: isGuest
+          ? EmptyStateView(
+              icon: Icons.lock_outline,
+              title: 'Sign in required',
+              subtitle: 'Log in to view your bookings, rides, and orders.',
+              actionLabel: 'Sign In',
+              onAction: () => context.go('/auth'),
+            )
+          : Column(
         children: [
           // Category filter chips
           Padding(
@@ -99,12 +117,9 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
             child: RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(_unifiedActivityProvider);
-                ref.invalidate(_foodOrdersProvider);
-                ref.invalidate(_rideHistoryProvider);
-                ref.invalidate(_staysBookingsProvider);
-                ref.invalidate(_rentalsProvider);
+                ref.invalidate(_sequentialFallbackProvider);
               },
-              child: _buildBody(context, unifiedAsync, foodAsync, rideAsync, staysAsync, rentalsAsync),
+              child: _buildBody(context, unifiedAsync, fallbackAsync),
             ),
           ),
         ],
@@ -141,10 +156,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
   Widget _buildBody(
     BuildContext context,
     AsyncValue<List<Map<String, dynamic>>> unifiedAsync,
-    AsyncValue<List<dynamic>> foodAsync,
-    AsyncValue<List<dynamic>> rideAsync,
-    AsyncValue<List<Map<String, dynamic>>> staysAsync,
-    AsyncValue<List<dynamic>> rentalsAsync,
+    AsyncValue<({List<dynamic> food, List<dynamic> rides, List<Map<String, dynamic>> stays, List<dynamic> rentals})> fallbackAsync,
   ) {
     // If the unified endpoint returned data, use it directly.
     final unified = unifiedAsync.valueOrNull;
@@ -152,14 +164,13 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       return _buildUnifiedList(context, unified);
     }
 
-    // Loading state (fallback providers)
-    if (foodAsync.isLoading || rideAsync.isLoading || staysAsync.isLoading || rentalsAsync.isLoading) {
+    // Loading state (fallback provider)
+    if (fallbackAsync.isLoading) {
       return const SkeletonList(type: SkeletonType.activity, count: 6);
     }
 
-    // Error state — only show error if ALL providers failed
-    final allError = foodAsync.hasError && rideAsync.hasError && staysAsync.hasError && rentalsAsync.hasError;
-    if (allError) {
+    // Error state — only show error if the fallback provider failed
+    if (fallbackAsync.hasError) {
       return EmptyStateView(
         isError: true,
         icon: Icons.cloud_off_rounded,
@@ -168,10 +179,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
         actionLabel: 'Retry',
         onAction: () {
           ref.invalidate(_unifiedActivityProvider);
-          ref.invalidate(_foodOrdersProvider);
-          ref.invalidate(_rideHistoryProvider);
-          ref.invalidate(_staysBookingsProvider);
-          ref.invalidate(_rentalsProvider);
+          ref.invalidate(_sequentialFallbackProvider);
         },
       );
     }
@@ -179,8 +187,11 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
     // Build unified activity items
     final items = <_ActivityItem>[];
 
-    // Stays
-    final stays = staysAsync.valueOrNull ?? [];
+    final fallback = fallbackAsync.valueOrNull;
+    final food = fallback?.food ?? [];
+    final rides = fallback?.rides ?? [];
+    final stays = fallback?.stays ?? [];
+    final rentals = fallback?.rentals ?? [];
     if (_filter == 'All' || _filter == 'Stays') {
       for (final booking in stays) {
         final status = (booking['status'] as String?) ?? '';
@@ -222,7 +233,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
     }
 
     // Food orders
-    final foodOrders = foodAsync.valueOrNull ?? [];
+    final foodOrders = food;
     if (_filter == 'All' || _filter == 'Food') {
       for (final order in foodOrders) {
         final map = order as Map<String, dynamic>;
@@ -273,8 +284,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       }
     }
 
-    // Rides
-    final rides = rideAsync.valueOrNull ?? [];
+    // Rides — rides variable already set from fallback
     if (_filter == 'All' || _filter == 'Rides') {
       for (final ride in rides) {
         final map = ride as Map<String, dynamic>;
@@ -310,8 +320,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen> {
       }
     }
 
-    // Rentals
-    final rentals = rentalsAsync.valueOrNull ?? [];
+    // Rentals — rentals variable already set from fallback
     if (_filter == 'All' || _filter == 'Rentals') {
       for (final rental in rentals) {
         final map = rental as Map<String, dynamic>;
@@ -569,28 +578,32 @@ class _ActivityCard extends StatelessWidget {
 
     final statusLabel = _friendlyStatus(item.status);
 
-    return GestureDetector(
-      onTap: item.onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-            color: item.isActive
-                ? AppTheme.warning.withValues(alpha: 0.3)
-                : Theme.of(context).dividerColor,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).brightness == Brightness.light
-                  ? AppTheme.cardShadow
-                  : Colors.black.withValues(alpha: 0.2),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+    return Semantics(
+      button: true,
+      label: '${item.title}, $statusLabel, ${item.subtitle}',
+      hint: item.onTap != null ? 'Tap to view details' : null,
+      child: GestureDetector(
+        onTap: item.onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: item.isActive
+                  ? AppTheme.warning.withValues(alpha: 0.3)
+                  : Theme.of(context).dividerColor,
             ),
-          ],
-        ),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? AppTheme.cardShadow
+                    : Colors.black.withValues(alpha: 0.2),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -675,6 +688,7 @@ class _ActivityCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }

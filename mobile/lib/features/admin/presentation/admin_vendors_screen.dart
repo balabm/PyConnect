@@ -103,10 +103,23 @@ class _AdminVendorsScreenState extends ConsumerState<AdminVendorsScreen> {
               error: (e, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Failed to load vendors:\n$e',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AdminColors.textMuted),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.cloud_off_rounded, size: 48, color: AdminColors.textMuted),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Failed to load vendors:\n$e',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AdminColors.textMuted),
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => ref.invalidate(adminVendorsProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -557,7 +570,16 @@ class _OnboardVendorDialogState extends ConsumerState<_OnboardVendorDialog> {
   final _deliveryFeeController = TextEditingController();
   final _prepTimeController = TextEditingController();
 
-  static const _categories = ['Restaurant', 'Cafe', 'Grocery', 'Bakery', 'Pharmacy', 'Retail'];
+  static const _categories = [
+    'Restaurant',
+    'Cafe',
+    'Pizzeria',
+    'PubClub',
+    'ScooterRental',
+    'TaxiOperator',
+    'LuggageCloak',
+    'PartySupplier',
+  ];
   String _category = _categories.first;
   bool _submitting = false;
 

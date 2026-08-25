@@ -49,7 +49,7 @@ class _AdminShellState extends ConsumerState<AdminShell>
     ),
     _NavDest(
       icon: Icons.gavel_rounded,
-      label: 'Disputes',
+      label: 'Disputes & Tickets',
       path: '/disputes',
     ),
     _NavDest(

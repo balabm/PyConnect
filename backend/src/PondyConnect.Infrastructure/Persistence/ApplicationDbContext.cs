@@ -129,6 +129,16 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<GuestKyc> GuestKycs => Set<GuestKyc>();
 
+    // ── Party Ecosystem ──
+
+    public DbSet<EquipmentItem> EquipmentItems => Set<EquipmentItem>();
+
+    public DbSet<EquipmentRental> EquipmentRentals => Set<EquipmentRental>();
+
+    public DbSet<P2pEvent> P2pEvents => Set<P2pEvent>();
+
+    public DbSet<P2pEventTicket> P2pEventTickets => Set<P2pEventTicket>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

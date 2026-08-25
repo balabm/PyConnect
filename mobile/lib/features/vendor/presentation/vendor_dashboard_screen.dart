@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/modern_animations.dart';
@@ -103,16 +104,25 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
   }
 
   Widget _buildErrorState() {
+    final isAuthError = _error?.contains('401') == true ||
+        _error?.toLowerCase().contains('unauthorized') == true ||
+        _error?.toLowerCase().contains('permission') == true;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+            Icon(
+              isAuthError ? Icons.lock_outline : Icons.cloud_off,
+              size: 64,
+              color: isAuthError
+                  ? AppTheme.emerald.withValues(alpha: 0.5)
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: 16),
             Text(
-              'Could not load dashboard',
+              isAuthError ? 'Session expired' : 'Could not load dashboard',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 18,
@@ -121,19 +131,25 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _error!,
+              isAuthError
+                  ? 'Your session has expired. Please log in again.'
+                  : _error!,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(),
-              icon: Icon(Icons.refresh),
-              label: Text('Retry'),
+              icon: Icon(isAuthError ? Icons.login : Icons.refresh),
+              label: Text(isAuthError ? 'Sign In' : 'Retry'),
               onPressed: () {
                 AppHaptics.light();
-                setState(() => _loading = true);
-                _loadData();
+                if (isAuthError) {
+                  context.go('/auth');
+                } else {
+                  setState(() => _loading = true);
+                  _loadData();
+                }
               },
             ),
           ],

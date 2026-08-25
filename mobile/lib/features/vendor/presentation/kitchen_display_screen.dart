@@ -112,7 +112,11 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
     _isFetching = true;
     setState(() => _loading = true);
     try {
-      final orders = await ref.read(kdsApiProvider).getOrders();
+      // Add an explicit timeout so the loading state never hangs indefinitely.
+      final orders = await ref
+          .read(kdsApiProvider)
+          .getOrders()
+          .timeout(const Duration(seconds: 15));
       if (mounted) {
         setState(() {
           _orders = orders;
@@ -134,7 +138,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen>
         // If there are no longer any incoming orders, stop the chime.
         _syncChime();
       }
-    } catch (e) {
+    } on Exception catch (e) {
       if (mounted) {
         // Show the real error. No mock data — the kitchen staff needs to
         // know the backend is unreachable, not be misled by fake orders.

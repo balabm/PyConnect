@@ -30,6 +30,7 @@ public sealed class RazorpayGateway : IPaymentGateway
         decimal amount,
         string currency,
         string receiptId,
+        bool capture = true,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(_options.KeyId) || string.IsNullOrWhiteSpace(_options.KeySecret))
@@ -40,7 +41,7 @@ public sealed class RazorpayGateway : IPaymentGateway
             amount = (int)(amount * 100), // Razorpay expects paise
             currency,
             receipt = receiptId,
-            payment_capture = 1 // auto-capture
+            payment_capture = capture ? 1 : 0 // 1 = auto-capture, 0 = auth-hold only
         };
 
         var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
@@ -215,6 +216,64 @@ public sealed class RazorpayGateway : IPaymentGateway
             ProviderPaymentId: paymentId,
             Status: status,
             AmountPaid: amountPaidPaise / 100m);
+    }
+
+    public async Task<CaptureResult> CapturePaymentAsync(
+        string providerPaymentId,
+        decimal amount,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.KeyId) || string.IsNullOrWhiteSpace(_options.KeySecret))
+            return new CaptureResult(false, ErrorMessage: "Razorpay keys not configured");
+
+        if (string.IsNullOrWhiteSpace(providerPaymentId))
+            return new CaptureResult(false, ErrorMessage: "Provider payment ID is required");
+
+        var payload = new
+        {
+            amount = (int)(amount * 100), // paise
+            currency = "INR"
+        };
+
+        var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync($"v1/payments/{providerPaymentId}/capture", content, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadAsStringAsync(cancellationToken);
+            return new CaptureResult(false, ErrorMessage: $"Razorpay capture error: {err}");
+        }
+
+        return new CaptureResult(true);
+    }
+
+    public async Task<ReleaseResult> ReleasePaymentAsync(
+        string providerPaymentId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.KeyId) || string.IsNullOrWhiteSpace(_options.KeySecret))
+            return new ReleaseResult(false, ErrorMessage: "Razorpay keys not configured");
+
+        if (string.IsNullOrWhiteSpace(providerPaymentId))
+            return new ReleaseResult(false, ErrorMessage: "Provider payment ID is required");
+
+        // Razorpay releases an uncaptured authorization by refunding the
+        // full authorized amount with the refund endpoint.
+        var payload = new
+        {
+            amount = 0 // 0 means refund the full authorized amount
+        };
+
+        var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync($"v1/payments/{providerPaymentId}/refund", content, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadAsStringAsync(cancellationToken);
+            return new ReleaseResult(false, ErrorMessage: $"Razorpay release error: {err}");
+        }
+
+        return new ReleaseResult(true);
     }
 
     public Task<PayoutResult> PayoutAsync(

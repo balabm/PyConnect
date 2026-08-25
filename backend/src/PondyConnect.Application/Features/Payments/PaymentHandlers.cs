@@ -109,7 +109,7 @@ public sealed class InitiatePaymentHandler : IRequestHandler<InitiatePaymentComm
         await _context.SaveChangesAsync(cancellationToken);
 
         // Create order with provider
-        var orderResult = await _gateway.CreateOrderAsync(request.Amount, request.Currency, receiptId, cancellationToken);
+        var orderResult = await _gateway.CreateOrderAsync(request.Amount, request.Currency, receiptId, cancellationToken: cancellationToken);
         if (!orderResult.Success)
         {
             _logger.LogError("Payment order creation failed for user {UserId}: {Error}", userId, orderResult.ErrorMessage);

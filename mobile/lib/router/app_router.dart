@@ -17,6 +17,11 @@ import '../features/essentials/presentation/essentials_screen.dart';
 import '../features/essentials/presentation/essentials_store_view.dart';
 import '../features/experiences/presentation/experiences_screen.dart';
 import '../features/events/presentation/party_builder_screen.dart';
+import '../features/events/presentation/create_party_screen.dart';
+import '../features/events/presentation/event_list_screen.dart';
+import '../features/events/presentation/event_detail_screen.dart';
+import '../features/events/presentation/host_scanner_screen.dart';
+import '../features/events/presentation/attendees_screen.dart';
 import '../features/food/presentation/food_order_detail_screen.dart';
 import '../features/food/presentation/food_order_history_screen.dart';
 import '../features/food/presentation/food_screen.dart';
@@ -166,6 +171,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'party',
             builder: (_, _) => const PartyBuilderScreen(),
+          ),
+          GoRoute(
+            path: 'create-party',
+            builder: (_, _) => const CreatePartyScreen(),
+          ),
+          GoRoute(
+            path: 'events',
+            builder: (_, _) => const EventListScreen(),
+          ),
+          GoRoute(
+            path: 'events/:slug',
+            builder: (_, state) => EventDetailScreen(
+              slug: state.pathParameters['slug']!,
+            ),
+          ),
+          GoRoute(
+            path: 'events/:id/scan',
+            builder: (_, state) => HostScannerScreen(
+              eventId: state.pathParameters['id']!,
+            ),
+          ),
+          GoRoute(
+            path: 'events/:id/attendees',
+            builder: (_, state) => AttendeesScreen(
+              eventId: state.pathParameters['id']!,
+            ),
           ),
           GoRoute(
             path: 'ticket/:bookingId',

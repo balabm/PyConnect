@@ -206,9 +206,22 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               error: (e, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text('Failed to load users:\n$e',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AdminColors.danger)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.cloud_off_rounded, size: 48, color: AdminColors.textMuted),
+                      const SizedBox(height: 16),
+                      Text('Failed to load users:\n$e',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AdminColors.danger)),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => ref.invalidate(adminUsersProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               data: (result) {

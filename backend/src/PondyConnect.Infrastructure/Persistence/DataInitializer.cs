@@ -46,6 +46,7 @@ public sealed class DataInitializer
         await SeedDriverKycAndLedgerAsync(cancellationToken);
         await SeedHomestaysAsync(cancellationToken);
         await SeedSupportTicketsAsync(cancellationToken);
+        await SeedPartySupplierAsync(cancellationToken);
     }
 
     private async Task SeedAdminUserAsync(CancellationToken cancellationToken)
@@ -389,9 +390,9 @@ public sealed class DataInitializer
 
         var menuItems = new[]
         {
-            MenuItem.Create(fuocoVendorId, "Woodfired Margherita", 450m, "Pizza", description: "San Marzano tomato, fresh buffalo mozzarella, basil, EVOO.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1604068549290-fa44e08c421a?w=400"),
+            MenuItem.Create(fuocoVendorId, "Woodfired Margherita", 450m, "Pizza", description: "San Marzano tomato, fresh buffalo mozzarella, basil, EVOO.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80b25f?w=400"),
             MenuItem.Create(fuocoVendorId, "Truffle Fries", 250m, "Sides", description: "Hand-cut fries tossed in truffle oil and parmesan.", imageUrl: "https://images.unsplash.com/photo-1639024471283-03518883512d?w=400"),
-            MenuItem.Create(fuocoVendorId, "Pepperoni Pizza", 550m, "Pizza", description: "Double pepperoni, mozzarella, San Marzano sauce.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1621219309024-eb8f4b4b6b3b?w=400"),
+            MenuItem.Create(fuocoVendorId, "Pepperoni Pizza", 550m, "Pizza", description: "Double pepperoni, mozzarella, San Marzano sauce.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1593564705826-36b9403c0c66?w=400"),
             MenuItem.Create(fuocoVendorId, "Garlic Bread", 150m, "Sides", description: "Toasted ciabatta with herb butter and parmesan.", imageUrl: "https://images.unsplash.com/photo-1573140246462-332f2d2b4c91?w=400"),
             MenuItem.Create(fuocoVendorId, "Tiramisu", 220m, "Dessert", description: "Classic Italian coffee-soaked layers with mascarpone cream.", imageUrl: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=400"),
             MenuItem.Create(fuocoVendorId, "Chicken Wings (6 pc)", 280m, "Sides", description: "Buffalo-style hot wings with blue cheese dip.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=400"),
@@ -491,7 +492,7 @@ public sealed class DataInitializer
                 },
                 "Pondy Pizzeria" => new[]
                 {
-                    MenuItem.Create(s.Id, "Margherita Pizza", 250m, "Pizza", description: "Classic tomato, mozzarella, and basil.", imageUrl: "https://images.unsplash.com/photo-1604068549290-fa44e08c421a?w=400"),
+                    MenuItem.Create(s.Id, "Margherita Pizza", 250m, "Pizza", description: "Classic tomato, mozzarella, and basil.", imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80b25f?w=400"),
                     MenuItem.Create(s.Id, "Veg Supreme Pizza", 320m, "Pizza", description: "Bell peppers, onions, mushrooms, olives.", imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80b25f?w=400"),
                     MenuItem.Create(s.Id, "Chicken Tikka Pizza", 380m, "Pizza", description: "Tandoori chicken with peppers and mint mayo.", isLateNight: true, imageUrl: "https://images.unsplash.com/photo-1593564705826-36b9403c0c66?w=400"),
                     MenuItem.Create(s.Id, "Garlic Knots (6 pc)", 100m, "Sides", description: "Soft dough knots with garlic butter.", imageUrl: "https://images.unsplash.com/photo-1573140246462-332f2d2b4c91?w=400"),
@@ -915,6 +916,50 @@ public sealed class DataInitializer
             TicketMessage.Create(ticket1.Id, MessageSenderRole.AI, "I can help you cancel your booking. Please share your booking ID and I'll process the cancellation."),
             TicketMessage.Create(ticket2.Id, MessageSenderRole.User, "SOS: Scooter Breakdown"));
 
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Seeds a PartySupplier (equipment rental) vendor with sample inventory
+    /// so the Partner app can demonstrate the equipment ecosystem workflow.
+    /// Vendor phone: 9000000020 (owner user created if missing).
+    /// </summary>
+    private async Task SeedPartySupplierAsync(CancellationToken cancellationToken)
+    {
+        if (await _context.EquipmentItems.AnyAsync(cancellationToken))
+            return;
+
+        var phone = "9000000020";
+
+        // Create owner user if it doesn't exist
+        if (!await _context.Users.AnyAsync(u => u.Phone == phone, cancellationToken))
+        {
+            _context.Users.Add(User.Create("Pondy AV Owner", phone, UserRole.Vendor));
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        // Create the vendor if it doesn't exist
+        var vendor = await _context.Vendors.FirstOrDefaultAsync(v => v.ContactPhone == phone, cancellationToken);
+        if (vendor is null)
+        {
+            vendor = Vendor.Create("Pondy AV Rentals", VendorCategory.PartySupplier, contactPhone: phone, description: "Audio-visual equipment rentals for private events. Speakers, lights, smoke machines.");
+            vendor.Approve();
+            _context.Vendors.Add(vendor);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        // Seed sample equipment inventory
+        var equipment = new[]
+        {
+            EquipmentItem.Create(vendor.Id, "JBL PartyBox 310", 1500m, 5000m, 4, "Speakers", "Portable party speaker with deep bass and light show.", null),
+            EquipmentItem.Create(vendor.Id, "JBL PartyBox 710", 3000m, 10000m, 2, "Speakers", "High-power party speaker with karaoke and guitar inputs.", null),
+            EquipmentItem.Create(vendor.Id, "LED Par Wash Lights (Set of 4)", 800m, 3000m, 5, "Lighting", "RGB LED par cans with DMX controller for event lighting.", null),
+            EquipmentItem.Create(vendor.Id, "Smoke/Fog Machine 700W", 500m, 2000m, 3, "Effects", "Compact fog machine with wired remote for atmosphere effects.", null),
+            EquipmentItem.Create(vendor.Id, "Wireless Microphone Set (2)", 600m, 2500m, 6, "Audio", "UHF wireless mic system with receiver, ideal for hosts and DJs.", null),
+            EquipmentItem.Create(vendor.Id, "DJ Controller Deck", 2000m, 8000m, 2, "DJ Equipment", "2-channel DJ controller with USB audio interface.", null),
+        };
+
+        _context.EquipmentItems.AddRange(equipment);
         await _context.SaveChangesAsync(cancellationToken);
     }
 }
