@@ -75,6 +75,44 @@ public sealed class VendorController : ControllerBase
     }
 
     /// <summary>
+    /// Resolves the vendor for the authenticated partner with a UserId
+    /// fallback. If the JWT <c>phone</c> claim is present, resolves by phone
+    /// (the standard path). If the phone claim is missing or doesn't match
+    /// any vendor, falls back to resolving via the JWT <c>UserId</c> →
+    /// <c>User.Phone</c> → <c>Vendor.ContactPhone</c>. This prevents the
+    /// "No Venue Found" 404 when a token was minted without the phone claim
+    /// or the phone number format differs.
+    /// </summary>
+    private async Task<Domain.Entities.Vendor?> ResolveVendorWithFallbackAsync(
+        Guid? vendorId,
+        CancellationToken cancellationToken)
+    {
+        var phone = _currentUser.Phone;
+
+        // Standard path: phone claim is present.
+        if (!string.IsNullOrWhiteSpace(phone))
+        {
+            var vendor = await ResolveVendorAsync(phone, vendorId, cancellationToken);
+            if (vendor != null) return vendor;
+        }
+
+        // Fallback: resolve phone from UserId → User.Phone.
+        var userId = _currentUser.UserId;
+        if (userId.HasValue)
+        {
+            var user = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userId.Value, cancellationToken);
+            if (user != null && !string.IsNullOrWhiteSpace(user.Phone))
+            {
+                return await ResolveVendorAsync(user.Phone, vendorId, cancellationToken);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Validates that an uploaded file is an image within the allowed types
     /// and size limit. Returns an error message if validation fails, null if OK.
     /// </summary>
@@ -241,17 +279,14 @@ public sealed class VendorController : ControllerBase
     [HttpGet("profile")]
     [ProducesResponseType(typeof(VendorProfileResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<VendorProfileResponse>> GetProfile(
         Guid? vendorId = null,
         CancellationToken cancellationToken = default)
     {
-        var phone = _currentUser.Phone;
-        if (string.IsNullOrWhiteSpace(phone))
-            return Unauthorized();
-
-        var vendor = await ResolveVendorAsync(phone, vendorId, cancellationToken);
+        var vendor = await ResolveVendorWithFallbackAsync(vendorId, cancellationToken);
         if (vendor is null)
-            return NotFound();
+            return NotFound(new { Message = "No vendor found for this account. If you recently registered, please wait for admin approval." });
 
         return Ok(new VendorProfileResponse(
             vendor.Id,

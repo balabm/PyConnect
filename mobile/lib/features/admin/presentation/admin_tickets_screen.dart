@@ -250,7 +250,7 @@ class _PaginationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalPages = (totalCount / pageSize).ceil();
+    final totalPages = totalCount == 0 ? 1 : (totalCount / pageSize).ceil();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(border: Border(top: BorderSide(color: AdminColors.border))),
@@ -258,7 +258,7 @@ class _PaginationBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(icon: const Icon(Icons.chevron_left), onPressed: page > 1 ? onPrev : null),
-          Text('Page $page of ${totalPages.clamp(1, 9999)} · $totalCount items',
+          Text('Page ${page.clamp(1, totalPages)} of $totalPages · $totalCount items',
               style: const TextStyle(color: AdminColors.textPrimary)),
           IconButton(icon: const Icon(Icons.chevron_right), onPressed: page < totalPages ? onNext : null),
         ],

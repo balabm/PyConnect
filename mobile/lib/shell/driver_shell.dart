@@ -56,6 +56,10 @@ class _DriverShellState extends ConsumerState<DriverShell> {
     super.initState();
     // Initialize overlay alert service for dispatch notifications
     OverlayAlertService.instance.initialize();
+    // Force a fresh network fetch of the driver profile on every app boot
+    // to ensure KYC approval status is always accurate, bypassing any
+    // stale cached state from a previous session.
+    ref.invalidate(driverProfileProvider);
     _listenForRideOffers();
     _resumeActiveTask();
   }

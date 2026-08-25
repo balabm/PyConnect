@@ -44,16 +44,31 @@ public sealed class AdminFinanceController : ControllerBase
     [ProducesResponseType(typeof(AdminFinanceSummaryResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminFinanceSummaryResponse>> GetSummary(CancellationToken cancellationToken)
     {
+        // GMV: sum of all captured payments. Use nullable cast so empty
+        // tables return 0 instead of throwing.
         var capturedPayments = _context.Payments.AsNoTracking()
             .Where(p => p.Status == PaymentStatus.Captured);
 
         var gmv = await capturedPayments.SumAsync(p => (decimal?)p.Amount, cancellationToken) ?? 0m;
         var totalTransactions = await capturedPayments.CountAsync(cancellationToken);
 
+        // Completed orders: count food orders delivered + rides completed.
+        // These are the fulfilled orders that actually generated revenue.
+        var completedFoodOrders = await _context.FoodOrders.AsNoTracking()
+            .Where(o => o.Status == FoodOrderStatus.Delivered)
+            .CountAsync(cancellationToken);
+
+        var completedRides = await _context.RideRequests.AsNoTracking()
+            .Where(r => r.Status == RideStatus.Completed)
+            .CountAsync(cancellationToken);
+
+        var completedOrders = completedFoodOrders + completedRides;
+
         // Platform takes 0% commission currently.
         const decimal commissionRevenue = 0m;
 
         // Driver payouts due = sum of pending settlement driver payouts.
+        // Empty table → 0m via nullable coalesce.
         var driverPayoutsDue = await _context.PaymentSettlements.AsNoTracking()
             .Where(s => s.SettlementStatus == SettlementStatus.Pending)
             .SumAsync(s => (decimal?)s.DriverPayout, cancellationToken) ?? 0m;
@@ -62,7 +77,8 @@ public sealed class AdminFinanceController : ControllerBase
             gmv,
             commissionRevenue,
             driverPayoutsDue,
-            totalTransactions));
+            totalTransactions,
+            completedOrders));
     }
 
     /// <summary>
@@ -263,7 +279,8 @@ public sealed record AdminFinanceSummaryResponse(
     decimal Gmv,
     decimal CommissionRevenue,
     decimal DriverPayoutsDue,
-    int TotalTransactions);
+    int TotalTransactions,
+    int CompletedOrders);
 
 public sealed record SettlementLogResponse(
     Guid PaymentId,

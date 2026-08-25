@@ -528,11 +528,23 @@ class _PaginationBar extends StatelessWidget {
     // Clamp both ends to valid bounds. Prevents "26-8 of 8" when the
     // page index is stale (e.g. user was on page 2 then filtered down
     // to fewer results).
-    final from = totalCount == 0
-        ? 0
-        : ((page - 1) * pageSize + 1).clamp(1, totalCount);
-    final to = (page * pageSize).clamp(0, totalCount);
-    final safeFrom = from > to ? 0 : from;
+    final int from;
+    final int to;
+    if (totalCount == 0) {
+      from = 0;
+      to = 0;
+    } else {
+      final rawFrom = (page - 1) * pageSize + 1;
+      final rawTo = page * pageSize;
+      // If the page is completely stale (all items removed), reset to 0.
+      if (rawFrom > totalCount) {
+        from = 0;
+        to = 0;
+      } else {
+        from = rawFrom.clamp(1, totalCount);
+        to = rawTo.clamp(1, totalCount);
+      }
+    }
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -542,7 +554,7 @@ class _PaginationBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text('$safeFrom–$to of $totalCount',
+          Text('$from–$to of $totalCount',
               style: const TextStyle(color: AdminColors.textPrimary, fontSize: 13)),
           const Spacer(),
           TextButton(

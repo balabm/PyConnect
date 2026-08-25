@@ -615,11 +615,22 @@ class _PaginationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final from = total == 0
-        ? 0
-        : ((page - 1) * pageSize + 1).clamp(1, total);
-    final to = (page * pageSize).clamp(0, total);
-    final safeFrom = from > to ? 0 : from;
+    final int from;
+    final int to;
+    if (total == 0) {
+      from = 0;
+      to = 0;
+    } else {
+      final rawFrom = (page - 1) * pageSize + 1;
+      final rawTo = page * pageSize;
+      if (rawFrom > total) {
+        from = 0;
+        to = 0;
+      } else {
+        from = rawFrom.clamp(1, total);
+        to = rawTo.clamp(1, total);
+      }
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: const BoxDecoration(
@@ -630,7 +641,7 @@ class _PaginationBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            '$safeFrom–$to of $total',
+            '$from–$to of $total',
             style: const TextStyle(fontSize: 13, color: AdminColors.textPrimary, fontWeight: FontWeight.w500),
           ),
           Row(

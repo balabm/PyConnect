@@ -198,118 +198,72 @@ class _AdminShellState extends ConsumerState<AdminShell>
     required bool isExtended,
     required bool hasCritical,
   }) {
-    return NavigationRail(
-      extended: isExtended,
-      selectedIndex: index,
-      onDestinationSelected: (i) => context.go(_destinations[i].path),
-      backgroundColor: AdminColors.bg,
-      selectedIconTheme: const IconThemeData(color: AdminColors.accent),
-      unselectedIconTheme: const IconThemeData(color: AdminColors.textMuted),
-      selectedLabelTextStyle: const TextStyle(
-        color: AdminColors.accent,
-        fontWeight: FontWeight.w600,
-        fontSize: 14,
-      ),
-      unselectedLabelTextStyle: const TextStyle(
-        color: AdminColors.textMuted,
-        fontSize: 14,
-      ),
-      indicatorColor: AdminColors.accent.withValues(alpha: 0.12),
-      indicatorShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      leading: isExtended
-          ? Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.emeraldGradient,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.shield_rounded,
-                      color: AdminColors.textPrimary,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'God Mode',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: AdminColors.textPrimary,
-                          ),
-                        ),
-                        const Text(
-                          'PY Connect',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AdminColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+    if (!isExtended) {
+      // Compact mode: keep the original NavigationRail for narrow screens.
+      return NavigationRail(
+        extended: false,
+        selectedIndex: index,
+        onDestinationSelected: (i) => context.go(_destinations[i].path),
+        backgroundColor: AdminColors.bg,
+        selectedIconTheme: const IconThemeData(color: AdminColors.accent),
+        unselectedIconTheme: const IconThemeData(color: AdminColors.textMuted),
+        selectedLabelTextStyle: const TextStyle(
+          color: AdminColors.accent,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+        unselectedLabelTextStyle: const TextStyle(
+          color: AdminColors.textMuted,
+          fontSize: 14,
+        ),
+        indicatorColor: AdminColors.accent.withValues(alpha: 0.12),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: AppTheme.emeraldGradient,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.shield_rounded,
+              color: AdminColors.textPrimary,
+              size: 22,
+            ),
+          ),
+        ),
+        trailing: _buildMoreMenu(context, hasCritical),
+        destinations: _destinations
+            .map(
+              (d) => NavigationRailDestination(
+                icon: Icon(d.icon),
+                label: Text(d.label),
               ),
             )
-          : Padding(
-              padding: const EdgeInsets.all(8),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: AppTheme.emeraldGradient,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.shield_rounded,
-                  color: AdminColors.textPrimary,
-                  size: 22,
-                ),
-              ),
-            ),
-      trailing: _buildMoreMenu(context, hasCritical),
-      destinations: _destinations
-          .map(
-            (d) => NavigationRailDestination(
-              icon: Icon(d.icon),
-              label: Text(d.label),
-            ),
-          )
-          .toList(),
+            .toList(),
+      );
+    }
+
+    // Extended mode: custom sidebar with ExpansionTile + pinned Sign out.
+    return _AdminSidebar(
+      index: index,
+      hasCritical: hasCritical,
+      destinations: _destinations,
+      secondaryDestinations: _secondaryDestinations,
+      onNavigate: (path) => context.go(path),
+      onSignOut: () => ref.read(authControllerProvider.notifier).signOut(),
     );
   }
 
-  /// "More" sub-menu exposing secondary routes (Users, SOS, Tickets, Logs)
-  /// so the existing routes remain reachable from the desktop rail without
-  /// crowding the 5 primary tabs. Also includes a Sign out action.
+  /// "More" sub-menu for compact (non-extended) mode.
   Widget _buildMoreMenu(BuildContext context, bool hasCritical) {
-    final isExtended = MediaQuery.of(context).size.width >= 1100;
     return PopupMenuButton<String>(
       tooltip: 'More sections',
-      icon: isExtended
-          ? const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.more_horiz_rounded, color: AdminColors.textMuted),
-                SizedBox(width: 6),
-                Text(
-                  'More',
-                  style: TextStyle(color: AdminColors.textMuted, fontSize: 14),
-                ),
-              ],
-            )
-          : const Icon(Icons.more_horiz_rounded, color: AdminColors.textMuted),
+      icon: const Icon(Icons.more_horiz_rounded, color: AdminColors.textMuted),
       color: AdminColors.surface,
       onSelected: (value) {
         if (value == '__logout__') {
@@ -364,6 +318,237 @@ class _AdminShellState extends ConsumerState<AdminShell>
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Custom extended sidebar with ExpansionTile for secondary routes and a
+/// Sign out button pinned at the bottom. This prevents the menu from
+/// pushing Sign out off-screen when there are many navigation items.
+class _AdminSidebar extends StatelessWidget {
+  const _AdminSidebar({
+    required this.index,
+    required this.hasCritical,
+    required this.destinations,
+    required this.secondaryDestinations,
+    required this.onNavigate,
+    required this.onSignOut,
+  });
+
+  final int index;
+  final bool hasCritical;
+  final List<_NavDest> destinations;
+  final List<_NavDest> secondaryDestinations;
+  final ValueChanged<String> onNavigate;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 240,
+      color: AdminColors.bg,
+      child: Column(
+        children: [
+          // --- Header (logo + title) ---
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.emeraldGradient,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.shield_rounded,
+                    color: AdminColors.textPrimary,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'God Mode',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AdminColors.textPrimary,
+                        ),
+                      ),
+                      const Text(
+                        'PY Connect',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AdminColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // --- Scrollable nav items ---
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              children: [
+                // Primary destinations
+                for (var i = 0; i < destinations.length; i++)
+                  _SidebarTile(
+                    icon: destinations[i].icon,
+                    label: destinations[i].label,
+                    isSelected: i == index,
+                    onTap: () => onNavigate(destinations[i].path),
+                  ),
+                const Divider(color: AdminColors.border, height: 24),
+                // Secondary destinations in an ExpansionTile
+                ExpansionTile(
+                  initiallyExpanded: false,
+                  iconColor: AdminColors.textMuted,
+                  collapsedIconColor: AdminColors.textMuted,
+                  backgroundColor: Colors.transparent,
+                  collapsedBackgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  collapsedShape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  title: const Row(
+                    children: [
+                      Icon(Icons.more_horiz_rounded,
+                          color: AdminColors.textMuted, size: 22),
+                      SizedBox(width: 12),
+                      Text(
+                        'More Sections',
+                        style: TextStyle(
+                          color: AdminColors.textMuted,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  children: secondaryDestinations.map((d) {
+                    final isSos = d.path == '/sos';
+                    return _SidebarTile(
+                      icon: d.icon,
+                      label: d.label,
+                      isSelected: false,
+                      indent: true,
+                      badge: isSos && hasCritical,
+                      onTap: () => onNavigate(d.path),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          // --- Pinned Sign out button ---
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: AdminColors.border)),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.logout_rounded,
+                  color: AdminColors.danger, size: 22),
+              title: const Text(
+                'Sign out',
+                style: TextStyle(
+                  color: AdminColors.danger,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              onTap: onSignOut,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single sidebar navigation tile with selected/unselected styling.
+class _SidebarTile extends StatelessWidget {
+  const _SidebarTile({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.indent = false,
+    this.badge = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool indent;
+  final bool badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(left: indent ? 16 : 0),
+      child: Material(
+        color: isSelected
+            ? AdminColors.accent.withValues(alpha: 0.12)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 22,
+                  color: isSelected ? AdminColors.accent : AdminColors.textMuted,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected
+                          ? AdminColors.accent
+                          : AdminColors.textPrimary,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                if (badge) ...[
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: AdminColors.danger,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 10,
+                      minHeight: 10,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
@@ -241,10 +242,49 @@ class _TicketCard extends StatefulWidget {
 class _TicketCardState extends State<_TicketCard>
     with SingleTickerProviderStateMixin {
   bool _expanded = false;
+  double? _originalBrightness;
+  final ScreenBrightness _brightness = ScreenBrightness();
 
   void _toggleQr() {
     AppHaptics.light();
     setState(() => _expanded = !_expanded);
+    if (_expanded) {
+      _maximizeBrightness();
+    } else {
+      _restoreBrightness();
+    }
+  }
+
+  /// Forces the screen to 100% brightness so the bouncer's scanner can
+  /// read the QR code instantly, even in a dark nightclub doorway.
+  Future<void> _maximizeBrightness() async {
+    try {
+      _originalBrightness = await _brightness.application;
+      await _brightness.setApplicationScreenBrightness(1.0);
+    } catch (_) {
+      // Brightness control may not be available on all platforms.
+    }
+  }
+
+  /// Restores the screen brightness to the user's previous setting.
+  Future<void> _restoreBrightness() async {
+    try {
+      if (_originalBrightness != null) {
+        await _brightness.setApplicationScreenBrightness(_originalBrightness!);
+      } else {
+        await _brightness.resetApplicationScreenBrightness();
+      }
+    } catch (_) {
+      // Ignore — best-effort restore.
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_expanded) {
+      _restoreBrightness();
+    }
+    super.dispose();
   }
 
   @override
