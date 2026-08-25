@@ -6,6 +6,7 @@ import 'core/config/app_flavor.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/error_boundary.dart';
 import 'core/widgets/offline_banner.dart';
+import 'core/widgets/active_task_overlay.dart';
 import 'features/driver/application/driver_providers.dart';
 import 'features/notifications/application/notification_providers.dart';
 import 'router/admin_router.dart';
@@ -116,9 +117,11 @@ class _PondyConnectAppState extends ConsumerState<PondyConnectApp> {
       themeMode: ThemeMode.light,
       routerConfig: router,
       builder: (context, child) {
-        return OfflineBanner(
-          child: ErrorBoundary(child: child!),
-        );
+        // Only show the active task overlay for the consumer app
+        final content = widget.flavor == AppFlavor.consumer
+            ? ActiveTaskOverlay(child: ErrorBoundary(child: child!))
+            : ErrorBoundary(child: child!);
+        return OfflineBanner(child: content);
       },
     );
   }

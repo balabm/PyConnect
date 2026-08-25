@@ -40,6 +40,9 @@ import '../features/support/presentation/help_screen.dart';
 import '../features/venues/data/venue_api.dart';
 import '../features/venues/presentation/venue_detail_screen.dart';
 import '../features/venues/presentation/venue_list_screen.dart';
+import '../features/location/presentation/saved_addresses_screen.dart';
+import '../features/location/presentation/map_picker_screen.dart';
+import '../features/events/presentation/ticket_wallet_screen.dart';
 import '../shell/home_shell.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers.dart';
@@ -312,6 +315,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'profile',
             builder: (_, _) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: 'addresses',
+            builder: (_, _) => const SavedAddressesScreen(),
+          ),
+          GoRoute(
+            path: 'map-picker',
+            builder: (_, _) => const MapPickerScreen(),
+          ),
+          GoRoute(
+            path: 'tickets',
+            builder: (_, _) => const TicketWalletScreen(),
           ),
           GoRoute(
             path: 'wallet',

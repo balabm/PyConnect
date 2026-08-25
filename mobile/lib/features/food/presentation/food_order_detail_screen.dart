@@ -81,7 +81,7 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
         ),
         data: (order) {
           _maybeShowCompletionSheet(order);
-          return _OrderDetailBody(order: order);
+          return _OrderDetailBody(order: order, orderId: widget.orderId);
         },
       ),
     );
@@ -109,14 +109,19 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
   }
 }
 
-class _OrderDetailBody extends StatelessWidget {
-  const _OrderDetailBody({required this.order});
+class _OrderDetailBody extends ConsumerWidget {
+  const _OrderDetailBody({required this.order, required this.orderId});
   final Map<String, dynamic> order;
+  final String orderId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = order['status'] as String? ?? 'Unknown';
     final items = order['items'] as List<dynamic>? ?? [];
+    final statusLower = status.toLowerCase();
+    final canCancel = statusLower == 'pending';
+    final isCancelled = statusLower == 'cancelled';
+    final isPreparing = statusLower == 'preparing' || statusLower == 'confirmed';
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -135,6 +140,13 @@ class _OrderDetailBody extends StatelessWidget {
           const SizedBox(height: 4),
           Text(order['deliveryAddress'] as String, style: Theme.of(context).textTheme.bodyMedium),
         ],
+        const SizedBox(height: 24),
+        // Dynamic cancellation button
+        if (!isCancelled) _CancelButton(
+          canCancel: canCancel,
+          isPreparing: isPreparing,
+          orderId: orderId,
+        ),
       ],
     );
   }
@@ -233,6 +245,133 @@ class _ItemRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Dynamic cancellation button that adapts based on the order status.
+///
+/// - **Pending**: Active cancel button → instant 100% refund
+/// - **Preparing/Confirmed**: Greyed out → shows toast explaining why
+/// - **Other active**: Hidden
+class _CancelButton extends ConsumerStatefulWidget {
+  const _CancelButton({
+    required this.canCancel,
+    required this.isPreparing,
+    required this.orderId,
+  });
+
+  final bool canCancel;
+  final bool isPreparing;
+  final String orderId;
+
+  @override
+  ConsumerState<_CancelButton> createState() => _CancelButtonState();
+}
+
+class _CancelButtonState extends ConsumerState<_CancelButton> {
+  bool _cancelling = false;
+
+  Future<void> _cancelOrder() async {
+    // Confirm before cancelling
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Order?'),
+        content: const Text(
+          'Your order is still pending. You\'ll receive a full refund to your original payment method within 5-7 business days.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Order'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _cancelling = true);
+    try {
+      await ref.read(foodApiProvider).cancelOrder(widget.orderId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order cancelled. Full refund initiated.'),
+            backgroundColor: AppTheme.emerald,
+          ),
+        );
+        // Refresh the order detail
+        ref.invalidate(foodOrderDetailProvider(widget.orderId));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel: $e'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.canCancel) {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: _cancelling ? null : _cancelOrder,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppTheme.danger,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          icon: _cancelling
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Icon(Icons.cancel_outlined),
+          label: Text(_cancelling ? 'Cancelling...' : 'Cancel Order (Full Refund)'),
+        ),
+      );
+    }
+
+    if (widget.isPreparing) {
+      return SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'The kitchen has already started preparing your food. Cancellation is no longer possible.',
+                ),
+                backgroundColor: AppTheme.slate,
+                duration: Duration(seconds: 4),
+              ),
+            );
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.slate,
+            side: BorderSide(color: AppTheme.slate.withValues(alpha: 0.3)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          icon: const Icon(Icons.lock_outline),
+          label: const Text('Cancellation Locked — Kitchen is Preparing'),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }
 

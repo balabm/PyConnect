@@ -268,6 +268,36 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
 
   Future<void> _cancelRide() async {
     AppHaptics.heavy();
+
+    // Show confirmation dialog with penalty explanation
+    final status = _ride?['status']?.toString().toLowerCase() ?? '';
+    final driverAssigned = status == 'accepted' || status == 'enroute' || status == 'en_route' || status == 'arrived';
+    final willChargeFee = driverAssigned && !_isDriverGpsStale;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Ride?'),
+        content: Text(
+          willChargeFee
+              ? 'A cancellation fee of \u20B950 may apply since the captain is already on the way. If you cancel within 2 minutes of assignment, no fee will be charged.'
+              : 'You can cancel this ride for free. No penalty will be applied.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Ride'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cancel Ride'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     setState(() => _cancelling = true);
     try {
       final api = ref.read(ridesApiProvider);
@@ -287,7 +317,8 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
                 ? 'Ride cancelled. Fee waived (driver network issue).'
                 : fee != null && fee > 0
                     ? 'Ride cancelled. Cancellation fee: \u20B9$fee'
-                    : 'Ride cancelled'),
+                    : 'Ride cancelled. No fee applied.'),
+            backgroundColor: feeWaived || fee == null || fee == 0 ? AppTheme.emerald : AppTheme.warning,
           ),
         );
         _refreshRide();

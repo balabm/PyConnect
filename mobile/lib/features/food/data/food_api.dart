@@ -142,6 +142,15 @@ class FoodDeliveryApi {
     return await _api.get('/api/orders', queryParameters: {'page': page, 'pageSize': pageSize}) as List<dynamic>;
   }
 
+  /// Cancels a food order. Only works if the order is still in "Pending"
+  /// status (before the restaurant accepts it on the KDS). Returns the
+  /// updated order with cancellation details.
+  Future<Map<String, dynamic>> cancelOrder(String orderId, {String? reason}) async {
+    return await _api.post('/api/orders/$orderId/cancel', data: {
+      if (reason != null) 'reason': reason,
+    }) as Map<String, dynamic>;
+  }
+
   Future<List<dynamic>> listVendors({bool foodVendorsOnly = false}) async {
     return await _api.get('/api/vendors',
         queryParameters: {'foodVendorsOnly': foodVendorsOnly}) as List<dynamic>;

@@ -18,6 +18,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../checkout/cart_conflict_exception.dart';
 import '../../checkout/cart_controller.dart';
+import '../../checkout/presentation/cart_collision_sheet.dart';
 import '../../checkout/presentation/floating_cart_pill.dart';
 import '../../checkout/presentation/slide_to_pay.dart';
 import '../../checkout/presentation/payment_success_overlay.dart';
@@ -130,7 +131,7 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         category: _cartCategory,
       );
     } on CartConflictException catch (e) {
-      final confirmed = await _showCartConflictDialog(e.vendorName, e.newVendorName);
+      final confirmed = await CartCollisionSheet.show(context, e);
       if (confirmed == true) {
         cartController.clear();
         cartController.addItem(
@@ -141,30 +142,6 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         );
       }
     }
-  }
-
-  /// Shows the cross-vendor / cross-category confirmation dialog.
-  Future<bool> _showCartConflictDialog(String vendorName, String newVendorName) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Replace cart?'),
-        content: const Text(
-          'You have items from another vendor. Clear cart and add this item?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Clear & Add'),
-          ),
-        ],
-      ),
-    );
-    return confirmed == true;
   }
 
   @override
