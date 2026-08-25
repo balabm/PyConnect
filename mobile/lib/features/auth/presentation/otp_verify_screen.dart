@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,12 +31,11 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
   void initState() {
     super.initState();
     _startCooldown();
-    // Attempt OTP autofill for testing. The backend only returns the code
-    // when Sms:UseMock is true (test mode). In production this is a no-op.
-    // Only attempt autofill in debug mode to avoid unnecessary network calls in production.
-    if (kDebugMode) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _autofillOtp());
-    }
+    // Attempt OTP autofill. The backend only returns the code when
+    // Sms:UseMock is true (test mode). In production with real SMS, the
+    // peek endpoint returns 404 and this is a silent no-op. Safe to run
+    // in release builds — no secrets are exposed and no user data leaks.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autofillOtp());
   }
 
   @override
@@ -274,8 +272,9 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Test mode hint — visible while OTP autofill is attempting (debug only)
-              if (kDebugMode && _isAutofilling)
+              // Test mode hint — visible while OTP autofill is in progress.
+              // Shows when the backend is in SMS mock mode (test/staging).
+              if (_isAutofilling)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
