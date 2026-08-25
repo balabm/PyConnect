@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import 'package:signalr_netcore/ihub_protocol.dart';
 
@@ -70,7 +71,9 @@ class AdminSignalRService {
           if (eventName == 'CriticalTicketPushed' && !criticalController.isClosed) {
             try {
               criticalController.add(CriticalTicketModel.fromJson(payload));
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('AdminSignalR: critical ticket parse failed: $e');
+            }
           }
         }
       });
@@ -79,7 +82,9 @@ class AdminSignalRService {
     await connection.start();
     try {
       await connection.invoke('JoinAdminGroup');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('AdminSignalR: JoinAdminGroup failed: $e');
+    }
 
     return service;
   }
@@ -88,7 +93,9 @@ class AdminSignalRService {
     try {
       await _connection.invoke('LeaveAdminGroup');
       await _connection.stop();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('AdminSignalR: dispose failed: $e');
+    }
     await _controller.close();
     await _criticalController.close();
   }

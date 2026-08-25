@@ -634,7 +634,9 @@ class _UserDetailDialogState extends ConsumerState<_UserDetailDialog> {
           });
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('AdminUsers: extra data load failed: $e');
+    }
     if (mounted) setState(() => _loadingExtra = false);
   }
 

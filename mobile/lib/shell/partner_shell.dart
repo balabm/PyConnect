@@ -95,7 +95,9 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           _venueId = venues.first.venueId;
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('PartnerShell: venue load failed: $e');
+    }
   }
 
   Future<void> _toggleAcceptingOrders() async {

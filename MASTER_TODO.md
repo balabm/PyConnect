@@ -58,8 +58,61 @@ implemented and committed; items marked `[ ]` are pending.
 | Consumer App | 6 | 5 | 1 |
 | **Total** | **23** | **22** | **1** |
 
-## Next Priority
+---
 
-The **House Party Module** (P2P event creator + hardware rental escrow) is the
-last remaining item. This is a larger feature requiring both backend and
-mobile work.
+### 5. STATE MANAGEMENT & API RESILIENCE (The Silent Crashers)
+
+* [x] **The 401 Interceptor:** Already exists in `api_client.dart` — silent token refresh via `POST /api/auth/refresh` (consumer) + `POST /api/vendor/auth/refresh` (vendor fallback), then retries the original request. If refresh fails, calls `onUnauthorized` to kick user to Login.
+* [x] **Swallowed Exceptions:** Fixed 15+ empty `catch (_) {}` blocks across activity hub, ride tracking, driver shell, partner shell, admin SignalR services, driver SignalR provider, geocoding service, and admin providers. All now log via `debugPrint`. Remaining empty catches are in non-critical cleanup paths (audio stop, prefs save, token storage).
+* [x] **SignalR Reconnects:** Already exists — `withAutomaticReconnect()` + manual exponential backoff (0, 2, 5, 10, 15, 30s) in `signalr_client.dart`. Connection state callback for UI "Reconnecting…" banners.
+* [x] **Double-Tap Prevention:** Checkout uses SlideToPay (gesture-based, no double-tap risk). Checkout button disabled via `_loading` state: `onPressed: (loading || !enabled) ? null : onCheckout`.
+
+---
+
+### 6. UI/UX & POLISH (The "Premium" Feel)
+
+* [x] **The Empty State Audit:** No bare `return Container()` found. All 9 `SizedBox.shrink()` returns are conditional sub-component hiding (e.g., "if no suggestions, hide suggestions box") — correct UX. Full-page empty states use branded `EmptyState` widget.
+* [x] **Keyboard Overlap (Bottom Inset):** `resizeToAvoidBottomInset` defaults to `true` in Flutter's `Scaffold`. No one has disabled it (`resizeToAvoidBottomInset: false` = 0 results). All forms already handle keyboard correctly.
+* [x] **Image Caching & Memory Leaks:** Zero `Image.network` calls in the codebase. All network images use `AppNetworkImage` which wraps `CachedNetworkImage` with shimmer placeholder + error fallback. No OOM risk.
+* [x] **Skeleton Loaders:** Already widely used — 44 files reference Skeleton/Shimmer. Full-page loads use `SkeletonList` with typed skeletons (booking, restaurant, etc.) instead of bare spinners.
+
+---
+
+### 7. SECURITY & ANTI-FRAUD (Protecting the Platform)
+
+* [ ] **Mock Location Detection:** For the Captain App, integrate `trust_location` or check Android native APIs to detect GPS-spoofer usage by drivers in high-surge zones.
+* [x] **Permission Denied Failsafes:** Location permission interceptor already shows a full-screen justification before requesting. Added a "Permission Denied" dialog with "Open Settings" button when OS permission is denied.
+* [x] **Rate Limiting:** Already implemented — `RateLimitingOptions` in `Program.cs` with `AuthPolicy` (5/60s) and `OrderPolicy` (10/60s). OTP rate limiting via `OtpRateLimiter` service. KDS throttling via `KdsThrottlingWorker`.
+* [x] **SQL Injection / LINQ Safety:** Zero raw SQL queries (`FromSqlRaw`, `ExecuteSqlRaw`, etc.) in the codebase. All data access uses EF Core parameterized LINQ queries.
+
+---
+
+### 8. THE "MAGIC" EXPANSION MODULES (Future Roadmap)
+
+* [ ] **The Genie Engine:** Build the `[ Custom Errand ]` text prompt screen allowing users to type anything, triggering a dynamic Auth-Hold for the Captain to go purchase it.
+* [ ] **Intercity Toll Calculator:** Integrate a static toll database or TollGuru API so Chennai-to-Pondy cab rides accurately reflect Base Fare + State Tax + FastTag tolls upfront.
+* [ ] **Split Payments (P2P):** Build the deep-link engine (`pyconnect.in/split/xyz`) so users can share high-ticket villa/yacht rentals to WhatsApp and track friends paying their shares in real-time.
+
+---
+
+## Updated Summary
+
+| Section | Total | Done | Pending |
+|---------|-------|------|---------|
+| 1. God Mode (Admin) | 4 | 4 | 0 |
+| 2. Partner App | 7 | 7 | 0 |
+| 3. Captain App | 6 | 6 | 0 |
+| 4. Consumer App | 6 | 5 | 1 |
+| 5. State & API Resilience | 4 | 4 | 0 |
+| 6. UI/UX & Polish | 4 | 4 | 0 |
+| 7. Security & Anti-Fraud | 4 | 3 | 1 |
+| 8. Magic Expansion Modules | 3 | 0 | 3 |
+| **Total** | **38** | **33** | **5** |
+
+## Remaining Items
+
+1. **House Party Module** (Consumer) — P2P event creator + escrow
+2. **Mock Location Detection** (Captain) — GPS spoofer detection
+3. **Genie Engine** (Consumer) — Custom errand text prompt
+4. **Intercity Toll Calculator** (Consumer) — TollGuru API integration
+5. **Split Payments P2P** (Consumer) — Deep-link split payment engine

@@ -44,8 +44,52 @@ class LocationPermissionInterceptor {
 
     // Now request the system-level permission.
     final permission = await Geolocator.requestPermission();
-    return permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always;
+    if (permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always) {
+      return true;
+    }
+
+    // Permission was denied — show a dialog explaining why it's needed
+    // and provide a button to open OS settings.
+    if (context.mounted) {
+      await _showPermissionDeniedDialog(context, isDriver);
+    }
+    return false;
+  }
+
+  /// Shows a dialog when the user denies location permission, explaining
+  /// why the app needs it and providing a button to open OS settings.
+  static Future<void> _showPermissionDeniedDialog(
+    BuildContext context,
+    bool isDriver,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.location_off, color: AppTheme.warning, size: 48),
+        title: const Text('Location Permission Required'),
+        content: Text(
+          isDriver
+              ? 'PY Connect Captain needs location access to dispatch rides to you and navigate to pickup points. Without it, you cannot receive ride offers.\n\nPlease enable location permission in your device settings.'
+              : 'PY Connect needs location access to find nearby drivers, track your food delivery, and ensure ride safety.\n\nPlease enable location permission in your device settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Maybe later'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.settings),
+            label: const Text('Open Settings'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Geolocator.openAppSettings();
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 

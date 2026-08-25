@@ -137,7 +137,9 @@ class _DriverShellState extends ConsumerState<DriverShell> {
                 );
             // Also show the full-screen modal offer sheet when app is foregrounded.
             _showOfferSheet(offer);
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('DriverShell: ride offer handling failed: $e');
+          }
         }
       }
     });
@@ -173,7 +175,9 @@ class _DriverShellState extends ConsumerState<DriverShell> {
                   earnings: offer.driverEarnings,
                 );
             _showOfferSheet(offer);
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('DriverShell: ride offer handling failed: $e');
+          }
         }
       }
     });

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/providers.dart';
@@ -249,7 +250,9 @@ final adminSignalREventHandlerProvider = Provider<void>((ref) {
           ref
               .read(criticalTicketsProvider.notifier)
               .addTicket(CriticalTicketModel.fromJson(event.payload!));
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('AdminProviders: critical ticket parse failed: $e');
+        }
       }
 
       // Invalidate relevant providers based on event category.

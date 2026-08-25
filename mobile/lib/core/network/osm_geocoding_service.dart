@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 /// OSM Nominatim geocoding service. Converts addresses to coordinates
@@ -52,7 +53,9 @@ class OsmGeocodingService {
       if (response.data is Map<String, dynamic>) {
         return GeocodingResult.fromReverseJson(response.data as Map<String, dynamic>);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Geocoding: reverse geocode failed: $e');
+    }
     return null;
   }
 }

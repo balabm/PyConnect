@@ -155,7 +155,9 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
         LatLng(dropoffLat, dropoffLng),
       );
       if (mounted && route != null) setState(() => _routePoints = route.points);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DriverRide: route fetch failed: $e');
+    }
   }
 
   /// Syncs the live trip timer with the server-side [startedAt] timestamp.

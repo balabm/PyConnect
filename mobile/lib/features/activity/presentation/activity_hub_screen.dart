@@ -46,16 +46,25 @@ final _sequentialFallbackProvider =
 
   try {
     food = await foodApi.listOrders();
-  } catch (_) {}
+  } catch (e) {
+    // One feed failing should not block the others — leave empty.
+    debugPrint('ActivityHub: food orders fetch failed: $e');
+  }
   try {
     rides = await ridesApi.listRides();
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('ActivityHub: rides fetch failed: $e');
+  }
   try {
     stays = await staysApi.listMyBookings();
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('ActivityHub: stays fetch failed: $e');
+  }
   try {
     rentals = await rentalApi.listRentals();
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('ActivityHub: rentals fetch failed: $e');
+  }
 
   return (food: food, rides: rides, stays: stays, rentals: rentals);
 });

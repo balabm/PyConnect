@@ -175,7 +175,9 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
       }
       // Show the post-completion rating sheet when the ride completes.
       _maybeShowCompletionSheet(ride);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('RideTracking: refresh failed: $e');
+    }
   }
 
   void _maybeShowCompletionSheet(Map<String, dynamic> ride) {
@@ -227,7 +229,9 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
         LatLng(dropoffLat, dropoffLng),
       );
       if (mounted && route != null) setState(() => _routePoints = route.points);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('RideTracking: route fetch failed: $e');
+    }
 
     // Fetch driver→pickup route for dual-layer polyline
     _fetchDriverRoute(ride, pickupLat, pickupLng);
@@ -263,7 +267,9 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
       if (mounted && route != null) {
         setState(() => _driverRoutePoints = route.points);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('RideTracking: driver route fetch failed: $e');
+    }
   }
 
   Future<void> _cancelRide() async {

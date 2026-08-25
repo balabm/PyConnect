@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
@@ -91,7 +92,9 @@ class DriverSignalRProvider {
           );
           if (!controller.isClosed) controller.add([task]);
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('DriverSignalR: delivery offer parse failed: $e');
+      }
     });
 
     controller.onCancel = () {
