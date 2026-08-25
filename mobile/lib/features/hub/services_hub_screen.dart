@@ -58,6 +58,18 @@ class ServicesHubScreen extends ConsumerWidget {
       route: '/essentials',
     ),
     _HubService(
+      icon: Icons.auto_awesome,
+      title: 'Genie Errand Service',
+      subtitle: 'Custom errands — type anything you need',
+      route: '/genie',
+    ),
+    _HubService(
+      icon: Icons.group,
+      title: 'Split Payment',
+      subtitle: 'Share costs with friends via WhatsApp',
+      route: '/split-payment',
+    ),
+    _HubService(
       icon: Icons.museum_outlined,
       title: 'Explore',
       subtitle: 'Experiences & safety tips',

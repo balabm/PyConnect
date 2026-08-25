@@ -149,6 +149,16 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<VendorStaff> VendorStaffs => Set<VendorStaff>();
 
+    // ── Genie Engine ──
+
+    public DbSet<GenieErrand> GenieErrands => Set<GenieErrand>();
+
+    // ── Split Payments (P2P) ──
+
+    public DbSet<SplitPaymentPool> SplitPaymentPools => Set<SplitPaymentPool>();
+
+    public DbSet<SplitPaymentContributor> SplitPaymentContributors => Set<SplitPaymentContributor>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

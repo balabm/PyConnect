@@ -22,6 +22,8 @@ import '../features/events/presentation/event_list_screen.dart';
 import '../features/events/presentation/event_detail_screen.dart';
 import '../features/events/presentation/host_scanner_screen.dart';
 import '../features/events/presentation/attendees_screen.dart';
+import '../features/genie/presentation/genie_screen.dart';
+import '../features/split_payments/presentation/split_payment_screen.dart';
 import '../features/food/presentation/food_order_detail_screen.dart';
 import '../features/food/presentation/food_order_history_screen.dart';
 import '../features/food/presentation/food_screen.dart';
@@ -178,6 +180,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'create-party',
             builder: (_, _) => const CreatePartyScreen(),
+          ),
+          GoRoute(
+            path: 'genie',
+            builder: (_, _) => const GenieScreen(),
+          ),
+          GoRoute(
+            path: 'split-payment',
+            builder: (_, _) => const SplitPaymentScreen(),
           ),
           GoRoute(
             path: 'events',

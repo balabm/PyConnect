@@ -187,3 +187,41 @@ public sealed class P2pEventTicketConfiguration : IEntityTypeConfiguration<P2pEv
         builder.HasIndex(t => t.P2pEventId);
     }
 }
+
+public sealed class GenieErrandConfiguration : IEntityTypeConfiguration<GenieErrand>
+{
+    public void Configure(EntityTypeBuilder<GenieErrand> builder)
+    {
+        builder.ToTable("genie_errands");
+
+        builder.HasKey(e => e.Id);
+
+        builder.Property(e => e.UserId).IsRequired();
+
+        builder.Property(e => e.Description)
+            .IsRequired()
+            .HasMaxLength(1000);
+
+        builder.Property(e => e.PickupAddress).HasMaxLength(500);
+        builder.Property(e => e.DropoffAddress).HasMaxLength(500);
+
+        builder.Property(e => e.EstimatedCost).HasColumnType("numeric(12,2)").IsRequired();
+        builder.Property(e => e.AuthHoldAmount).HasColumnType("numeric(12,2)").IsRequired();
+        builder.Property(e => e.ActualCost).HasColumnType("numeric(12,2)");
+
+        builder.Property(e => e.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.Property(e => e.RazorpayOrderId).HasMaxLength(100);
+        builder.Property(e => e.RazorpayPaymentId).HasMaxLength(100);
+
+        builder.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+        builder.Property(e => e.UpdatedAt).HasColumnType("timestamptz");
+
+        builder.HasIndex(e => e.UserId);
+        builder.HasIndex(e => e.CaptainId);
+        builder.HasIndex(e => e.Status);
+    }
+}

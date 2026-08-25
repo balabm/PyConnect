@@ -13,6 +13,7 @@ import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../auth/presentation/waiver_sheet.dart';
+import '../data/toll_calculator.dart';
 import '../domain/nearby_driver.dart';
 import 'widgets/map_selection_mode_indicator.dart';
 import 'widgets/nearby_drivers_section.dart';
@@ -155,6 +156,22 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
         (durationMin * perMinRate).ceil();
     if (fare < minFare) fare = minFare;
     return fare.toDouble();
+  }
+
+  /// Returns the full fare breakdown including tolls for intercity rides.
+  /// For local rides, returns null (use simple _calculateFare instead).
+  TollBreakdown? _calculateIntercityFare(int vehicleIndex, double distanceKm, int durationMin) {
+    if (!TollCalculator.isIntercity(distanceKm)) return null;
+    final (_, _, ratePerKm, baseFare, _, _, _, _) = _vehicles[vehicleIndex];
+    final perMinRate = vehicleIndex == 0 ? 1.0 : vehicleIndex == 1 ? 1.5 : 2.0;
+    final basePlusTime = baseFare + (durationMin * perMinRate).ceil();
+    return TollCalculator.calculate(
+      pickupAddress: _pickupAddress ?? '',
+      dropoffAddress: _dropoffAddress ?? '',
+      distanceKm: distanceKm,
+      baseFare: basePlusTime.toDouble(),
+      perKmRate: ratePerKm,
+    );
   }
 
   int _estimateEta(int vehicleIndex) {
@@ -715,6 +732,8 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
     }
 
     final fare = _calculateFare(_selectedVehicle, route.distanceKm, route.durationMin);
+    final tollBreakdown = _calculateIntercityFare(_selectedVehicle, route.distanceKm, route.durationMin);
+    final totalFare = tollBreakdown?.total ?? fare;
     final vehicleName = _vehicles[_selectedVehicle].$1;
 
     final confirmed = await showModalBottomSheet<bool>(
@@ -723,12 +742,13 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => _RideConfirmSheet(
         vehicleName: vehicleName,
-        fare: fare,
+        fare: totalFare,
         distanceKm: route.distanceKm,
         durationMin: route.durationMin,
         pickupAddress: _pickupAddress,
         dropoffAddress: _dropoffAddress,
         paymentMethod: _paymentMethods[_selectedPayment],
+        tollBreakdown: tollBreakdown,
       ),
     );
 
@@ -786,6 +806,7 @@ class _RideConfirmSheet extends StatelessWidget {
     required this.pickupAddress,
     required this.dropoffAddress,
     required this.paymentMethod,
+    this.tollBreakdown,
   });
 
   final String vehicleName;
@@ -795,6 +816,7 @@ class _RideConfirmSheet extends StatelessWidget {
   final String pickupAddress;
   final String dropoffAddress;
   final String paymentMethod;
+  final TollBreakdown? tollBreakdown;
 
   @override
   Widget build(BuildContext context) {
@@ -861,15 +883,8 @@ class _RideConfirmSheet extends StatelessWidget {
                 ],
               ),
               const Divider(height: 24),
-              // Fare
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Total Fare', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  Text('\u20B9${fare.toStringAsFixed(0)}',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
-                ],
-              ),
+              // Fare breakdown (with toll for intercity)
+              ..._buildFareSection(context, tollBreakdown, fare, distanceKm),
               const SizedBox(height: 20),
               // Confirm button
               SizedBox(
@@ -885,6 +900,117 @@ class _RideConfirmSheet extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Builds the fare breakdown section — shows toll breakdown for intercity
+  /// rides, or a simple total for local rides.
+  List<Widget> _buildFareSection(
+    BuildContext context,
+    TollBreakdown? breakdown,
+    double simpleFare,
+    double distanceKm,
+  ) {
+    if (breakdown == null) {
+      return [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Total Fare', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Text('\u20B9${simpleFare.toStringAsFixed(0)}',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+          ],
+        ),
+      ];
+    }
+
+    if (breakdown.hasToll) {
+      return [
+        _FareLine(label: 'Base Fare', amount: breakdown.baseFare),
+        _FareLine(label: 'Distance (${distanceKm.toStringAsFixed(1)} km)', amount: breakdown.distanceFare),
+        if (breakdown.tollAmount > 0)
+          _FareLine(label: 'Toll (FastTag)', amount: breakdown.tollAmount, icon: Icons.toll),
+        if (breakdown.stateTax > 0)
+          _FareLine(label: 'State Tax', amount: breakdown.stateTax, icon: Icons.receipt),
+        if (breakdown.notes != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.emerald.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: AppTheme.emerald),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(breakdown.notes!,
+                    style: const TextStyle(fontSize: 12, color: AppTheme.emerald),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Total Fare', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Text('\u20B9${breakdown.total.toStringAsFixed(0)}',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+          ],
+        ),
+      ];
+    }
+
+    // Intercity but no known toll
+    return [
+      _FareLine(label: 'Base + Distance', amount: breakdown.totalBeforeToll),
+      const SizedBox(height: 4),
+      Text('Tolls added by captain with receipt',
+        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+      ),
+      const SizedBox(height: 12),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Estimated Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          Text('\u20B9${breakdown.total.toStringAsFixed(0)}',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        ],
+      ),
+    ];
+  }
+}
+
+class _FareLine extends StatelessWidget {
+  const _FareLine({required this.label, required this.amount, this.icon});
+  final String label;
+  final double amount;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+                const SizedBox(width: 6),
+              ],
+              Text(label, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+            ],
+          ),
+          Text('\u20B9${amount.toStringAsFixed(0)}',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface)),
+        ],
       ),
     );
   }

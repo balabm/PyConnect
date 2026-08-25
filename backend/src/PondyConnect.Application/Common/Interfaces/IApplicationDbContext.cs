@@ -138,6 +138,14 @@ public interface IApplicationDbContext
     DbSet<EquipmentMaintenanceBlock> EquipmentMaintenanceBlocks { get; }
     DbSet<VendorStaff> VendorStaffs { get; }
 
+    // ── Split Payments (P2P) ──
+    DbSet<SplitPaymentPool> SplitPaymentPools { get; }
+    DbSet<SplitPaymentContributor> SplitPaymentContributors { get; }
+
+    // ── Genie Engine ──
+
+    DbSet<GenieErrand> GenieErrands { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -44,7 +44,7 @@ implemented and committed; items marked `[ ]` are pending.
 * [x] **Offline Ticket Vault:** Cache purchased event QR codes locally via SQLite/Hive, and force device brightness to 100% when the QR code is tapped. — _Commit 88ca3ba + brightness (pending)_
 * [x] **Location Friction:** Keep the map pin dead-center and let the user drag the map underneath it. Implement a "Saved Addresses" (Home/Work) vault. — _Commit 88ca3ba_
 * [x] **Dynamic Cancellations:** Tie the "Cancel Order" button state to the Partner's KDS. Allow 100% refund if `Pending`, block cancellation if `Preparing`. — _Commit 88ca3ba_
-* [ ] **House Party Module:** Build the custom P2P event creator form and hardware rental flow with upfront Escrow splits.
+* [x] **House Party Module:** Already fully built — P2pEvent entity + P2pEventsController (CRUD, ticketing, escrow, validation) + CreatePartyScreen + PartyBuilderScreen + EventListScreen + HostScannerScreen + AttendeesScreen. 5% platform fee, 95% to host wallet.
 
 ---
 
@@ -80,7 +80,7 @@ implemented and committed; items marked `[ ]` are pending.
 
 ### 7. SECURITY & ANTI-FRAUD (Protecting the Platform)
 
-* [ ] **Mock Location Detection:** For the Captain App, integrate `trust_location` or check Android native APIs to detect GPS-spoofer usage by drivers in high-surge zones.
+* [x] **Mock Location Detection:** Already fully built — `LocationSecurity` class checks `Position.isMocked` on every GPS ping. Driver is forced offline, red warning screen shown, anomaly logged to backend via `POST /api/driver/mock-location-report`.
 * [x] **Permission Denied Failsafes:** Location permission interceptor already shows a full-screen justification before requesting. Added a "Permission Denied" dialog with "Open Settings" button when OS permission is denied.
 * [x] **Rate Limiting:** Already implemented — `RateLimitingOptions` in `Program.cs` with `AuthPolicy` (5/60s) and `OrderPolicy` (10/60s). OTP rate limiting via `OtpRateLimiter` service. KDS throttling via `KdsThrottlingWorker`.
 * [x] **SQL Injection / LINQ Safety:** Zero raw SQL queries (`FromSqlRaw`, `ExecuteSqlRaw`, etc.) in the codebase. All data access uses EF Core parameterized LINQ queries.
@@ -89,9 +89,9 @@ implemented and committed; items marked `[ ]` are pending.
 
 ### 8. THE "MAGIC" EXPANSION MODULES (Future Roadmap)
 
-* [ ] **The Genie Engine:** Build the `[ Custom Errand ]` text prompt screen allowing users to type anything, triggering a dynamic Auth-Hold for the Captain to go purchase it.
-* [ ] **Intercity Toll Calculator:** Integrate a static toll database or TollGuru API so Chennai-to-Pondy cab rides accurately reflect Base Fare + State Tax + FastTag tolls upfront.
-* [ ] **Split Payments (P2P):** Build the deep-link engine (`pyconnect.in/split/xyz`) so users can share high-ticket villa/yacht rentals to WhatsApp and track friends paying their shares in real-time.
+* [x] **The Genie Engine:** Built — `POST /api/genie` backend (GenieErrand entity + GenieController) + mobile GenieScreen with free-text errand creator, estimated cost auth-hold, and errand tracking. Accessible from Services Hub.
+* [x] **Intercity Toll Calculator:** Built — static toll database (`toll_calculator.dart`) covering Pondicherry ↔ Chennai (ECR + NH32), Bangalore, Coimbatore, Trichy, Velankanni, Mahabalipuram. Fare breakdown shows Base Fare + Distance + Toll (FastTag) + State Tax in the ride confirmation sheet for intercity rides.
+* [x] **Split Payments (P2P):** Built — `POST /api/split-payments` backend (SplitPaymentPool + SplitPaymentContributor entities + SplitPaymentsController) + mobile SplitPaymentScreen with pool creation, WhatsApp share via `share_plus`, progress bar, and contributor tracking. Deep-link slug generated for each pool.
 
 ---
 
@@ -102,17 +102,11 @@ implemented and committed; items marked `[ ]` are pending.
 | 1. God Mode (Admin) | 4 | 4 | 0 |
 | 2. Partner App | 7 | 7 | 0 |
 | 3. Captain App | 6 | 6 | 0 |
-| 4. Consumer App | 6 | 5 | 1 |
+| 4. Consumer App | 6 | 6 | 0 |
 | 5. State & API Resilience | 4 | 4 | 0 |
 | 6. UI/UX & Polish | 4 | 4 | 0 |
-| 7. Security & Anti-Fraud | 4 | 3 | 1 |
-| 8. Magic Expansion Modules | 3 | 0 | 3 |
-| **Total** | **38** | **33** | **5** |
+| 7. Security & Anti-Fraud | 4 | 4 | 0 |
+| 8. Magic Expansion Modules | 3 | 3 | 0 |
+| **Total** | **38** | **38** | **0** |
 
-## Remaining Items
-
-1. **House Party Module** (Consumer) — P2P event creator + escrow
-2. **Mock Location Detection** (Captain) — GPS spoofer detection
-3. **Genie Engine** (Consumer) — Custom errand text prompt
-4. **Intercity Toll Calculator** (Consumer) — TollGuru API integration
-5. **Split Payments P2P** (Consumer) — Deep-link split payment engine
+## All items complete! 🎉
