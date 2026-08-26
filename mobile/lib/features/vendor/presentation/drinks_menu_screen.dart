@@ -1,40 +1,11 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/vendor_providers.dart';
 import '../data/vendor_dashboard_api.dart';
 import 'manual_door_log_sheet.dart';
-
-/// Guestlist entry for pub/club partners.
-/// Persisted locally via SharedPreferences until backend endpoint is available.
-class GuestlistEntry {
-  GuestlistEntry({
-    required this.name,
-    required this.partySize,
-    this.checkedIn = false,
-  });
-
-  String name;
-  int partySize;
-  bool checkedIn;
-
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'partySize': partySize,
-        'checkedIn': checkedIn,
-      };
-
-  factory GuestlistEntry.fromJson(Map<String, dynamic> json) => GuestlistEntry(
-        name: json['name'] as String? ?? '',
-        partySize: (json['partySize'] as num?)?.toInt() ?? 1,
-        checkedIn: json['checkedIn'] as bool? ?? false,
-      );
-}
 
 /// Drinks menu management for Pub/Club vendors.
 /// Reuses the existing menu API but displays with beverage-themed UI.
@@ -48,8 +19,8 @@ class DrinksMenuScreen extends ConsumerStatefulWidget {
 
 class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
   int _crowdPercent = 25;
-  final List<GuestlistEntry> _guestlist = [];
-  static const _guestlistKey = 'pub_guestlist';
+  final List<GuestlistEntryModel> _guestlist = [];
+  bool _guestlistLoading = false;
   String? _venueId;
 
   @override
@@ -71,22 +42,21 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
   }
 
   Future<void> _loadGuestlist() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_guestlistKey);
-    if (json != null) {
-      final list = jsonDecode(json) as List<dynamic>;
-      setState(() {
-        _guestlist.clear();
-        _guestlist.addAll(list
-            .map((e) => GuestlistEntry.fromJson(e as Map<String, dynamic>)));
-      });
+    setState(() => _guestlistLoading = true);
+    try {
+      final entries = await ref.read(vendorDashboardApiProvider).getGuestlist();
+      if (mounted) {
+        setState(() {
+          _guestlist.clear();
+          _guestlist.addAll(entries);
+          _guestlistLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _guestlistLoading = false);
+      }
     }
-  }
-
-  Future<void> _saveGuestlist() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = jsonEncode(_guestlist.map((e) => e.toJson()).toList());
-    await prefs.setString(_guestlistKey, json);
   }
 
   String _vibeLabel(int pct) {
@@ -481,7 +451,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
     );
   }
 
-  Widget _buildGuestlistTile(int index, GuestlistEntry entry) {
+  Widget _buildGuestlistTile(int index, GuestlistEntryModel entry) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -507,7 +477,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.name,
+                  entry.guestName,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
@@ -540,10 +510,23 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               minimumSize: Size.zero,
             ),
-            onPressed: () {
+            onPressed: () async {
               AppHaptics.light();
-              setState(() => entry.checkedIn = !entry.checkedIn);
-              _saveGuestlist();
+              final entry = _guestlist[index];
+              try {
+                if (entry.checkedIn) {
+                  await ref.read(vendorDashboardApiProvider).undoCheckInGuest(entry.id);
+                } else {
+                  await ref.read(vendorDashboardApiProvider).checkInGuest(entry.id);
+                }
+                setState(() => entry.checkedIn = !entry.checkedIn);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed: $e'), backgroundColor: AppTheme.danger),
+                  );
+                }
+              }
             },
             child: Text(entry.checkedIn ? 'Undo' : 'Check In'),
           ),
@@ -593,16 +576,27 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(),
-            onPressed: () {
+            onPressed: () async {
               final name = nameController.text.trim();
               final size = int.tryParse(sizeController.text.trim()) ?? 1;
               if (name.isEmpty) return;
               AppHaptics.light();
-              setState(() {
-                _guestlist.add(GuestlistEntry(name: name, partySize: size < 1 ? 1 : size));
-              });
-              _saveGuestlist();
               Navigator.pop(dialogContext);
+              try {
+                final entry = await ref.read(vendorDashboardApiProvider).addGuestlistEntry(
+                      guestName: name,
+                      partySize: size < 1 ? 1 : size,
+                    );
+                if (mounted) {
+                  setState(() => _guestlist.insert(0, entry));
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add: $e'), backgroundColor: AppTheme.danger),
+                  );
+                }
+              }
             },
             child: Text('Add'),
           ),
