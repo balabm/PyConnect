@@ -17,6 +17,7 @@ import '../features/admin/presentation/admin_sos_screen.dart';
 import '../features/admin/presentation/admin_tickets_screen.dart';
 import '../features/admin/presentation/admin_logs_screen.dart';
 import '../features/admin/presentation/admin_finance_screen.dart';
+import '../features/admin/presentation/admin_withdrawals_screen.dart';
 import '../features/admin/data/admin_api.dart';
 import '../features/support/data/support_api.dart';
 import '../features/kyc/presentation/kyc_review_screen.dart';
@@ -115,6 +116,10 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/finance',
             builder: (_, _) => const AdminFinanceScreen(),
+          ),
+          GoRoute(
+            path: '/withdrawals',
+            builder: (_, _) => const AdminWithdrawalsScreen(),
           ),
         ],
       ),

@@ -99,6 +99,22 @@ class PartyBuilderScreen extends StatelessWidget {
                 },
                 child: const Text('Browse Events'),
               ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  AppHaptics.light();
+                  context.push('/equipment');
+                },
+                icon: const Icon(Icons.speaker),
+                label: const Text('Rent Equipment'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.emerald,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

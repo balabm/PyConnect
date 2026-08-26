@@ -29,6 +29,26 @@ class AdminApi {
         .toList();
   }
 
+  // === Driver Withdrawals ===
+
+  Future<List<AdminWithdrawalRequest>> getWithdrawals() async {
+    final result = await _api.get('/api/admin/withdrawals');
+    final list = result as List<dynamic>;
+    return list
+        .map((e) => AdminWithdrawalRequest.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> approveWithdrawal(String withdrawalId) async {
+    await _api.post('/api/admin/withdrawals/$withdrawalId/approve');
+  }
+
+  Future<void> rejectWithdrawal(String withdrawalId, {String? reason}) async {
+    await _api.post('/api/admin/withdrawals/$withdrawalId/reject', data: {
+      if (reason != null) 'reason': reason,
+    });
+  }
+
   // === Vendor Management ===
 
   Future<List<AdminVendor>> getVendors() async {
@@ -905,4 +925,39 @@ class AdminSettlementLog {
   final String currency;
   final String status;
   final String capturedAt;
+}
+
+/// Driver withdrawal request returned by GET /api/admin/withdrawals.
+class AdminWithdrawalRequest {
+  const AdminWithdrawalRequest({
+    required this.id,
+    required this.driverId,
+    required this.driverName,
+    required this.amount,
+    required this.status,
+    required this.requestedAt,
+    this.bankAccount = '',
+    this.ifsc = '',
+  });
+
+  factory AdminWithdrawalRequest.fromJson(Map<String, dynamic> json) =>
+      AdminWithdrawalRequest(
+        id: json['id'] as String? ?? '',
+        driverId: json['driverId'] as String? ?? '',
+        driverName: json['driverName'] as String? ?? 'Unknown',
+        amount: (json['amount'] as num?)?.toDouble() ?? 0,
+        status: json['status'] as String? ?? 'Pending',
+        requestedAt: json['requestedAt'] as String? ?? '',
+        bankAccount: json['bankAccount'] as String? ?? '',
+        ifsc: json['ifsc'] as String? ?? '',
+      );
+
+  final String id;
+  final String driverId;
+  final String driverName;
+  final double amount;
+  final String status;
+  final String requestedAt;
+  final String bankAccount;
+  final String ifsc;
 }

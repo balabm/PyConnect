@@ -29,7 +29,7 @@ class ManageHubScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: TextButton.icon(
-                onPressed: () => _showBusinessSwitcher(context, session),
+                onPressed: () => _showBusinessSwitcher(context, ref, session),
                 icon: const Icon(Icons.storefront, size: 18),
                 label: Text(
                   session.vendorName,
@@ -419,7 +419,7 @@ class ManageHubScreen extends ConsumerWidget {
 
   /// Shows a bottom sheet listing all businesses owned by this partner.
   /// Tapping a business switches the active vendor context.
-  void _showBusinessSwitcher(BuildContext context, VendorAuthSession session) {
+  void _showBusinessSwitcher(BuildContext context, WidgetRef ref, VendorAuthSession session) {
     AppHaptics.light();
     showModalBottomSheet(
       context: context,
@@ -459,9 +459,16 @@ class ManageHubScreen extends ConsumerWidget {
                 onTap: () {
                   AppHaptics.selection();
                   Navigator.pop(ctx);
-                  // TODO: Switch active vendor context — requires
-                  // persisting the selected vendorId and passing it as
-                  // a query param to vendor API calls.
+                  // Switch active vendor context for multi-business partners.
+                  ref
+                      .read(vendorAuthControllerProvider.notifier)
+                      .switchVendor(b);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Switched to ${b.name}'),
+                      backgroundColor: AppTheme.emerald,
+                    ),
+                  );
                 },
               );
             }),

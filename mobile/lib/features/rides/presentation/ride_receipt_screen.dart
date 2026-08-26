@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
@@ -29,10 +30,22 @@ class RideReceiptScreen extends ConsumerWidget {
             icon: const Icon(Icons.share),
             onPressed: () {
               AppHaptics.light();
-              // TODO: Share receipt via system share sheet
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Receipt sharing coming soon')),
-              );
+              final receipt = receiptAsync.valueOrNull;
+              if (receipt != null) {
+                final total = receipt['totalAmount'] ?? 0;
+                final vehicleType = receipt['vehicleType'] as String? ?? 'Ride';
+                final distanceKm = receipt['distanceKm'] ?? 0;
+                final status = receipt['status'] as String? ?? 'Completed';
+                Share.share(
+                  'PY Connect Ride Receipt\n'
+                  'Ride ID: $rideId\n'
+                  'Vehicle: $vehicleType\n'
+                  'Distance: $distanceKm km\n'
+                  'Status: $status\n'
+                  'Total: \u20B9$total',
+                  subject: 'PY Connect Ride Receipt',
+                );
+              }
             },
           ),
         ],

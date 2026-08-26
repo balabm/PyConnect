@@ -81,6 +81,11 @@ class _AdminShellState extends ConsumerState<AdminShell>
       path: '/tickets',
     ),
     _NavDest(icon: Icons.history_rounded, label: 'Audit Logs', path: '/logs'),
+    _NavDest(
+      icon: Icons.payments_rounded,
+      label: 'Withdrawals',
+      path: '/withdrawals',
+    ),
   ];
 
   late final AnimationController _sosBannerController;

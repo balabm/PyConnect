@@ -45,6 +45,10 @@ import '../features/venues/presentation/venue_list_screen.dart';
 import '../features/location/presentation/saved_addresses_screen.dart';
 import '../features/location/presentation/map_picker_screen.dart';
 import '../features/events/presentation/ticket_wallet_screen.dart';
+import '../features/equipment/presentation/equipment_browse_screen.dart';
+import '../features/equipment/presentation/equipment_detail_screen.dart';
+import '../features/equipment/presentation/my_equipment_rentals_screen.dart';
+import '../features/equipment/data/consumer_equipment_api.dart';
 import '../shell/home_shell.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers.dart';
@@ -220,6 +224,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'experiences',
             builder: (_, _) => const ExperiencesScreen(),
+          ),
+          // ── Equipment rental screens ──
+          GoRoute(
+            path: 'equipment',
+            builder: (_, _) => const EquipmentBrowseScreen(),
+          ),
+          GoRoute(
+            path: 'equipment/my-rentals',
+            builder: (_, _) => const MyEquipmentRentalsScreen(),
+          ),
+          GoRoute(
+            path: 'equipment/:itemId',
+            builder: (_, state) => EquipmentDetailScreen(
+              item: state.extra as ConsumerEquipmentItemModel,
+            ),
           ),
           GoRoute(
             path: 'stays',

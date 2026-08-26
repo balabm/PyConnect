@@ -172,6 +172,28 @@ class VendorAuthController extends AsyncNotifier<VendorAuthSession?> {
     state = const AsyncData(null);
   }
 
+  /// Switches the active vendor context for multi-business partners.
+  /// Updates the session's vendorId, vendorName, and category to the
+  /// selected business and persists the change. The API client will
+  /// use the new vendorId for subsequent vendor API calls.
+  Future<void> switchVendor(VendorBusinessSummary business) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final updated = VendorAuthSession(
+      accessToken: current.accessToken,
+      vendorId: business.vendorId,
+      vendorName: business.name,
+      category: business.category,
+      phone: current.phone,
+      status: current.status,
+      rejectionReason: current.rejectionReason,
+      businesses: current.businesses,
+    );
+    await _persistSession(updated);
+    state = AsyncData(updated);
+  }
+
   bool get isAuthenticated => state.valueOrNull?.isAuthenticated ?? false;
 
   Future<void> _persistSession(VendorAuthSession session) async {
