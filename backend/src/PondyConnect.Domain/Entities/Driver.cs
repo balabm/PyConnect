@@ -147,6 +147,10 @@ public sealed class Driver : BaseEntity
 
     public void GoOnline()
     {
+        if (!IsApproved)
+            throw new InvalidOperationException("Cannot go online until approved by admin.");
+        if (!IsKycUploaded)
+            throw new InvalidOperationException("Cannot go online until KYC is uploaded.");
         if (IsOnRide)
             throw new InvalidOperationException("Cannot go online while on an active ride.");
         IsOnline = true;
