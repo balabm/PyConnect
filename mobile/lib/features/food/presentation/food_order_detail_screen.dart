@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers.dart';
+import '../application/food_order_signalr_provider.dart';
 import '../../activity/presentation/post_completion_sheet.dart';
 
 final foodOrderDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, orderId) async {
@@ -24,9 +25,10 @@ class FoodOrderDetailScreen extends ConsumerStatefulWidget {
 class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
   bool _completionSheetShown = false;
   Timer? _pollTimer;
+  StreamSubscription<String>? _signalRSub;
 
   /// Statuses that are considered "active" — the order is still in progress
-  /// and the screen should poll for live updates.
+  /// and the screen should listen for live updates.
   static const _activeStatuses = {
     'pending',
     'confirmed',
@@ -37,20 +39,37 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _initSignalR();
+  }
+
+  void _initSignalR() {
+    // Listen for real-time order updates via SignalR (VendorHub broadcasts
+    // "OrderUpdated" events). When we receive an update for our order ID,
+    // invalidate the provider to refresh the data immediately.
+    _signalRSub = ref.read(foodOrderUpdateStreamProvider.stream).listen((updatedOrderId) {
+      if (mounted && updatedOrderId == widget.orderId) {
+        ref.invalidate(foodOrderDetailProvider(widget.orderId));
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _pollTimer?.cancel();
+    _signalRSub?.cancel();
     super.dispose();
   }
 
-  /// Starts or stops the polling timer based on the current order status.
-  /// The backend does not yet have a SignalR hub for food orders, so we poll
-  /// every 10 seconds while the order is in an active state. Once the order
-  /// reaches a terminal state (delivered, cancelled), polling stops.
+  /// Starts or stops the fallback polling timer based on the current order
+  /// status. SignalR is the primary update mechanism, but we keep a slower
+  /// polling fallback (every 30s) in case the WebSocket connection drops.
   void _updatePolling(String status) {
     final isActive = _activeStatuses.contains(status.toLowerCase());
 
     if (isActive && _pollTimer == null) {
-      _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
         if (mounted) {
           ref.invalidate(foodOrderDetailProvider(widget.orderId));
         }
@@ -65,7 +84,7 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
   Widget build(BuildContext context) {
     final orderAsync = ref.watch(foodOrderDetailProvider(widget.orderId));
 
-    // Manage the polling timer based on the latest order status.
+    // Manage the fallback polling timer based on the latest order status.
     orderAsync.whenData((order) {
       final status = (order['status'] as String?) ?? '';
       _updatePolling(status);

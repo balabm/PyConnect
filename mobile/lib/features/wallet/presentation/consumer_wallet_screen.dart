@@ -26,6 +26,7 @@ class ConsumerWalletScreen extends ConsumerStatefulWidget {
 
 class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
   UserWalletModel? _wallet;
+  List<UserWalletTransactionModel>? _transactions;
   bool _loading = true;
   String? _error;
 
@@ -41,10 +42,14 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
       _error = null;
     });
     try {
-      final wallet = await ref.read(userWalletApiProvider).getWallet();
+      final results = await Future.wait([
+        ref.read(userWalletApiProvider).getWallet(),
+        ref.read(userWalletApiProvider).getTransactions(),
+      ]);
       if (mounted) {
         setState(() {
-          _wallet = wallet;
+          _wallet = results[0] as UserWalletModel;
+          _transactions = results[1] as List<UserWalletTransactionModel>;
           _loading = false;
         });
       }
@@ -230,25 +235,69 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
   }
 
   Widget _buildTransactionList(bool isDark) {
-    // Transaction history endpoint is planned for a future iteration.
-    // For now, show an honest empty state.
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(Icons.receipt_long_outlined, size: 48, color: AppTheme.slate.withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-            Text(
-              'Transaction history coming soon',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.slate.withValues(alpha: 0.7),
+    final transactions = _transactions;
+
+    if (transactions == null || transactions.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.receipt_long_outlined, size: 48, color: AppTheme.slate.withValues(alpha: 0.5)),
+              const SizedBox(height: 12),
+              Text(
+                'No transactions yet',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.slate.withValues(alpha: 0.7),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                'Top up your wallet to get started',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.slate.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: transactions.length,
+      itemBuilder: (context, index) {
+        final tx = transactions[index];
+        final isCredit = tx.isCredit;
+        final iconData = isCredit ? Icons.add_circle : Icons.remove_circle;
+        final iconColor = isCredit ? AppTheme.emerald : AppTheme.danger;
+
+        return ListTile(
+          leading: Icon(iconData, color: iconColor),
+          title: Text(
+            tx.description,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            tx.type,
+            style: TextStyle(fontSize: 12, color: AppTheme.slate.withValues(alpha: 0.6)),
+          ),
+          trailing: Text(
+            '${isCredit ? '+' : '-'}\u20B9${tx.amount.abs().toStringAsFixed(0)}',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: iconColor,
+            ),
+          ),
+        );
+      },
     );
   }
 

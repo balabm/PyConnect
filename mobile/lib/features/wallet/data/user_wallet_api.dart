@@ -38,6 +38,16 @@ class UserWalletApi {
     });
     return UserWalletModel.fromJson(body as Map<String, dynamic>);
   }
+
+  /// Fetches the user's recent wallet transactions.
+  Future<List<UserWalletTransactionModel>> getTransactions({int limit = 50}) async {
+    final body = await _api.get('/api/user/wallet/transactions',
+        queryParameters: {'limit': limit});
+    final list = body as List? ?? [];
+    return list
+        .map((e) => UserWalletTransactionModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }
 
 class UserWalletModel {
@@ -72,4 +82,34 @@ class TopUpInitResult {
 
   final String razorpayOrderId;
   final double amount;
+}
+
+class UserWalletTransactionModel {
+  UserWalletTransactionModel({
+    required this.id,
+    required this.type,
+    required this.amount,
+    required this.description,
+    this.referenceId,
+    required this.createdAt,
+  });
+
+  factory UserWalletTransactionModel.fromJson(Map<String, dynamic> json) =>
+      UserWalletTransactionModel(
+        id: json['id'] as String? ?? '',
+        type: json['type'] as String? ?? 'TopUp',
+        amount: (json['amount'] as num?)?.toDouble() ?? 0,
+        description: json['description'] as String? ?? '',
+        referenceId: json['referenceId'] as String?,
+        createdAt: json['createdAt'] as String? ?? '',
+      );
+
+  final String id;
+  final String type;
+  final double amount;
+  final String description;
+  final String? referenceId;
+  final String createdAt;
+
+  bool get isCredit => amount > 0;
 }

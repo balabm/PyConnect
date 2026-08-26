@@ -69,6 +69,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<UserWallet> UserWallets => Set<UserWallet>();
 
+    public DbSet<UserWalletTransaction> UserWalletTransactions => Set<UserWalletTransaction>();
+
     public DbSet<Referral> Referrals => Set<Referral>();
 
     public DbSet<VendorLedgerEntry> VendorLedgerEntries => Set<VendorLedgerEntry>();

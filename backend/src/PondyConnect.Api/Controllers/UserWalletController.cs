@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Domain.Entities;
+using PondyConnect.Domain.Enums;
 
 /// <summary>
 /// Consumer PY Wallet endpoints. Exposes the user's promo balance, real
@@ -121,6 +122,16 @@ public sealed class UserWalletController : ControllerBase
         }
 
         wallet.CreditReal(request.Amount);
+
+        // Record the transaction in the ledger.
+        var transaction = UserWalletTransaction.Create(
+            walletId: wallet.Id,
+            type: UserWalletTransactionType.TopUp,
+            amount: request.Amount,
+            description: $"Wallet top-up via Razorpay ({request.RazorpayPaymentId})",
+            referenceId: request.RazorpayPaymentId);
+        _dbContext.UserWalletTransactions.Add(transaction);
+
         await _dbContext.SaveChangesAsync(ct);
 
         return Ok(new UserWalletDetail(
@@ -128,6 +139,43 @@ public sealed class UserWalletController : ControllerBase
             RealBalance: wallet.RealBalance,
             PyCoins: wallet.PyCoins,
             TotalBalance: wallet.PromoBalance + wallet.RealBalance));
+    }
+
+    /// <summary>
+    /// Returns the user's recent wallet transactions (ledger entries).
+    /// </summary>
+    [HttpGet("transactions")]
+    [ProducesResponseType(typeof(IReadOnlyList<UserWalletTransactionResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<UserWalletTransactionResponse>>> GetTransactions(
+        [FromQuery] int limit = 50, CancellationToken ct = default)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null || userId == Guid.Empty)
+            return Unauthorized(new { Message = "User not authenticated." });
+
+        var wallet = await _dbContext.UserWallets
+            .AsNoTracking()
+            .FirstOrDefaultAsync(w => w.UserId == userId, ct);
+
+        if (wallet is null)
+            return Ok(new List<UserWalletTransactionResponse>());
+
+        var transactions = await _dbContext.UserWalletTransactions
+            .AsNoTracking()
+            .Where(t => t.WalletId == wallet.Id)
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(limit)
+            .Select(t => new UserWalletTransactionResponse(
+                t.Id,
+                t.Type.ToString(),
+                t.Amount,
+                t.Description,
+                t.ReferenceId,
+                t.CreatedAt))
+            .ToListAsync(ct);
+
+        return Ok(transactions);
     }
 }
 
@@ -149,3 +197,11 @@ public sealed record UserConfirmTopUpRequest(
     string RazorpayOrderId,
     string RazorpayPaymentId,
     string Signature);
+
+public sealed record UserWalletTransactionResponse(
+    Guid Id,
+    string Type,
+    decimal Amount,
+    string Description,
+    string? ReferenceId,
+    DateTimeOffset CreatedAt);

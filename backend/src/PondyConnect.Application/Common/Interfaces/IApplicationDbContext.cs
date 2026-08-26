@@ -61,6 +61,8 @@ public interface IApplicationDbContext
 
     DbSet<UserWallet> UserWallets { get; }
 
+    DbSet<UserWalletTransaction> UserWalletTransactions { get; }
+
     DbSet<Referral> Referrals { get; }
 
     DbSet<VendorLedgerEntry> VendorLedgerEntries { get; }
