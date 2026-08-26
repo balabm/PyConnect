@@ -140,6 +140,12 @@ public interface IApplicationDbContext
     DbSet<EquipmentMaintenanceBlock> EquipmentMaintenanceBlocks { get; }
     DbSet<VendorStaff> VendorStaffs { get; }
 
+    // ── Party Services Marketplace ──
+    DbSet<PartyService> PartyServices { get; }
+    DbSet<PartyServiceBooking> PartyServiceBookings { get; }
+    DbSet<GuestlistEntry> GuestlistEntries { get; }
+    DbSet<ScooterFleetItem> ScooterFleetItems { get; }
+
     // ── Split Payments (P2P) ──
     DbSet<SplitPaymentPool> SplitPaymentPools { get; }
     DbSet<SplitPaymentContributor> SplitPaymentContributors { get; }

@@ -49,6 +49,10 @@ import '../features/equipment/presentation/equipment_browse_screen.dart';
 import '../features/equipment/presentation/equipment_detail_screen.dart';
 import '../features/equipment/presentation/my_equipment_rentals_screen.dart';
 import '../features/equipment/data/consumer_equipment_api.dart';
+import '../features/party_services/presentation/party_services_browse_screen.dart';
+import '../features/party_services/presentation/party_service_detail_screen.dart';
+import '../features/party_services/presentation/my_party_bookings_screen.dart';
+import '../features/party_services/data/party_services_api.dart';
 import '../shell/home_shell.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers.dart';
@@ -238,6 +242,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'equipment/:itemId',
             builder: (_, state) => EquipmentDetailScreen(
               item: state.extra as ConsumerEquipmentItemModel,
+            ),
+          ),
+          // ── Party services marketplace ──
+          GoRoute(
+            path: 'party-services',
+            builder: (_, _) => const PartyServicesBrowseScreen(),
+          ),
+          GoRoute(
+            path: 'party-services/my-bookings',
+            builder: (_, _) => const MyPartyBookingsScreen(),
+          ),
+          GoRoute(
+            path: 'party-services/:id',
+            builder: (_, state) => PartyServiceDetailScreen(
+              serviceId: state.pathParameters['id']!,
+              service: state.extra as PartyServiceModel?,
             ),
           ),
           GoRoute(

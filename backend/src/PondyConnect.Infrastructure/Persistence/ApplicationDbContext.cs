@@ -151,6 +151,12 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<VendorStaff> VendorStaffs => Set<VendorStaff>();
 
+    // ── Party Services Marketplace ──
+    public DbSet<PartyService> PartyServices => Set<PartyService>();
+    public DbSet<PartyServiceBooking> PartyServiceBookings => Set<PartyServiceBooking>();
+    public DbSet<GuestlistEntry> GuestlistEntries => Set<GuestlistEntry>();
+    public DbSet<ScooterFleetItem> ScooterFleetItems => Set<ScooterFleetItem>();
+
     // ── Genie Engine ──
 
     public DbSet<GenieErrand> GenieErrands => Set<GenieErrand>();

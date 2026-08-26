@@ -115,6 +115,22 @@ class PartyBuilderScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  AppHaptics.light();
+                  context.push('/party-services');
+                },
+                icon: const Icon(Icons.celebration),
+                label: const Text('Book DJ, Catering & More'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.emerald,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

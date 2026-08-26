@@ -531,6 +531,121 @@ class VendorDashboardApi {
     });
   }
 
+  // ── Guestlist (Pub/Club) ──
+
+  /// Fetches the vendor's guestlist from the backend.
+  Future<List<GuestlistEntryModel>> getGuestlist({String? date}) async {
+    final body = await _api.get('/api/vendor/guestlist',
+        queryParameters: date != null ? {'date': date} : null);
+    final list = body as List? ?? [];
+    return list
+        .map((e) => GuestlistEntryModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Adds a guest to the backend guestlist.
+  Future<GuestlistEntryModel> addGuestlistEntry({
+    required String guestName,
+    int partySize = 1,
+    String? phone,
+    String? eventDate,
+  }) async {
+    final body = await _api.post('/api/vendor/guestlist', data: {
+      'guestName': guestName,
+      'partySize': partySize,
+      if (phone != null) 'phone': phone,
+      if (eventDate != null) 'eventDate': eventDate,
+    });
+    return GuestlistEntryModel.fromJson(body as Map<String, dynamic>);
+  }
+
+  /// Checks in a guest at the door.
+  Future<void> checkInGuest(String entryId) async {
+    await _api.post('/api/vendor/guestlist/$entryId/checkin');
+  }
+
+  /// Undoes a guest check-in.
+  Future<void> undoCheckInGuest(String entryId) async {
+    await _api.post('/api/vendor/guestlist/$entryId/undo-checkin');
+  }
+
+  /// Removes a guest from the guestlist.
+  Future<void> removeGuestlistEntry(String entryId) async {
+    await _api.delete('/api/vendor/guestlist/$entryId');
+  }
+
+  // ── Scooter Fleet Inventory ──
+
+  /// Fetches the vendor's scooter fleet inventory.
+  Future<List<ScooterFleetModel>> getScooterFleet() async {
+    final body = await _api.get('/api/vendor/fleet');
+    final list = body as List? ?? [];
+    return list
+        .map((e) => ScooterFleetModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Adds a scooter to the fleet.
+  Future<ScooterFleetModel> addScooter({
+    required String model,
+    required double ratePerHour,
+    String? plateNumber,
+    double? ratePerDay,
+    bool? isElectric,
+    String? imageUrl,
+    int? batteryPercent,
+    int? odometerKm,
+    String? notes,
+  }) async {
+    final body = await _api.post('/api/vendor/fleet', data: {
+      'model': model,
+      'ratePerHour': ratePerHour,
+      if (plateNumber != null) 'plateNumber': plateNumber,
+      if (ratePerDay != null) 'ratePerDay': ratePerDay,
+      if (isElectric != null) 'isElectric': isElectric,
+      if (imageUrl != null) 'imageUrl': imageUrl,
+      if (batteryPercent != null) 'batteryPercent': batteryPercent,
+      if (odometerKm != null) 'odometerKm': odometerKm,
+      if (notes != null) 'notes': notes,
+    });
+    return ScooterFleetModel.fromJson(body as Map<String, dynamic>);
+  }
+
+  /// Updates a scooter's details.
+  Future<void> updateScooter(String id, {
+    String? model,
+    double? ratePerHour,
+    double? ratePerDay,
+    String? plateNumber,
+    String? imageUrl,
+    int? batteryPercent,
+    int? odometerKm,
+    String? notes,
+    bool? isAvailable,
+  }) async {
+    await _api.put('/api/vendor/fleet/$id', data: {
+      if (model != null) 'model': model,
+      if (ratePerHour != null) 'ratePerHour': ratePerHour,
+      if (ratePerDay != null) 'ratePerDay': ratePerDay,
+      if (plateNumber != null) 'plateNumber': plateNumber,
+      if (imageUrl != null) 'imageUrl': imageUrl,
+      if (batteryPercent != null) 'batteryPercent': batteryPercent,
+      if (odometerKm != null) 'odometerKm': odometerKm,
+      if (notes != null) 'notes': notes,
+      if (isAvailable != null) 'isAvailable': isAvailable,
+    });
+  }
+
+  /// Toggles a scooter's availability.
+  Future<void> toggleScooterAvailability(String id) async {
+    await _api.post('/api/vendor/fleet/$id/toggle-availability');
+  }
+
+  /// Removes a scooter from the fleet.
+  Future<void> removeScooter(String id) async {
+    await _api.delete('/api/vendor/fleet/$id');
+  }
+
 }
 
 class MenuItemModel {
@@ -1093,4 +1208,78 @@ class WalletTransactionModel {
   final double amount;
   final String description;
   final String timestamp;
+}
+
+class GuestlistEntryModel {
+  GuestlistEntryModel({
+    required this.id,
+    required this.guestName,
+    required this.partySize,
+    this.phone,
+    required this.checkedIn,
+    required this.eventDate,
+  });
+
+  factory GuestlistEntryModel.fromJson(Map<String, dynamic> json) =>
+      GuestlistEntryModel(
+        id: json['id'] as String? ?? '',
+        guestName: json['guestName'] as String? ?? '',
+        partySize: (json['partySize'] as num?)?.toInt() ?? 1,
+        phone: json['phone'] as String?,
+        checkedIn: json['checkedIn'] as bool? ?? false,
+        eventDate: json['eventDate'] as String? ?? '',
+      );
+
+  final String id;
+  final String guestName;
+  final int partySize;
+  final String? phone;
+  bool checkedIn;
+  final String eventDate;
+}
+
+class ScooterFleetModel {
+  ScooterFleetModel({
+    required this.id,
+    required this.model,
+    this.plateNumber,
+    required this.ratePerHour,
+    this.ratePerDay,
+    required this.isAvailable,
+    required this.isRented,
+    required this.isElectric,
+    this.batteryPercent,
+    this.odometerKm,
+    this.imageUrl,
+    this.notes,
+  });
+
+  factory ScooterFleetModel.fromJson(Map<String, dynamic> json) =>
+      ScooterFleetModel(
+        id: json['id'] as String? ?? '',
+        model: json['model'] as String? ?? '',
+        plateNumber: json['plateNumber'] as String?,
+        ratePerHour: (json['ratePerHour'] as num?)?.toDouble() ?? 0,
+        ratePerDay: (json['ratePerDay'] as num?)?.toDouble(),
+        isAvailable: json['isAvailable'] as bool? ?? true,
+        isRented: json['isRented'] as bool? ?? false,
+        isElectric: json['isElectric'] as bool? ?? false,
+        batteryPercent: (json['batteryPercent'] as num?)?.toInt(),
+        odometerKm: (json['odometerKm'] as num?)?.toInt(),
+        imageUrl: json['imageUrl'] as String?,
+        notes: json['notes'] as String?,
+      );
+
+  final String id;
+  final String model;
+  final String? plateNumber;
+  final double ratePerHour;
+  final double? ratePerDay;
+  final bool isAvailable;
+  final bool isRented;
+  final bool isElectric;
+  final int? batteryPercent;
+  final int? odometerKm;
+  final String? imageUrl;
+  final String? notes;
 }

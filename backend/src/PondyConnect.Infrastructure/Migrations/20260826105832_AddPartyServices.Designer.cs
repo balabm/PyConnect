@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PondyConnect.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace PondyConnect.Infrastructure.Persistence.Migrations
+namespace PondyConnect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826105832_AddPartyServices")]
+    partial class AddPartyServices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1493,42 +1496,6 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("GuestKycs");
-                });
-
-            modelBuilder.Entity("PondyConnect.Domain.Entities.GuestlistEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("CheckedIn")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateOnly>("EventDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("GuestName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("PartySize")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Phone")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("VendorId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("GuestlistEntries");
                 });
 
             modelBuilder.Entity("PondyConnect.Domain.Entities.Homestay", b =>
@@ -3039,60 +3006,6 @@ namespace PondyConnect.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("scheduled_rides", (string)null);
-                });
-
-            modelBuilder.Entity("PondyConnect.Domain.Entities.ScooterFleetItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("BatteryPercent")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsElectric")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsRented")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Model")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("OdometerKm")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PlateNumber")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("RatePerDay")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("RatePerHour")
-                        .HasColumnType("numeric");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("VendorId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ScooterFleetItems");
                 });
 
             modelBuilder.Entity("PondyConnect.Domain.Entities.ScooterRental", b =>
