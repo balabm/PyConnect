@@ -26,9 +26,12 @@ dotnet test                     # All tests (integration tests hit deployed back
 ```powershell
 cd mobile
 flutter analyze                 # Static analysis
-flutter build apk --flavor consumer --target lib/main.dart --release
-flutter build apk --flavor driver --target lib/main_driver.dart --release
-flutter build apk --flavor partner --target lib/main_partner.dart --release
+# IMPORTANT: Always pass --dart-define=APP_FLAVOR=<flavor> so the app
+# knows which flavor it is. Without it, resolvedAppFlavor defaults to
+# "consumer" and the driver/partner apps show wrong UI.
+flutter build apk --flavor consumer --target lib/main.dart --release --dart-define=APP_FLAVOR=consumer
+flutter build apk --flavor driver --target lib/main_driver.dart --release --dart-define=APP_FLAVOR=driver
+flutter build apk --flavor partner --target lib/main_partner.dart --release --dart-define=APP_FLAVOR=partner
 ```
 
 ## Architecture
