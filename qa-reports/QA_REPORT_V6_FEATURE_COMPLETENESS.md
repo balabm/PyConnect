@@ -400,3 +400,87 @@ Either implement the consumer equipment browse/booking screens (using existing b
 | `mobile/lib/features/wallet/data/user_wallet_api.dart` | NEW — Flutter API client for consumer wallet |
 | `mobile/lib/features/wallet/presentation/consumer_wallet_screen.dart` | Wired to real API, removed hardcoded data |
 | `mobile/lib/core/providers.dart` | Added `userWalletApiProvider` |
+
+---
+
+## Follow-Up Iteration — Additional Feature Implementations
+
+**Commit:** `0fe992e` — "Add consumer equipment rental, driver rating, admin withdrawals, and more"
+**Deployed:** Consumer, Partner, and Admin web apps all rebuilt and deployed to EC2.
+
+### 6. Consumer Equipment Rental screens (CRITICAL GAP CLOSED)
+
+The biggest gap from the V6 audit was that the Consumer app had no UI for browsing or booking equipment rentals, despite the backend endpoints existing. This is now implemented.
+
+**New files:**
+- `mobile/lib/features/equipment/data/consumer_equipment_api.dart` — API client for `GET /api/equipment/browse`, `POST /api/equipment/rentals`, `POST /api/equipment/rentals/{id}/confirm`
+- `mobile/lib/features/equipment/presentation/equipment_browse_screen.dart` — Grid layout with category filters (Sound, Lighting, DJ, Power, Misc), availability badges, and pricing
+- `mobile/lib/features/equipment/presentation/equipment_detail_screen.dart` — Full booking screen with date pickers, unit selector, delivery address, notes, cost summary, and Razorpay checkout + rental confirmation
+- `mobile/lib/features/equipment/presentation/my_equipment_rentals_screen.dart` — Rental history (redirects to Activity Hub for now)
+
+**Modified files:**
+- `mobile/lib/router/app_router.dart` — Added routes `/equipment`, `/equipment/:itemId`, `/equipment/my-rentals`
+- `mobile/lib/features/events/presentation/party_builder_screen.dart` — Added "Rent Equipment" button entry point
+- `mobile/lib/core/providers.dart` — Added `consumerEquipmentApiProvider`
+
+**Impact:** The Host a Party flow now has a complete equipment rental path: Party Builder → Rent Equipment → Browse → Select item → Choose dates/units → Razorpay checkout → Rental confirmed. This closes the biggest gap in the Consumer app.
+
+### 7. Partner Multi-Vendor Context Switching (HIGH FIX)
+
+**Modified files:**
+- `mobile/lib/features/auth/application/vendor_auth_controller.dart` — Added `switchVendor()` method that updates the session's active vendorId, vendorName, and category, and persists to SharedPreferences
+- `mobile/lib/features/vendor/presentation/manage_hub_screen.dart` — Replaced TODO with actual `switchVendor()` call + success snackbar
+
+**Impact:** Partners with multiple businesses can now switch between their vendor contexts. The selected vendorId is persisted and used for subsequent API calls.
+
+### 8. Admin Driver Withdrawals UI (HIGH FIX)
+
+**New files:**
+- `mobile/lib/features/admin/presentation/admin_withdrawals_screen.dart` — Full withdrawal management screen with status filters (All/Pending/Approved/Rejected), withdrawal cards showing driver name, amount, bank details, and approve/reject actions
+
+**Modified files:**
+- `mobile/lib/features/admin/data/admin_api.dart` — Added `getWithdrawals()`, `approveWithdrawal()`, `rejectWithdrawal()` methods + `AdminWithdrawalRequest` model
+- `mobile/lib/router/admin_router.dart` — Added `/withdrawals` route
+- `mobile/lib/features/admin/presentation/admin_shell.dart` — Added "Withdrawals" to secondary navigation
+
+**Impact:** Admins can now manage driver withdrawal requests. Previously the 3 backend endpoints (`GET /api/admin/withdrawals`, `POST /approve`, `POST /reject`) had no frontend caller.
+
+### 9. Driver Rider Rating Screen (MEDIUM GAP CLOSED)
+
+**New files:**
+- `mobile/lib/features/driver/presentation/driver_ride_rating_screen.dart` — Star rating, feedback tags (Polite, On time, Clear directions, etc.), text feedback, and thank-you confirmation
+
+**Modified files:**
+- `mobile/lib/router/driver_router.dart` — Added `/ride/:id/rate` route
+
+**Impact:** Drivers can now rate riders after completing a trip. The backend `POST /api/rides/{id}/rate` endpoint already supported driver-rating-rider via JWT role detection — the missing piece was the frontend UI.
+
+### 10. Ride Receipt Sharing (HIGH FIX)
+
+**Modified files:**
+- `mobile/lib/features/rides/presentation/ride_receipt_screen.dart` — Replaced "coming soon" stub with actual `Share.share()` call using `share_plus`, sharing ride ID, vehicle type, distance, status, and total amount
+
+**Impact:** Users can now share ride receipts via the system share sheet (WhatsApp, SMS, email, etc.).
+
+### Updated Completeness Scores
+
+| App | Before | After | Change |
+|-----|--------|-------|--------|
+| Consumer | 90% | **95%** | +5% (equipment rental screens added) |
+| Driver | 88% | **92%** | +4% (rider rating screen added) |
+| Partner | 85% | **88%** | +3% (multi-vendor switching fixed) |
+| Admin | 80% | **84%** | +4% (withdrawals UI added) |
+| **Total** | **86%** | **90%** | +4% |
+
+### Remaining Priority Items
+
+1. **Admin Finance Payouts/Invoices/Chargebacks UI** — 6 orphaned endpoints in AdminFinanceController
+2. **Admin Risk Management UI** — 5 orphaned endpoints in AdminRiskController
+3. **RazorpayX Payout Integration** — Backend uses MockPayoutService
+4. **Masked Call (Exotel/Twilio)** — Backend returns fake virtual numbers
+5. **Food Order SignalR Hub** — Frontend uses 10s polling
+6. **Wallet Top-up Flow** — Consumer wallet shows balance but can't add money via Razorpay
+7. **Wallet Transaction History** — No `UserWalletTransaction` entity yet
+8. **DJ/Bartender/Catering booking** — Full party services marketplace
+9. **Driver Help & Safety screens** — Placeholder screens
+10. **S3 Photo Upload** — Condition photos send local paths
