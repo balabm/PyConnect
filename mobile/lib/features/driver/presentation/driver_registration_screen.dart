@@ -278,9 +278,14 @@ class _DriverRegistrationScreenState
             // Login link for existing captains
             Center(
               child: TextButton(
-                onPressed: () {
+                onPressed: () async {
                   AppHaptics.light();
-                  context.go('/auth');
+                  // Log out first so the router doesn't redirect back to
+                  // /register (authenticated user with no driver profile).
+                  await ref.read(authControllerProvider.notifier).signOut();
+                  if (context.mounted) {
+                    context.go('/auth');
+                  }
                 },
                 child: RichText(
                   text: TextSpan(
