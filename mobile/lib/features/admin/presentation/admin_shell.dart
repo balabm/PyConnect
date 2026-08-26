@@ -86,6 +86,16 @@ class _AdminShellState extends ConsumerState<AdminShell>
       label: 'Withdrawals',
       path: '/withdrawals',
     ),
+    _NavDest(
+      icon: Icons.account_balance_rounded,
+      label: 'Finance Mgmt',
+      path: '/finance-management',
+    ),
+    _NavDest(
+      icon: Icons.shield_rounded,
+      label: 'Risk',
+      path: '/risk',
+    ),
   ];
 
   late final AnimationController _sosBannerController;

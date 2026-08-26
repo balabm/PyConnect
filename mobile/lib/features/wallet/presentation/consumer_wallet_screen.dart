@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/animations/haptic.dart';
+import '../../../core/network/razorpay_payment_service.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/animated_counter.dart';
+import '../../auth/application/auth_controller.dart';
 import '../data/user_wallet_api.dart';
 import 'wallet_card_widget.dart';
 
@@ -250,60 +253,203 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
   }
 
   void _showAddMoneySheet(BuildContext context) {
+    double selectedAmount = 500;
+    final customAmountController = TextEditingController();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(2),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Add Money to Wallet',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            // Quick amount chips
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [200, 500, 1000, 2000].map((amount) {
-                return ActionChip(
-                  label: Text('₹$amount'),
+              const SizedBox(height: 20),
+              const Text(
+                'Add Money to Wallet',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Top up via Razorpay. Funds are credited instantly after payment.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.slate.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Quick amount chips
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [200, 500, 1000, 2000].map((amount) {
+                  final isSelected = selectedAmount == amount.toDouble();
+                  return ChoiceChip(
+                    label: Text('\u20B9$amount'),
+                    selected: isSelected,
+                    onSelected: (_) {
+                      setSheetState(() {
+                        selectedAmount = amount.toDouble();
+                        customAmountController.clear();
+                      });
+                    },
+                    selectedColor: AppTheme.emerald.withValues(alpha: 0.15),
+                    checkmarkColor: AppTheme.emerald,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              // Custom amount
+              TextField(
+                controller: customAmountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Or enter custom amount',
+                  prefixText: '\u20B9 ',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  final parsed = double.tryParse(value);
+                  if (parsed != null && parsed > 0) {
+                    setSheetState(() => selectedAmount = parsed);
+                  }
+                },
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
                   onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Wallet top-up is coming soon. Promo credits are added automatically from referrals and rewards.'),
-                        duration: Duration(seconds: 4),
-                      ),
-                    );
+                    Navigator.pop(ctx);
+                    _processTopUp(selectedAmount);
                   },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-          ],
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppTheme.emerald,
+                  ),
+                  child: Text(
+                    'Add \u20B9${selectedAmount.toStringAsFixed(0)} via Razorpay',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _processTopUp(double amount) async {
+    if (amount <= 0) return;
+    AppHaptics.light();
+
+    try {
+      // 1. Create Razorpay order via backend
+      final initResult = await ref.read(userWalletApiProvider).initiateTopUp(amount);
+
+      // 2. Launch Razorpay checkout
+      final paymentService = ref.read(razorpayPaymentProvider);
+      final authSession = ref.read(authControllerProvider).valueOrNull;
+      paymentService.init();
+
+      final paymentResult = await paymentService
+          .startPayment(
+            orderId: initResult.razorpayOrderId,
+            amount: (amount * 100).round(),
+            phone: authSession?.phone ?? '',
+            userName: authSession?.name,
+          )
+          .timeout(
+            const Duration(minutes: 5),
+            onTimeout: () => PaymentError(
+              code: -1,
+              message: 'Payment timed out. Please try again.',
+            ),
+          );
+
+      if (!mounted) return;
+
+      switch (paymentResult) {
+        case PaymentSuccess(:final paymentId, :final orderId, :final signature):
+          try {
+            final updatedWallet = await ref.read(userWalletApiProvider).confirmTopUp(
+                  amount: amount,
+                  razorpayOrderId: orderId,
+                  razorpayPaymentId: paymentId,
+                  signature: signature ?? '',
+                );
+            if (mounted) {
+              setState(() => _wallet = updatedWallet);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('\u20B9${amount.toStringAsFixed(0)} added to wallet!'),
+                  backgroundColor: AppTheme.emerald,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Payment succeeded but confirmation failed: $e'),
+                  backgroundColor: AppTheme.danger,
+                  duration: const Duration(seconds: 6),
+                ),
+              );
+            }
+          }
+        case PaymentError(:final message):
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Payment failed: $message'),
+                backgroundColor: AppTheme.danger,
+              ),
+            );
+          }
+        case PaymentExternalWallet():
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment via wallet. Please verify your balance.'),
+                backgroundColor: AppTheme.info,
+              ),
+            );
+          }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Top-up failed: $e'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    }
   }
 }
 

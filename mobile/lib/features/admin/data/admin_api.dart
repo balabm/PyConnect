@@ -49,6 +49,84 @@ class AdminApi {
     });
   }
 
+  // === Finance: Invoices, Payouts, Chargebacks ===
+
+  Future<List<AdminTaxInvoice>> getInvoices({String? month, String? vendorId}) async {
+    final result = await _api.get('/api/admin/finance/invoices',
+        queryParameters: {
+          if (month != null) 'month': month,
+          if (vendorId != null) 'vendorId': vendorId,
+        });
+    final list = result as List<dynamic>;
+    return list
+        .map((e) => AdminTaxInvoice.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<GenerateInvoicesResult> generateInvoices({required int year, required int month}) async {
+    final result = await _api.post('/api/admin/finance/invoices/generate',
+        queryParameters: {'year': year, 'month': month});
+    return GenerateInvoicesResult.fromJson(result as Map<String, dynamic>);
+  }
+
+  Future<List<AdminPayout>> getPayouts({String? status}) async {
+    final result = await _api.get('/api/admin/finance/payouts',
+        queryParameters: status != null ? {'status': status} : null);
+    final list = result as List<dynamic>;
+    return list
+        .map((e) => AdminPayout.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<ProcessSettlementsResult> processSettlements({String type = 'all'}) async {
+    final result = await _api.post('/api/admin/finance/settlements/process',
+        queryParameters: {'type': type});
+    return ProcessSettlementsResult.fromJson(result as Map<String, dynamic>);
+  }
+
+  Future<List<AdminChargeback>> getChargebacks({String? status}) async {
+    final result = await _api.get('/api/admin/finance/chargebacks',
+        queryParameters: status != null ? {'status': status} : null);
+    final list = result as List<dynamic>;
+    return list
+        .map((e) => AdminChargeback.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> resolveChargeback(String chargebackId, {required bool won, String? note}) async {
+    await _api.post('/api/admin/finance/chargebacks/$chargebackId/resolve', data: {
+      'won': won,
+      if (note != null) 'note': note,
+    });
+  }
+
+  // === Risk Management ===
+
+  Future<AdminRiskScore?> getRiskScore(String userId) async {
+    try {
+      final result = await _api.get('/api/admin/risk/$userId');
+      return AdminRiskScore.fromJson(result as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setTrustScore(String userId, int score) async {
+    await _api.put('/api/admin/risk/$userId', data: {'score': score});
+  }
+
+  Future<void> applyRefundPenalty(String userId) async {
+    await _api.post('/api/admin/risk/$userId/penalty/refund');
+  }
+
+  Future<void> applyCancellationPenalty(String userId) async {
+    await _api.post('/api/admin/risk/$userId/penalty/cancellation');
+  }
+
+  Future<void> awardFiveStar(String userId) async {
+    await _api.post('/api/admin/risk/$userId/reward/five-star');
+  }
+
   // === Vendor Management ===
 
   Future<List<AdminVendor>> getVendors() async {
@@ -960,4 +1038,199 @@ class AdminWithdrawalRequest {
   final String requestedAt;
   final String bankAccount;
   final String ifsc;
+}
+
+/// Tax invoice returned by GET /api/admin/finance/invoices.
+class AdminTaxInvoice {
+  const AdminTaxInvoice({
+    required this.id,
+    required this.vendorId,
+    required this.invoiceNumber,
+    required this.invoiceMonth,
+    required this.baseCommission,
+    required this.cgstAmount,
+    required this.sgstAmount,
+    required this.totalAmount,
+    required this.transactionCount,
+    this.pdfUrl,
+    required this.isEmailed,
+    required this.generatedAt,
+  });
+
+  factory AdminTaxInvoice.fromJson(Map<String, dynamic> json) => AdminTaxInvoice(
+        id: json['id'] as String? ?? '',
+        vendorId: json['vendorId'] as String? ?? '',
+        invoiceNumber: json['invoiceNumber'] as String? ?? '',
+        invoiceMonth: json['invoiceMonth'] as String? ?? '',
+        baseCommission: (json['baseCommission'] as num?)?.toDouble() ?? 0,
+        cgstAmount: (json['cgstAmount'] as num?)?.toDouble() ?? 0,
+        sgstAmount: (json['sgstAmount'] as num?)?.toDouble() ?? 0,
+        totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+        transactionCount: json['transactionCount'] as int? ?? 0,
+        pdfUrl: json['pdfUrl'] as String?,
+        isEmailed: json['isEmailed'] as bool? ?? false,
+        generatedAt: json['generatedAt'] as String? ?? '',
+      );
+
+  final String id;
+  final String vendorId;
+  final String invoiceNumber;
+  final String invoiceMonth;
+  final double baseCommission;
+  final double cgstAmount;
+  final double sgstAmount;
+  final double totalAmount;
+  final int transactionCount;
+  final String? pdfUrl;
+  final bool isEmailed;
+  final String generatedAt;
+}
+
+class GenerateInvoicesResult {
+  const GenerateInvoicesResult({
+    required this.year,
+    required this.month,
+    required this.invoiceCount,
+    required this.invoiceNumbers,
+  });
+
+  factory GenerateInvoicesResult.fromJson(Map<String, dynamic> json) =>
+      GenerateInvoicesResult(
+        year: json['year'] as int? ?? 0,
+        month: json['month'] as int? ?? 0,
+        invoiceCount: json['invoiceCount'] as int? ?? 0,
+        invoiceNumbers: (json['invoiceNumbers'] as List?)?.cast<String>() ?? [],
+      );
+
+  final int year;
+  final int month;
+  final int invoiceCount;
+  final List<String> invoiceNumbers;
+}
+
+/// Payout returned by GET /api/admin/finance/payouts.
+class AdminPayout {
+  const AdminPayout({
+    required this.id,
+    required this.recipientType,
+    required this.recipientId,
+    required this.amount,
+    required this.tdsDeducted,
+    required this.netAmount,
+    required this.status,
+    this.providerPayoutId,
+    this.utrNumber,
+    this.failureReason,
+    this.processedAt,
+    required this.createdAt,
+  });
+
+  factory AdminPayout.fromJson(Map<String, dynamic> json) => AdminPayout(
+        id: json['id'] as String? ?? '',
+        recipientType: json['recipientType'] as String? ?? '',
+        recipientId: json['recipientId'] as String? ?? '',
+        amount: (json['amount'] as num?)?.toDouble() ?? 0,
+        tdsDeducted: (json['tdsDeducted'] as num?)?.toDouble() ?? 0,
+        netAmount: (json['netAmount'] as num?)?.toDouble() ?? 0,
+        status: json['status'] as String? ?? 'Pending',
+        providerPayoutId: json['providerPayoutId'] as String?,
+        utrNumber: json['utrNumber'] as String?,
+        failureReason: json['failureReason'] as String?,
+        processedAt: json['processedAt'] as String?,
+        createdAt: json['createdAt'] as String? ?? '',
+      );
+
+  final String id;
+  final String recipientType;
+  final String recipientId;
+  final double amount;
+  final double tdsDeducted;
+  final double netAmount;
+  final String status;
+  final String? providerPayoutId;
+  final String? utrNumber;
+  final String? failureReason;
+  final String? processedAt;
+  final String createdAt;
+}
+
+class ProcessSettlementsResult {
+  const ProcessSettlementsResult({required this.vendorPayouts, required this.driverPayouts});
+
+  factory ProcessSettlementsResult.fromJson(Map<String, dynamic> json) =>
+      ProcessSettlementsResult(
+        vendorPayouts: json['vendorPayouts'] as int? ?? 0,
+        driverPayouts: json['driverPayouts'] as int? ?? 0,
+      );
+
+  final int vendorPayouts;
+  final int driverPayouts;
+}
+
+/// Chargeback returned by GET /api/admin/finance/chargebacks.
+class AdminChargeback {
+  const AdminChargeback({
+    required this.id,
+    required this.paymentId,
+    required this.userId,
+    this.orderId,
+    this.orderType,
+    required this.chargebackAmount,
+    required this.status,
+    required this.accountFrozen,
+    this.evidenceSummary,
+    this.resolutionNote,
+    required this.createdAt,
+    this.resolvedAt,
+  });
+
+  factory AdminChargeback.fromJson(Map<String, dynamic> json) => AdminChargeback(
+        id: json['id'] as String? ?? '',
+        paymentId: json['paymentId'] as String? ?? '',
+        userId: json['userId'] as String? ?? '',
+        orderId: json['orderId'] as String?,
+        orderType: json['orderType'] as String?,
+        chargebackAmount: (json['chargebackAmount'] as num?)?.toDouble() ?? 0,
+        status: json['status'] as String? ?? 'Open',
+        accountFrozen: json['accountFrozen'] as bool? ?? false,
+        evidenceSummary: json['evidenceSummary'] as String?,
+        resolutionNote: json['resolutionNote'] as String?,
+        createdAt: json['createdAt'] as String? ?? '',
+        resolvedAt: json['resolvedAt'] as String?,
+      );
+
+  final String id;
+  final String paymentId;
+  final String userId;
+  final String? orderId;
+  final String? orderType;
+  final double chargebackAmount;
+  final String status;
+  final bool accountFrozen;
+  final String? evidenceSummary;
+  final String? resolutionNote;
+  final String createdAt;
+  final String? resolvedAt;
+}
+
+/// Risk score returned by GET /api/admin/risk/{userId}.
+class AdminRiskScore {
+  const AdminRiskScore({
+    required this.trustScore,
+    required this.isCodDisabled,
+    required this.isShadowBanned,
+    this.trustScoreUpdatedAt,
+  });
+
+  factory AdminRiskScore.fromJson(Map<String, dynamic> json) => AdminRiskScore(
+        trustScore: json['trustScore'] as int? ?? 100,
+        isCodDisabled: json['isCodDisabled'] as bool? ?? false,
+        isShadowBanned: json['isShadowBanned'] as bool? ?? false,
+        trustScoreUpdatedAt: json['trustScoreUpdatedAt'] as String?,
+      );
+
+  final int trustScore;
+  final bool isCodDisabled;
+  final bool isShadowBanned;
+  final String? trustScoreUpdatedAt;
 }
