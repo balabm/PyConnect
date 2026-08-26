@@ -31,6 +31,7 @@ import '../features/public/data/public_api.dart';
 import '../features/stays/data/stays_api.dart';
 import '../features/support/data/support_api.dart';
 import '../features/admin/data/admin_api.dart';
+import '../features/wallet/data/user_wallet_api.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   late ApiClient client;
@@ -85,6 +86,7 @@ final supportApiProvider = Provider<SupportApi>((ref) => SupportApi(ref.watch(ap
 final publicApiProvider = Provider<PublicApi>((ref) => PublicApi(ref.watch(apiClientProvider)));
 final adminApiProvider = Provider<AdminApi>((ref) => AdminApi(ref.watch(apiClientProvider)));
 final vendorOnboardingApiProvider = Provider<VendorOnboardingApi>((ref) => VendorOnboardingApi(ref.watch(apiClientProvider)));
+final userWalletApiProvider = Provider<UserWalletApi>((ref) => UserWalletApi(ref.watch(apiClientProvider)));
 
 /// SignalR clients for real-time ride updates (rider-facing) and driver hub.
 final rideHubProvider = Provider<SignalRClient>((ref) {

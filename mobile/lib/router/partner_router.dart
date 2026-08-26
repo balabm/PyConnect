@@ -39,6 +39,8 @@ import '../features/vendor/presentation/rental_return_screen.dart';
 import '../features/vendor/presentation/assign_driver_screen.dart';
 import '../features/vendor/presentation/partial_refund_screen.dart';
 import '../features/vendor/presentation/occupancy_update_screen.dart';
+import '../features/vendor/presentation/live_tables_screen.dart';
+import '../features/vendor/presentation/crowd_dashboard_screen.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers/force_update_provider.dart';
 import '../features/splash/presentation/force_update_screen.dart';
@@ -253,6 +255,15 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'occupancy',
             builder: (_, _) => const OccupancyUpdateScreen(),
+          ),
+          // ── Pub/Club live operations screens ──
+          GoRoute(
+            path: 'live-tables',
+            builder: (_, _) => const LiveTablesScreen(),
+          ),
+          GoRoute(
+            path: 'crowd-dashboard',
+            builder: (_, _) => const CrowdDashboardScreen(),
           ),
         ],
       ),

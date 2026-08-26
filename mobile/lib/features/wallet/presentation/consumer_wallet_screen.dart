@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/animated_counter.dart';
+import '../data/user_wallet_api.dart';
 import 'wallet_card_widget.dart';
 
 /// A premium consumer wallet screen with holographic card, rolling
@@ -20,8 +22,41 @@ class ConsumerWalletScreen extends ConsumerStatefulWidget {
 }
 
 class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
-  // Placeholder balance — wire to backend wallet provider
-  double _balance = 1250.00;
+  UserWalletModel? _wallet;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWallet();
+  }
+
+  Future<void> _loadWallet() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final wallet = await ref.read(userWalletApiProvider).getWallet();
+      if (mounted) {
+        setState(() {
+          _wallet = wallet;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e.toString();
+        });
+      }
+    }
+  }
+
+  double get _balance => _wallet?.totalBalance ?? 0;
+  int get _pyCoins => _wallet?.pyCoins.round() ?? 0;
 
   @override
   Widget build(BuildContext context) {
@@ -38,61 +73,82 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Holographic wallet card
-            WalletCard(
-              balance: _balance,
-              cardHolder: 'PY Member',
-            ),
-            const SizedBox(height: 24),
-            // Quick actions row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _QuickAction(
-                  icon: Icons.add_rounded,
-                  label: 'Add Money',
-                  onTap: () => _showAddMoneySheet(context),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, size: 48, color: AppTheme.danger),
+                      const SizedBox(height: 12),
+                      Text('Could not load wallet', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: _loadWallet,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadWallet,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Holographic wallet card
+                        WalletCard(
+                          balance: _balance,
+                          cardHolder: 'PY Member',
+                        ),
+                        const SizedBox(height: 24),
+                        // Quick actions row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _QuickAction(
+                              icon: Icons.add_rounded,
+                              label: 'Add Money',
+                              onTap: () => _showAddMoneySheet(context),
+                            ),
+                            _QuickAction(
+                              icon: Icons.send_rounded,
+                              label: 'Send',
+                              onTap: () {},
+                            ),
+                            _QuickAction(
+                              icon: Icons.receipt_long_rounded,
+                              label: 'History',
+                              onTap: () {},
+                            ),
+                            _QuickAction(
+                              icon: Icons.account_balance_rounded,
+                              label: 'Bank',
+                              onTap: () {},
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        // PY Coins section
+                        _buildCoinsSection(isDark),
+                        const SizedBox(height: 24),
+                        // Recent transactions
+                        Text(
+                          'Recent Transactions',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTransactionList(isDark),
+                      ],
+                    ),
+                  ),
                 ),
-                _QuickAction(
-                  icon: Icons.send_rounded,
-                  label: 'Send',
-                  onTap: () {},
-                ),
-                _QuickAction(
-                  icon: Icons.receipt_long_rounded,
-                  label: 'History',
-                  onTap: () {},
-                ),
-                _QuickAction(
-                  icon: Icons.account_balance_rounded,
-                  label: 'Bank',
-                  onTap: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            // PY Coins section
-            _buildCoinsSection(isDark),
-            const SizedBox(height: 24),
-            // Recent transactions
-            Text(
-              'Recent Transactions',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppTheme.darkTextPrimary : AppTheme.charcoal,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildTransactionList(isDark),
-          ],
-        ),
-      ),
     );
   }
 
@@ -139,7 +195,7 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
                   ),
                 ),
                 AnimatedCounter(
-                  value: 340,
+                  value: _pyCoins.toDouble(),
                   suffix: ' coins',
                   style: TextStyle(
                     fontSize: 24,
@@ -171,81 +227,25 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
   }
 
   Widget _buildTransactionList(bool isDark) {
-    final transactions = [
-      _Transaction('Food Order - Fuoco', -450, 'Pizza Margherita', Icons.restaurant),
-      _Transaction('Ride - White Town', -85, 'Auto ride', Icons.two_wheeler),
-      _Transaction('Wallet Top-up', 1000, 'UPI Payment', Icons.account_balance),
-      _Transaction('Cashback Reward', 50, 'PY Coins redemption', Icons.redeem),
-    ];
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: transactions.length,
-      itemBuilder: (context, index) {
-        final tx = transactions[index];
-        final isCredit = tx.amount > 0;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: AppModernCard(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: (isCredit ? AppTheme.emerald : AppTheme.coral)
-                        .withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    tx.icon,
-                    color: isCredit ? AppTheme.emerald : AppTheme.coral,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tx.title,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.charcoal,
-                        ),
-                      ),
-                      Text(
-                        tx.subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.slate,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                AnimatedCounter(
-                  value: tx.amount,
-                  prefix: isCredit ? '+₹' : '−₹',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isCredit ? AppTheme.emerald : AppTheme.coral,
-                  ),
-                ),
-              ],
+    // Transaction history endpoint is planned for a future iteration.
+    // For now, show an honest empty state.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.receipt_long_outlined, size: 48, color: AppTheme.slate.withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+            Text(
+              'Transaction history coming soon',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.slate.withValues(alpha: 0.7),
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 
@@ -288,8 +288,13 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
                 return ActionChip(
                   label: Text('₹$amount'),
                   onPressed: () {
-                    setState(() => _balance += amount);
                     Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Wallet top-up is coming soon. Promo credits are added automatically from referrals and rewards.'),
+                        duration: Duration(seconds: 4),
+                      ),
+                    );
                   },
                 );
               }).toList(),
@@ -348,13 +353,4 @@ class _QuickAction extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Transaction {
-  final String title;
-  final double amount;
-  final String subtitle;
-  final IconData icon;
-
-  _Transaction(this.title, this.amount, this.subtitle, this.icon);
 }

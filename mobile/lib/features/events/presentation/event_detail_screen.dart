@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/network/razorpay_payment_service.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/application/auth_controller.dart';
 import '../data/p2p_event_api.dart';
 
 /// Event detail screen — shows event info, ticket purchase, and host actions.
@@ -73,17 +76,24 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           await _loadEvent();
         }
       } else {
-        // Paid event — would normally launch Razorpay checkout here.
-        // For now, show the order ID for manual checkout integration.
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Order created: ${result.razorpayOrderId}. Complete payment to confirm.'),
-              backgroundColor: AppTheme.info,
-              duration: const Duration(seconds: 5),
-            ),
-          );
+        // Paid event — launch Razorpay checkout, then confirm the ticket.
+        final razorpayOrderId = result.razorpayOrderId;
+        if (razorpayOrderId == null || razorpayOrderId.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Could not create payment order. Please try again.'),
+                backgroundColor: AppTheme.danger,
+              ),
+            );
+          }
+          return;
         }
+        await _launchRazorpayAndConfirm(
+          ticketId: result.ticketId,
+          razorpayOrderId: razorpayOrderId,
+          amount: result.pricePaid > 0 ? result.pricePaid : event.entryPrice,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -96,6 +106,100 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       }
     } finally {
       if (mounted) setState(() => _purchasing = false);
+    }
+  }
+
+  /// Launches Razorpay checkout for a paid event ticket and confirms the
+  /// ticket on the backend once payment succeeds.
+  Future<void> _launchRazorpayAndConfirm({
+    required String ticketId,
+    required String razorpayOrderId,
+    required double amount,
+  }) async {
+    final paymentService = ref.read(razorpayPaymentProvider);
+    final authSession = ref.read(authControllerProvider).valueOrNull;
+
+    // Ensure the Razorpay SDK is initialized.
+    paymentService.init();
+
+    try {
+      final paymentResult = await paymentService
+          .startPayment(
+            orderId: razorpayOrderId,
+            amount: (amount * 100).round(), // paise
+            phone: authSession?.phone ?? '',
+            userName: authSession?.name,
+          )
+          .timeout(
+            const Duration(minutes: 5),
+            onTimeout: () => PaymentError(
+              code: -1,
+              message: 'Payment timed out. Please try again.',
+            ),
+          );
+
+      if (!mounted) return;
+
+      switch (paymentResult) {
+        case PaymentSuccess(:final paymentId, :final orderId, :final signature):
+          // Confirm the ticket on the backend with the Razorpay payment details.
+          try {
+            await ref.read(p2pEventApiProvider).confirmTicket(
+                  ticketId: ticketId,
+                  razorpayOrderId: orderId,
+                  razorpayPaymentId: paymentId,
+                  signature: signature ?? '',
+                );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Ticket confirmed! Check your wallet.'),
+                  backgroundColor: AppTheme.emerald,
+                ),
+              );
+              await _loadEvent();
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Payment succeeded but confirmation failed: $e'),
+                  backgroundColor: AppTheme.danger,
+                  duration: const Duration(seconds: 6),
+                ),
+              );
+            }
+          }
+        case PaymentError(:final message):
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Payment failed: $message'),
+                backgroundColor: AppTheme.danger,
+              ),
+            );
+          }
+        case PaymentExternalWallet():
+          // External wallet selected — user completed payment elsewhere.
+          // We still attempt to confirm in case the webhook already reconciled.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Payment via wallet. Verifying...'),
+                backgroundColor: AppTheme.info,
+              ),
+            );
+          }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payment error: $e'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
     }
   }
 

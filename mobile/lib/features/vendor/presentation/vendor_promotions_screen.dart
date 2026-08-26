@@ -502,7 +502,7 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                     )
-                  : Text('', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
+                  : Text('Create Flash Promo', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary)),
               style: FilledButton.styleFrom(),
             ),
           ),

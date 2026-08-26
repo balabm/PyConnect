@@ -60,7 +60,7 @@ class _VendorRegistrationScreenState
     ('Pizzeria', 'Pizzeria', Icons.local_pizza_outlined),
     ('PubClub', 'Pub / Club', Icons.nightlife_outlined),
     ('ScooterRental', 'Scooter Rental', Icons.electric_scooter_outlined),
-    ('Taxi', 'Taxi Operator', Icons.local_taxi_outlined),
+    ('TaxiOperator', 'Taxi Operator', Icons.local_taxi_outlined),
     ('LuggageCloak', 'Luggage Cloak', Icons.luggage_outlined),
   ];
 
