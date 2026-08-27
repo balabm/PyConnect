@@ -203,6 +203,8 @@ final vendorAcceptingOrdersProvider = StateProvider<bool>((ref) => true);
 /// Fetches the vendor's venue list to resolve the real venue ID.
 final vendorVenuesProvider =
     FutureProvider<List<VendorVenueSummary>>((ref) async {
+  // Watch auth state so venues reload when vendor switches/logs in.
+  ref.watch(vendorAuthControllerProvider);
   final api = ref.read(vendorDashboardApiProvider);
   return api.getVenues();
 });
@@ -376,12 +378,16 @@ class VendorBookingsNotifier extends StateNotifier<AsyncValue<List<BookingSummar
 
 final vendorWalletProvider =
     FutureProvider<VendorWalletModel>((ref) async {
+  // Watch auth state so wallet reloads when vendor switches/logs in.
+  ref.watch(vendorAuthControllerProvider);
   final api = ref.read(vendorDashboardApiProvider);
   return api.getWallet();
 });
 
 final vendorWalletTransactionsProvider =
     FutureProvider<List<WalletTransactionModel>>((ref) async {
+  // Watch auth state so transactions reload when vendor switches/logs in.
+  ref.watch(vendorAuthControllerProvider);
   final api = ref.read(vendorDashboardApiProvider);
   return api.getWalletTransactions();
 });
