@@ -30,15 +30,22 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: _AdminAuthRefreshListenable(ref),
     redirect: (context, state) {
-      final authenticated =
-          ref.read(authControllerProvider).valueOrNull?.isAuthenticated ?? false;
+      final session = ref.read(authControllerProvider).valueOrNull;
+      final authenticated = session?.isAuthenticated ?? false;
+      final isAdmin = session?.role == 'Admin';
       final path = state.matchedLocation;
 
       if (!authenticated && path != '/auth' && !path.startsWith('/auth')) {
         return '/auth';
       }
 
-      if (authenticated && (path == '/auth' || path.startsWith('/auth'))) {
+      // If authenticated but not an Admin, force re-login (stale token from
+      // another app flavor).
+      if (authenticated && !isAdmin && path != '/auth' && !path.startsWith('/auth')) {
+        return '/auth';
+      }
+
+      if (authenticated && isAdmin && (path == '/auth' || path.startsWith('/auth'))) {
         return '/';
       }
 

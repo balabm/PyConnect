@@ -7,8 +7,10 @@ import '../auth/jwt_decoder.dart';
 /// Stores the JWT access token. Uses platform secure storage on iOS/Android
 /// and falls back to SharedPreferences on the browser target.
 /// Validates token expiration on read to avoid 401 round-trips.
+/// On web, the storage key is flavor-specific so tokens from the consumer,
+/// driver, partner, and admin apps don't collide on the same domain.
 class TokenStorage {
-  TokenStorage({FlutterSecureStorage? storage})
+  TokenStorage({FlutterSecureStorage? storage, String? flavorKey})
       : _storage = storage ??
             const FlutterSecureStorage(
               aOptions: AndroidOptions(
@@ -24,9 +26,12 @@ class TokenStorage {
                 dbName: 'PondyConnect',
                 publicKey: 'pcWebKeys',
               ),
-            );
+            ),
+        _key = flavorKey ?? _defaultKey;
 
-  static const _key = 'auth.access_token';
+  static const _defaultKey = 'auth.access_token';
+
+  final String _key;
 
   final FlutterSecureStorage _storage;
 

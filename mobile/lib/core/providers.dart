@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'config/app_flavor.dart';
 import 'network/api_client.dart';
 import 'network/offline_mutation_queue.dart';
 import 'network/osm_geocoding_service.dart';
@@ -58,8 +59,13 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return client;
 });
 
-final tokenStorageProvider =
-    Provider<TokenStorage>((ref) => TokenStorage());
+final tokenStorageProvider = Provider<TokenStorage>((ref) {
+  // Use flavor-specific token keys on web so tokens from consumer, driver,
+  // partner, and admin apps don't collide on the same domain.
+  final flavor = resolvedAppFlavor;
+  final flavorKey = 'auth.${flavor.name}.access_token';
+  return TokenStorage(flavorKey: flavorKey);
+});
 
 final authTokenProvider = StateProvider<String?>((ref) => null);
 
