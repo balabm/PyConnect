@@ -107,28 +107,53 @@ class _DriverKycScreenState extends ConsumerState<DriverKycScreen> {
     try {
       final api = ref.read(driverApiProvider);
 
-      // Upload the primary 3 documents (Aadhaar, DL, RC) via the main
-      // KYC endpoint.
-      final result = await api.uploadKyc(
-        aadhaar: slots[0].file!,
-        drivingLicense: slots[1].file!,
-        rc: slots[2].file!,
-        upiId: upiId,
-      );
+      // Retry the primary KYC upload up to 3 times to handle transient
+      // TLS resets on the deployed backend. Multipart uploads are more
+      // susceptible to connection drops than regular JSON API calls.
+      KycUploadResult? result;
+      Exception? lastError;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          result = await api.uploadKyc(
+            aadhaar: slots[0].file!,
+            drivingLicense: slots[1].file!,
+            rc: slots[2].file!,
+            upiId: upiId,
+          );
+          lastError = null;
+          break;
+        } on Exception catch (e) {
+          lastError = e;
+          if (attempt < 2) {
+            if (mounted) {
+              AppToast.show(
+                context,
+                'Upload attempt ${attempt + 1} failed. Retrying...',
+                type: ToastType.warning,
+              );
+            }
+            await Future.delayed(Duration(seconds: 3 * (attempt + 1)));
+          }
+        }
+      }
+
+      if (lastError != null) throw lastError;
+      if (result == null) throw Exception('KYC upload failed with no response.');
 
       // Upload the extended documents (Commercial Insurance + Driver Selfie)
-      // via the extended KYC endpoint.
-      // TODO: If the backend merges these into a single endpoint, update
-      // the API call accordingly. For now the extended endpoint accepts
-      // insurance + selfie as separate multipart files.
-      try {
-        await api.uploadExtendedKyc(
-          insurance: slots[3].file,
-          selfie: slots[4].file,
-        );
-      } on Exception catch (_) {
-        // Extended upload failure is non-blocking — the primary KYC
-        // may still succeed. Log silently.
+      // via the extended KYC endpoint. Retry up to 2 times.
+      for (var attempt = 0; attempt < 2; attempt++) {
+        try {
+          await api.uploadExtendedKyc(
+            insurance: slots[3].file,
+            selfie: slots[4].file,
+          );
+          break;
+        } on Exception catch (_) {
+          if (attempt < 1) await Future.delayed(const Duration(seconds: 3));
+          // Extended upload failure is non-blocking — the primary KYC
+          // may still succeed. Log silently.
+        }
       }
 
       if (result.success && mounted) {
@@ -174,6 +199,13 @@ class _DriverKycScreenState extends ConsumerState<DriverKycScreen> {
     final slots = ref.watch(kycSlotsProvider);
     final allSelected = ref.watch(kycAllFilesSelectedProvider);
     final isSubmitting = ref.watch(kycSubmittingProvider);
+    final profileAsync = ref.watch(driverProfileProvider);
+    final profile = profileAsync.valueOrNull;
+
+    // If KYC is already uploaded and approved, show the approved state
+    // instead of the upload form.
+    final kycApproved = profile?.isKycUploaded == true && profile?.isApproved == true;
+    final kycUploadedPending = profile?.isKycUploaded == true && profile?.isApproved != true;
 
     return Scaffold(
       appBar: AppBar(
@@ -186,141 +218,145 @@ class _DriverKycScreenState extends ConsumerState<DriverKycScreen> {
           },
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      body: kycApproved
+          ? _KycApprovedView(upiId: profile?.upiId)
+          : kycUploadedPending
+              ? _KycPendingView(upiId: profile?.upiId)
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(Icons.verified_user_outlined,
+                                      color: Theme.of(context).colorScheme.primary, size: 24),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Complete your KYC',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Upload documents to start accepting rides',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                          ],
                         ),
-                        child: Icon(Icons.verified_user_outlined,
-                            color: Theme.of(context).colorScheme.primary, size: 24),
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
+
+                      // Upload zones
+                      ...List.generate(slots.length, (i) {
+                        return _KycUploadCard(
+                          slot: slots[i],
+                          onTap: () => _showSourceSheet(i),
+                        );
+                      }),
+
+                      // UPI ID field
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Complete your KYC',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Upload documents to start accepting rides',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
+                              'UPI ID for payouts',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
                                   ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            TextField(
+                              controller: _upiController,
+                              decoration: const InputDecoration(
+                                hintText: 'yourname@upi',
+                                prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.text,
                             ),
                           ],
                         ),
                       ),
+
+                      // Submit button
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.lg,
+                        ),
+                        child: GradientButton(
+                          label: isSubmitting ? 'Uploading...' : 'Submit KYC',
+                          icon: Icons.cloud_upload_outlined,
+                          enabled: allSelected && !isSubmitting,
+                          loading: isSubmitting,
+                          onPressed: _submitKyc,
+                        ),
+                      ),
+
+                      // Security note
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lock_outline,
+                                size: 14,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Your documents are encrypted and stored privately. Only verified admin staff can review them.',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                      fontSize: 11,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
-              ),
-            ),
-
-            // Upload zones
-            ...List.generate(slots.length, (i) {
-              return _KycUploadCard(
-                slot: slots[i],
-                onTap: () => _showSourceSheet(i),
-              );
-            }),
-
-            // UPI ID field
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'UPI ID for payouts',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  TextField(
-                    controller: _upiController,
-                    decoration: const InputDecoration(
-                      hintText: 'yourname@upi',
-                      prefixIcon: Icon(Icons.account_balance_wallet_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.text,
-                  ),
-                ],
-              ),
-            ),
-
-            // Submit button
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.lg,
-              ),
-              child: GradientButton(
-                label: isSubmitting ? 'Uploading...' : 'Submit KYC',
-                icon: Icons.cloud_upload_outlined,
-                enabled: allSelected && !isSubmitting,
-                loading: isSubmitting,
-                onPressed: _submitKyc,
-              ),
-            ),
-
-            // Security note
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Row(
-                children: [
-                  Icon(Icons.lock_outline,
-                      size: 14,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Your documents are encrypted and stored privately. Only verified admin staff can review them.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                            fontSize: 11,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-          ],
-        ),
-      ),
+                ),
     );
   }
 }
@@ -483,6 +519,158 @@ class _SourceOption extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when KYC documents have been uploaded and admin has approved them.
+class _KycApprovedView extends StatelessWidget {
+  const _KycApprovedView({this.upiId});
+  final String? upiId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppTheme.emerald.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.verified, size: 64, color: AppTheme.emerald),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              'KYC Approved',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.emerald,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Your documents have been verified. You are cleared to accept rides.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            if (upiId != null && upiId!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.lg),
+              AppCard(
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_balance_wallet_outlined, size: 20),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Payout UPI ID',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  )),
+                          Text(upiId!,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.xl),
+            FilledButton.icon(
+              onPressed: () => context.go('/'),
+              icon: const Icon(Icons.home_outlined),
+              label: const Text('Back to Home'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when KYC documents have been uploaded but admin hasn't approved yet.
+class _KycPendingView extends StatelessWidget {
+  const _KycPendingView({this.upiId});
+  final String? upiId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppTheme.warning.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.hourglass_top, size: 64, color: AppTheme.warning),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              'KYC Under Review',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.warning,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Your documents have been submitted and are pending admin review. You will be able to accept rides once approved.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            if (upiId != null && upiId!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.lg),
+              AppCard(
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_balance_wallet_outlined, size: 20),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Payout UPI ID',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  )),
+                          Text(upiId!,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.xl),
+            FilledButton.icon(
+              onPressed: () => context.go('/pending-verification'),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Check Status'),
+            ),
+          ],
         ),
       ),
     );

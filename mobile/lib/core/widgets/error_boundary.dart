@@ -81,6 +81,9 @@ class ErrorBoundary extends StatelessWidget {
 /// Sets a global error widget builder so framework errors show a friendly UI.
 void setupAppErrorWidget() {
   ErrorWidget.builder = (FlutterErrorDetails details) {
+    // Log the error so we can diagnose rendering crashes.
+    debugPrint('AppErrorWidget: ${details.exception}');
+    debugPrint('AppErrorWidget stack: ${details.stack}');
     return AppErrorWidget(error: details);
   };
 }

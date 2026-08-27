@@ -76,9 +76,12 @@ class DriverWalletModel {
   final List<LedgerEntryModel> recentEntries;
 
   factory DriverWalletModel.fromJson(Map<String, dynamic> json) {
+    final entriesRaw = json['recentEntries'] as List<dynamic>? ??
+        json['recentTransactions'] as List<dynamic>? ??
+        [];
     return DriverWalletModel(
-      balance: (json['balance'] as num).toDouble(),
-      recentEntries: (json['recentEntries'] as List)
+      balance: (json['balance'] as num?)?.toDouble() ?? 0,
+      recentEntries: entriesRaw
           .map((e) => LedgerEntryModel.fromJson(e as Map<String, dynamic>))
           .toList(),
     );

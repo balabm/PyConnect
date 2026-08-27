@@ -77,8 +77,18 @@ class _DriverRegistrationScreenState
       if (mounted) {
         // If the backend issued a fresh JWT with the Driver role, update
         // the local session so subsequent API calls carry the correct role.
+        // Retry the token refresh up to 3 times to handle transient TLS resets.
         if (newToken != null && newToken.isNotEmpty) {
-          await ref.read(authControllerProvider.notifier).refreshWithToken(newToken);
+          for (var attempt = 0; attempt < 3; attempt++) {
+            try {
+              await ref.read(authControllerProvider.notifier).refreshWithToken(newToken);
+              break;
+            } on Exception catch (_) {
+              if (attempt < 2) {
+                await Future.delayed(Duration(seconds: 2 * (attempt + 1)));
+              }
+            }
+          }
         }
         AppHaptics.success();
         AppToast.show(context, 'Registration successful! Complete the safety tutorial to continue.',

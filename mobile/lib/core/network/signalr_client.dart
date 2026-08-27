@@ -20,8 +20,10 @@ class SignalRClient {
   int _reconnectAttempts = 0;
 
   /// Exponential backoff delays (in seconds) for manual reconnection in the
-  /// `onclose` handler. Capped at 30s. Reset to zero on a successful reconnect.
-  static const List<int> _backoffDelays = [3, 6, 12, 24, 30];
+  /// `onclose` handler. Capped at 60s with 8 retries. Reset to zero on a
+  /// successful reconnect. The longer delays (45s, 60s) accommodate
+  /// intermittent TLS reset recovery on the deployed backend.
+  static const List<int> _backoffDelays = [2, 5, 10, 20, 30, 45, 60, 60];
 
   /// Callback invoked when the reconnection state changes. Receives `true`
   /// when the connection is lost and a reconnect is in progress, `false`

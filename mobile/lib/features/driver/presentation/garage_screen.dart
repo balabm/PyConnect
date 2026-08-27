@@ -188,13 +188,17 @@ class _VehicleCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   IconData get _vehicleIcon {
-    final type = (vehicle['vehicleType'] as num?)?.toInt() ?? 0;
-    switch (type) {
-      case 1:
+    final type = vehicle['vehicleType'];
+    final typeStr = type is num ? type.toString() : (type as String? ?? '');
+    switch (typeStr.toLowerCase()) {
+      case '1':
+      case 'bike':
         return Icons.two_wheeler;
-      case 2:
+      case '2':
+      case 'auto':
         return Icons.local_taxi;
-      case 3:
+      case '3':
+      case 'car':
         return Icons.directions_car;
       default:
         return Icons.directions_car;
@@ -202,13 +206,17 @@ class _VehicleCard extends StatelessWidget {
   }
 
   String get _vehicleTypeLabel {
-    final type = (vehicle['vehicleType'] as num?)?.toInt() ?? 0;
-    switch (type) {
-      case 1:
+    final type = vehicle['vehicleType'];
+    final typeStr = type is num ? type.toString() : (type as String? ?? '');
+    switch (typeStr.toLowerCase()) {
+      case '1':
+      case 'bike':
         return 'Bike';
-      case 2:
+      case '2':
+      case 'auto':
         return 'Auto';
-      case 3:
+      case '3':
+      case 'car':
         return 'Car';
       default:
         return 'Vehicle';

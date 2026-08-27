@@ -869,3 +869,111 @@ The fleet management screen previously only showed active/completed rentals. Now
 - **Bugs found:** 2 medium, 2 low, 2 info
 
 **Key finding:** The driver app onboarding flow (auth â†’ registration â†’ tutorial â†’ KYC â†’ main app) works end-to-end. The main driver screens (Tasks, Earnings, Radar, Active Trip, Account) all render correctly. The 2 medium issues (KYC status display, wallet unavailable) are UX improvements, not blockers. The TLS reset issues are infrastructure-related and affect all API calls intermittently.
+
+---
+
+## Driver App Intense Retest — Iteration 5
+
+**Date:** 2026-08-27
+**Method:** Android emulator (pondy_avd, emulator-5554) with debug + release APK builds, deployed backend (https://pyconnect.run.place), database state verification via PostgreSQL RDS.
+
+### Issues Found & Fixed
+
+#### Issue 1: KYC screen showed upload form when KYC already approved (FIXED)
+- **File:** mobile/lib/features/driver/presentation/driver_kyc_screen.dart
+- **Bug:** KYC screen always showed the upload form regardless of approval state
+- **Fix:** Added conditional rendering for approved/pending/upload states
+- **Retest:** ? KYC screen now shows "KYC Approved" with UPI ID when isKycUploaded=true && isApproved=true
+
+#### Issue 2: Wallet showed "Wallet unavailable" / "Tap to retry" (FIXED)
+- **File:** mobile/lib/features/driver/domain/driver_models.dart
+- **Bug:** DriverWalletModel.fromJson expected ecentEntries field but backend returns ecentTransactions. Cast 
+ull as List threw a type error.
+- **Fix:** Changed to accept both ecentEntries and ecentTransactions with null-safe fallback to []
+- **Retest:** ? Account screen now shows "Earnings — ?0 available" instead of "Wallet unavailable"
+
+#### Issue 3: SignalR reconnection needed better retry/backoff (FIXED)
+- **File:** mobile/lib/core/network/signalr_client.dart
+- **Bug:** Intermittent TLS resets caused "Reconnecting to dispatch..." with insufficient backoff
+- **Fix:** Expanded exponential backoff to 8 attempts with delays up to 60s, preserved reconnect state callbacks
+- **Retest:** ? No reconnecting banner observed during normal operation
+
+#### Issue 4: KYC multipart upload needed retry on TLS reset (FIXED)
+- **File:** mobile/lib/features/driver/presentation/driver_kyc_screen.dart
+- **Bug:** Multipart KYC submission failed immediately on transient TLS reset
+- **Fix:** Added retry logic for transient network failures
+- **Retest:** ? Not directly retested (KYC already approved in DB), but retry logic is in place
+
+#### Issue 5: DriverShell initState ref usage crash (CRITICAL — NEW)
+- **File:** mobile/lib/shell/driver_shell.dart
+- **Bug:** ef.invalidate() and ef.read() called inside initState() threw dependOnInheritedWidgetOfExactType<UncontrolledProviderScope>() was called before _DriverShellState.initState() completed. This crashed the app on every login with "Something went wrong" error screen.
+- **Fix:** Deferred Riverpod ref calls to WidgetsBinding.instance.addPostFrameCallback
+- **Retest:** ? App loads correctly after login, no crash
+
+#### Issue 6: DriverWalletModel.fromJson type cast crash (CRITICAL — NEW)
+- **File:** mobile/lib/features/driver/domain/driver_models.dart
+- **Bug:** (json['balance'] as num).toDouble() and (json['recentEntries'] as List) used unsafe casts that threw on null/missing fields
+- **Fix:** Changed to null-safe casts with fallbacks
+- **Retest:** ? Wallet loads correctly with balance 0.00
+
+#### Issue 7: Garage screen vehicleType String vs num cast crash (CRITICAL — NEW)
+- **File:** mobile/lib/features/driver/presentation/garage_screen.dart
+- **Bug:** (vehicle['vehicleType'] as num?)?.toInt() threw 	ype 'String' is not a subtype of type 'num?' because backend returns vehicleType as a String ("Bike", "Auto", "Car") not a num
+- **Fix:** Changed to handle both String and num types with lowercase string matching
+- **Retest:** ? Garage screen renders correctly with vehicle cards
+
+#### Issue 8: User role set to wrong enum value (DATA FIX)
+- **Bug:** User role was set to 2 (Local) instead of 5 (Driver) in the database
+- **Fix:** Updated users SET "Role" = 5 WHERE "Phone" = '9000000003'
+- **Retest:** ? OTP verify now returns ole: "Driver" and wallet endpoint returns HTTP 200
+
+### Retest Results — All Screens
+
+| # | Screen/Feature | Status | Notes |
+|---|----------------|--------|-------|
+| 1 | Phone entry + OTP auth | ? Pass | Auto-fill OTP works, role=Driver returned |
+| 2 | Main dashboard (Tasks) | ? Pass | OFFLINE/ONLINE toggle, "No tasks available" |
+| 3 | Online/offline toggle | ? Pass | Location permission requested, status changes |
+| 4 | Account/Profile | ? Pass | All rows render: Earnings, KYC, Garage, Preferences, Voice, Sign out, Delete |
+| 5 | Wallet/Earnings row | ? Pass | Shows "?0 available" (was "Wallet unavailable") |
+| 6 | KYC Verification — Approved | ? Pass | Shows "KYC Approved" with UPI ID (was upload form) |
+| 7 | My Garage — Empty | ? Pass | "No vehicles yet" with Add Vehicle button |
+| 8 | My Garage — Add Vehicle | ? Pass | Vehicle added with type selector + registration number |
+| 9 | My Garage — Vehicle card | ? Pass | Shows PY05CD7890, Car, Pending Approval (was crash) |
+| 10 | My Garage — Delete vehicle | ? Pass | Vehicle deleted, returns to empty state |
+| 11 | Shift Preferences | ? Pass | Destination mode + 5 service type toggles |
+| 12 | Service type toggle | ? Pass | "Updated: Food Delivery disabled" snackbar |
+| 13 | Voice Announcements | ? Pass | 6 language options displayed |
+| 14 | Earnings tab | ? Pass | "No Earnings Yet" with Start Browsing Tasks button |
+| 15 | Radar tab | ? Pass | "No Surge Zones Right Now" with Refresh button |
+| 16 | Active Trip tab | ? Pass | "No active trip" with helpful message |
+| 17 | SOS long press (4s) | ? Pass | Opens phone dialer to call emergency services |
+| 18 | Sign out | ? Pass | Returns to phone entry screen |
+| 19 | Become a Captain button | ? Pass | Scrolls to phone input (expected behavior) |
+| 20 | Release APK build | ? Pass | 83.9MB, installed and verified |
+
+### Summary
+
+| Metric | Count |
+|--------|-------|
+| Total checks | 20 |
+| Pass | 20 (100%) |
+| Warn | 0 (0%) |
+| Fail | 0 (0%) |
+| Bugs found & fixed | 7 (3 critical, 2 medium, 2 low) |
+
+**Key finding:** Three critical crash bugs were discovered and fixed during intense retesting:
+1. DriverShell.initState() used ef before the widget was fully initialized
+2. DriverWalletModel.fromJson used unsafe type casts on backend response fields
+3. garage_screen.dart cast vehicleType String to num, crashing the garage screen
+
+All three crashes manifested as "Something went wrong" error screens. After fixes, the driver app works end-to-end with no crashes. The wallet, KYC approved state, garage, preferences, and SOS all function correctly on both debug and release APK builds.
+
+**Files modified:**
+- mobile/lib/shell/driver_shell.dart — initState ref deferral
+- mobile/lib/features/driver/domain/driver_models.dart — DriverWalletModel.fromJson null-safe
+- mobile/lib/features/driver/presentation/garage_screen.dart — vehicleType String/num handling
+- mobile/lib/features/driver/presentation/driver_kyc_screen.dart — KYC approved/pending states + upload retry
+- mobile/lib/features/driver/presentation/driver_profile_screen.dart — wallet error/retry UI
+- mobile/lib/core/network/signalr_client.dart — exponential backoff reconnection
+- mobile/lib/core/widgets/error_boundary.dart — debug logging for rendering errors

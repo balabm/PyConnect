@@ -28,9 +28,12 @@ class DriverProfileScreen extends ConsumerWidget {
               children: [
                 walletAsync.when(
                   loading: () => const ShimmerList(count: 1, withImage: false),
-                  error: (_, __) => const ListTile(
-                    title: Text('Wallet unavailable'),
-                    leading: Icon(Icons.account_balance_wallet_outlined),
+                  error: (_, __) => ListTile(
+                    leading: const Icon(Icons.account_balance_wallet_outlined),
+                    title: const Text('Wallet'),
+                    subtitle: const Text('Tap to retry'),
+                    trailing: const Icon(Icons.refresh, size: 20),
+                    onTap: () => ref.invalidate(driverWalletProvider),
                   ),
                   data: (wallet) => ListTile(
                     leading: const Icon(Icons.account_balance_wallet),

@@ -56,12 +56,18 @@ class _DriverShellState extends ConsumerState<DriverShell> {
     super.initState();
     // Initialize overlay alert service for dispatch notifications
     OverlayAlertService.instance.initialize();
-    // Force a fresh network fetch of the driver profile on every app boot
-    // to ensure KYC approval status is always accurate, bypassing any
-    // stale cached state from a previous session.
-    ref.invalidate(driverProfileProvider);
-    _listenForRideOffers();
-    _resumeActiveTask();
+    // Defer Riverpod ref calls to after the first frame — calling
+    // ref.invalidate/ref.read inside initState throws
+    // "dependOnInheritedWidgetOfExactType called before initState completed".
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Force a fresh network fetch of the driver profile on every app boot
+      // to ensure KYC approval status is always accurate, bypassing any
+      // stale cached state from a previous session.
+      ref.invalidate(driverProfileProvider);
+      _listenForRideOffers();
+      _resumeActiveTask();
+    });
   }
 
   /// On app restart, check if the driver has an in-progress task and
