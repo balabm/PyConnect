@@ -25,28 +25,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _bootstrap() async {
+    debugPrint('SPLASH: bootstrap started');
     // Show branding for 1.5 seconds before any checks.
     await Future.delayed(const Duration(milliseconds: 1500));
+    debugPrint('SPLASH: after 1.5s delay');
 
+    debugPrint('SPLASH: checking force update...');
     await ref
         .read(forceUpdateProvider.notifier)
         .checkAppVersion(widget.flavor.name);
+    debugPrint('SPLASH: force update check done');
 
     if (!mounted) return;
 
     if (ref.read(forceUpdateProvider).forceUpdate) {
+      debugPrint('SPLASH: force update required, redirecting');
       context.go('/force-update');
       return;
     }
+    debugPrint('SPLASH: no force update needed');
 
     final bool authenticated;
     if (widget.flavor == AppFlavor.partner) {
       final session = await ref.read(vendorAuthControllerProvider.future);
       authenticated = session?.isAuthenticated ?? false;
     } else {
+      debugPrint('SPLASH: reading auth controller...');
       final session = await ref.read(authControllerProvider.future);
       authenticated = session?.isAuthenticated ?? false;
     }
+    debugPrint('SPLASH: auth check done, authenticated=$authenticated');
 
     if (!mounted) return;
 

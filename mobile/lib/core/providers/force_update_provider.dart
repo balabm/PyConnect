@@ -33,7 +33,11 @@ class ForceUpdateState {
 class ForceUpdateNotifier extends StateNotifier<ForceUpdateState> {
   ForceUpdateNotifier() : super(const ForceUpdateState());
 
-  final Dio _dio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: AppConfig.apiBaseUrl,
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 15),
+  ));
 
   Future<void> checkAppVersion(String flavor) async {
     try {
