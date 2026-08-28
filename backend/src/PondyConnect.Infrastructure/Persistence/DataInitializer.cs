@@ -644,6 +644,8 @@ public sealed class DataInitializer
 
         foreach (var driver in drivers)
         {
+            // Upload KYC before going online (domain requires KYC first).
+            driver.UploadKyc("seed://aadhaar", "seed://license", "seed://rc", "seed@upi");
             driver.Approve();
             driver.GoOnline();
             // Complete tutorial and sign agreement so the Flutter router
