@@ -612,12 +612,18 @@ public sealed class DataInitializer
         if (await _context.Drivers.AnyAsync(cancellationToken))
             return;
 
-        var driverUser1 = User.Create("Suresh Kumar", "9000000050", UserRole.Driver);
-        var driverUser2 = User.Create("Deepak Raj", "9000000051", UserRole.Driver);
-        var driverUser3 = User.Create("Arun Pandi", "9000000052", UserRole.Driver);
-        var driverUser4 = User.Create("Karthik S", "9000000053", UserRole.Driver);
-        var driverUser5 = User.Create("Ramesh P", "9000000054", UserRole.Driver);
-        _context.Users.AddRange(driverUser1, driverUser2, driverUser3, driverUser4, driverUser5);
+        // Resolve or create driver users idempotently so a partial seed
+        // (e.g. container OOM restart) doesn't collide on the unique phone index.
+        var driverUser1 = await _context.Users.FirstOrDefaultAsync(u => u.Phone == "9000000050", cancellationToken);
+        if (driverUser1 is null) { driverUser1 = User.Create("Suresh Kumar", "9000000050", UserRole.Driver); _context.Users.Add(driverUser1); }
+        var driverUser2 = await _context.Users.FirstOrDefaultAsync(u => u.Phone == "9000000051", cancellationToken);
+        if (driverUser2 is null) { driverUser2 = User.Create("Deepak Raj", "9000000051", UserRole.Driver); _context.Users.Add(driverUser2); }
+        var driverUser3 = await _context.Users.FirstOrDefaultAsync(u => u.Phone == "9000000052", cancellationToken);
+        if (driverUser3 is null) { driverUser3 = User.Create("Arun Pandi", "9000000052", UserRole.Driver); _context.Users.Add(driverUser3); }
+        var driverUser4 = await _context.Users.FirstOrDefaultAsync(u => u.Phone == "9000000053", cancellationToken);
+        if (driverUser4 is null) { driverUser4 = User.Create("Karthik S", "9000000053", UserRole.Driver); _context.Users.Add(driverUser4); }
+        var driverUser5 = await _context.Users.FirstOrDefaultAsync(u => u.Phone == "9000000054", cancellationToken);
+        if (driverUser5 is null) { driverUser5 = User.Create("Ramesh P", "9000000054", UserRole.Driver); _context.Users.Add(driverUser5); }
         await _context.SaveChangesAsync(cancellationToken);
 
         var drivers = new[]
