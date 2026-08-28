@@ -2,6 +2,7 @@ namespace PondyConnect.Architecture.Tests;
 
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
 using PondyConnect.Domain.ValueObjects;
@@ -21,11 +22,20 @@ public sealed class DataInitializerTests
         return new ApplicationDbContext(options);
     }
 
+    private static IConfiguration CreateConfig() =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["SeedDemoData"] = "true",
+                ["Admin:BootstrapPhone"] = "9000000000",
+            })
+            .Build();
+
     [Fact]
     public async Task SeedDemoDatasetAsync_FirstRun_SeedsAllDemoData()
     {
         using var context = CreateContext();
-        var initializer = new DataInitializer(context);
+        var initializer = new DataInitializer(context, CreateConfig());
 
         // Call the internal seeding method directly (skipping MigrateAsync which doesn't work with InMemory)
         var seedMethod = typeof(DataInitializer).GetMethod("SeedDemoDatasetAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -59,7 +69,7 @@ public sealed class DataInitializerTests
     public async Task SeedFuocoPizzeriaAsync_FirstRun_SeedsFuocoUserVendorAndVenue()
     {
         using var context = CreateContext();
-        var initializer = new DataInitializer(context);
+        var initializer = new DataInitializer(context, CreateConfig());
 
         var seedMethod = typeof(DataInitializer).GetMethod("SeedFuocoPizzeriaAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         await (Task)seedMethod!.Invoke(initializer, [CancellationToken.None])!;
@@ -78,7 +88,7 @@ public sealed class DataInitializerTests
     public async Task SeedFuocoPizzeriaAsync_SecondRun_DoesNotDuplicate()
     {
         using var context = CreateContext();
-        var initializer = new DataInitializer(context);
+        var initializer = new DataInitializer(context, CreateConfig());
 
         var seedMethod = typeof(DataInitializer).GetMethod("SeedFuocoPizzeriaAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         await (Task)seedMethod!.Invoke(initializer, [CancellationToken.None])!;

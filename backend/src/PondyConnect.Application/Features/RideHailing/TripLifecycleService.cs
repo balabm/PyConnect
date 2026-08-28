@@ -17,15 +17,18 @@ public sealed class TripLifecycleService
 {
     private readonly IApplicationDbContext _context;
     private readonly WalletService _wallet;
+    private readonly RidePricingService _pricingService;
     private readonly ILogger<TripLifecycleService> _logger;
 
     public TripLifecycleService(
         IApplicationDbContext context,
         WalletService wallet,
+        RidePricingService pricingService,
         ILogger<TripLifecycleService> logger)
     {
         _context = context;
         _wallet = wallet;
+        _pricingService = pricingService;
         _logger = logger;
     }
 
@@ -65,11 +68,11 @@ public sealed class TripLifecycleService
 
         // Calculate remaining distance
         var remainingDistance = breakdownLocation.DistanceKm(ride.DropoffLocation);
-        var remainingDuration = RidePricingService.EstimateDurationMin(remainingDistance, ride.VehicleType);
+        var remainingDuration = _pricingService.EstimateDurationMin(remainingDistance, ride.VehicleType);
 
         // Complete Leg 1 with prorated fare
         ride.CompleteWithBreakdown(traveledDistance, traveledDuration);
-        var leg1Fare = RidePricingService.CalculateFareWithSurge(
+        var leg1Fare = _pricingService.CalculateFareWithSurge(
             traveledDistance,
             traveledDuration,
             ride.VehicleType,
@@ -81,7 +84,7 @@ public sealed class TripLifecycleService
         ride.GetType().GetProperty("TotalAmount")?.SetValue(ride, leg1Fare.TotalAmount);
 
         // Create Leg 2 ride for the remaining distance
-        var leg2Fare = RidePricingService.CalculateFareWithSurge(
+        var leg2Fare = _pricingService.CalculateFareWithSurge(
             remainingDistance,
             remainingDuration,
             ride.VehicleType,

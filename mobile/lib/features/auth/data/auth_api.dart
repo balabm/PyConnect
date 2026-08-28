@@ -27,9 +27,13 @@ class AuthApi {
     return AuthResult.fromJson(body as Map<String, dynamic>);
   }
 
-  /// Updates the authenticated user's profile (currently supports name).
-  Future<void> updateMe(String name) async {
-    await _api.put('/api/auth/me', data: {'name': name});
+  /// Updates the authenticated user's profile (currently supports name and email).
+  Future<void> updateMe(String name, {String? email}) async {
+    final data = <String, dynamic>{'name': name};
+    if (email != null && email.trim().isNotEmpty) {
+      data['email'] = email.trim();
+    }
+    await _api.put('/api/auth/me', data: data);
   }
 
   /// Accepts the liability waiver. Required before booking rides or rentals.

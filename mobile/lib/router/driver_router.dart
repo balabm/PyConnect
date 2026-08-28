@@ -20,6 +20,7 @@ import '../features/driver/presentation/driver_radar_screen.dart';
 import '../features/driver/presentation/garage_screen.dart';
 import '../features/driver/presentation/driver_preferences_screen.dart';
 import '../features/driver/presentation/driver_ride_rating_screen.dart';
+import '../features/rides/presentation/emergency_contacts_screen.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers/force_update_provider.dart';
 import '../features/splash/presentation/force_update_screen.dart';
@@ -173,6 +174,10 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'safety-settings',
             builder: (_, _) => const DriverSafetySettingsScreen(),
+          ),
+          GoRoute(
+            path: 'emergency-contacts',
+            builder: (_, _) => const EmergencyContactsScreen(),
           ),
           GoRoute(
             path: 'help',

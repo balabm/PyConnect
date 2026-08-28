@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/config/service_area_config.dart';
 import '../../../core/network/osrm_routing_service.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -70,10 +71,10 @@ class _TripBody extends ConsumerWidget {
     final driverLat = (trip['driverLatitude'] as num?)?.toDouble();
     final driverLng = (trip['driverLongitude'] as num?)?.toDouble();
 
-    final pickupLat = (trip['pickupLat'] as num?)?.toDouble() ?? 11.9356;
-    final pickupLng = (trip['pickupLng'] as num?)?.toDouble() ?? 79.8301;
-    final dropoffLat = (trip['dropoffLat'] as num?)?.toDouble() ?? 11.9370;
-    final dropoffLng = (trip['dropoffLng'] as num?)?.toDouble() ?? 79.8338;
+    final pickupLat = (trip['pickupLat'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultCenter.latitude;
+    final pickupLng = (trip['pickupLng'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultCenter.longitude;
+    final dropoffLat = (trip['dropoffLat'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultDropoff.latitude;
+    final dropoffLng = (trip['dropoffLng'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultDropoff.longitude;
 
     final pickup = LatLng(pickupLat, pickupLng);
     final dropoff = LatLng(dropoffLat, dropoffLng);

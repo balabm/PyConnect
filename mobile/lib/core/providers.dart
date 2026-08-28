@@ -26,7 +26,6 @@ import '../features/auth/data/auth_api.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/vendor_auth_controller.dart';
 import '../features/food/data/food_api.dart';
-import '../features/essentials/data/essentials_api.dart';
 import '../features/rides/data/rides_api.dart';
 import '../features/public/data/public_api.dart';
 import '../features/stays/data/stays_api.dart';
@@ -87,7 +86,6 @@ final rentalApiProvider = Provider<RentalApi>((ref) => RentalApi(ref.watch(apiCl
 final vendorApiProvider = Provider<VendorApi>((ref) => VendorApi(ref.watch(apiClientProvider)));
 final bookingApiProvider = Provider<BookingApi>((ref) => BookingApi(ref.watch(apiClientProvider)));
 final foodApiProvider = Provider<FoodDeliveryApi>((ref) => FoodDeliveryApi(ref.watch(apiClientProvider)));
-final essentialsApiProvider = Provider<QuickCommerceApi>((ref) => QuickCommerceApi(ref.watch(apiClientProvider)));
 final ridesApiProvider = Provider<RideHailingApi>((ref) => RideHailingApi(ref.watch(apiClientProvider)));
 final staysApiProvider = Provider<StaysApi>((ref) => StaysApi(ref.watch(apiClientProvider)));
 final supportApiProvider = Provider<SupportApi>((ref) => SupportApi(ref.watch(apiClientProvider)));

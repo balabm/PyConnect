@@ -278,9 +278,9 @@ class _MenuItemCard extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(ctx).colorScheme.surface,
-        title: Text('Remove Item?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text('Delete Item?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
-          'Mark "${item.name}" as unavailable? It will be hidden from customers.',
+          'Delete "${item.name}" from your menu? This cannot be undone.',
           style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
@@ -289,12 +289,12 @@ class _MenuItemCard extends ConsumerWidget {
             child: Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () {
               Navigator.pop(ctx);
-              ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
+              ref.read(vendorMenuProvider.notifier).deleteItem(item.id);
             },
-            child: Text('Mark Unavailable'),
+            child: Text('Delete'),
           ),
         ],
       ),

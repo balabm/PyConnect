@@ -48,6 +48,19 @@ class UserWalletApi {
         .map((e) => UserWalletTransactionModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// Transfers funds from the authenticated user's real balance to another
+  /// user's wallet by phone number. Returns the updated wallet balance.
+  Future<UserWalletModel> transfer({
+    required String recipientPhone,
+    required double amount,
+  }) async {
+    final body = await _api.post('/api/user/wallet/transfer', data: {
+      'recipientPhone': recipientPhone,
+      'amount': amount,
+    });
+    return UserWalletModel.fromJson(body as Map<String, dynamic>);
+  }
 }
 
 class UserWalletModel {

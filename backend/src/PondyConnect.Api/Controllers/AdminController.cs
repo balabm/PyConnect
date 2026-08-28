@@ -96,6 +96,24 @@ public sealed class AdminController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Resumes dispatch for a driver who was auto-paused due to low ratings.
+    /// The admin should review the low-rating feedback before resuming.
+    /// </summary>
+    [HttpPost("drivers/{driverId:guid}/resume-dispatch")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResumeDriverDispatch(Guid driverId, CancellationToken ct)
+    {
+        var driver = await _dbContext.Drivers.FirstOrDefaultAsync(d => d.Id == driverId, ct);
+        if (driver is null)
+            return NotFound(new { Message = "Driver not found." });
+
+        driver.ResumeFromReview();
+        await _dbContext.SaveChangesAsync(ct);
+        return Ok(new { Message = "Driver dispatch resumed." });
+    }
+
     // === Vendor Onboarding ===
 
     [HttpGet("vendors")]

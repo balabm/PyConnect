@@ -29,11 +29,18 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
   List<UserWalletTransactionModel>? _transactions;
   bool _loading = true;
   String? _error;
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadWallet();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadWallet() async {
@@ -102,6 +109,7 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
               : RefreshIndicator(
                   onRefresh: _loadWallet,
                   child: SingleChildScrollView(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,17 +132,23 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
                             _QuickAction(
                               icon: Icons.send_rounded,
                               label: 'Send',
-                              onTap: () {},
+                              onTap: () => _showSendSheet(context),
                             ),
                             _QuickAction(
                               icon: Icons.receipt_long_rounded,
                               label: 'History',
-                              onTap: () {},
+                              onTap: () {
+                                _scrollController.animateTo(
+                                  _scrollController.position.maxScrollExtent,
+                                  duration: const Duration(milliseconds: 400),
+                                  curve: Curves.easeOut,
+                                );
+                              },
                             ),
                             _QuickAction(
                               icon: Icons.account_balance_rounded,
                               label: 'Bank',
-                              onTap: () {},
+                              onTap: () => _showBankSheet(context),
                             ),
                           ],
                         ),
@@ -499,6 +513,267 @@ class _ConsumerWalletScreenState extends ConsumerState<ConsumerWalletScreen> {
         );
       }
     }
+  }
+
+  void _showSendSheet(BuildContext context) {
+    final phoneCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool sending = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx).dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Send Money',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Transfer from your wallet to another PY Connect user by phone number.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.slate.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Recipient phone number',
+                    prefixText: '+91 ',
+                    border: OutlineInputBorder(),
+                    hintText: '9876543210',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Phone number is required';
+                    }
+                    if (value.trim().length < 10) {
+                      return 'Enter a valid 10-digit phone number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: amountCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Amount',
+                    prefixText: '\u20B9 ',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final parsed = double.tryParse(value ?? '');
+                    if (parsed == null || parsed <= 0) {
+                      return 'Enter a valid amount';
+                    }
+                    if (_wallet != null && parsed > _wallet!.realBalance) {
+                      return 'Insufficient real balance';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: sending
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate()) return;
+                            setSheetState(() => sending = true);
+                            AppHaptics.light();
+                            final messenger = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(ctx);
+                            try {
+                              final updated = await ref
+                                  .read(userWalletApiProvider)
+                                  .transfer(
+                                    recipientPhone: phoneCtrl.text.trim(),
+                                    amount: double.parse(amountCtrl.text),
+                                  );
+                              if (mounted) {
+                                navigator.pop();
+                                setState(() => _wallet = updated);
+                                await _loadWallet();
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '\u20B9${amountCtrl.text} sent successfully!'),
+                                    backgroundColor: AppTheme.emerald,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('Transfer failed: $e'),
+                                    backgroundColor: AppTheme.danger,
+                                  ),
+                                );
+                                setSheetState(() => sending = false);
+                              }
+                            }
+                          },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppTheme.emerald,
+                    ),
+                    child: sending
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Send Money',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBankSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(sheetContext).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(sheetContext).dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppTheme.emerald.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.account_balance_rounded,
+                      color: AppTheme.emerald, size: 24),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Text(
+                    'Bank Account',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Link your bank account to withdraw wallet balance directly to your bank. '
+              'Bank verification requires KYC completion.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.slate.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.gold.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: AppTheme.gold.withValues(alpha: 0.2), width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: AppTheme.gold, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Bank withdrawals are rolling out soon. '
+                      'You can still use your wallet balance for rides, food, and bookings.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.slate.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonal(
+                onPressed: () => Navigator.pop(sheetContext),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: const Text('Got it'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

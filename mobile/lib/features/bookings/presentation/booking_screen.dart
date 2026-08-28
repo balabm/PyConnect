@@ -14,6 +14,7 @@ import '../../auth/presentation/quick_auth_sheet.dart';
 import '../../venues/application/venue_controller.dart';
 import '../../venues/data/venue_api.dart';
 import '../data/booking_api.dart';
+import '../../cross_sell/presentation/ride_upsell_sheet.dart';
 import '../../../core/widgets/skeleton_loaders.dart';
 
 /// Cover-charge plus table reservation flow for a venue.
@@ -398,6 +399,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           }
           // Only confirm the booking once the backend has verified payment.
           setState(() => _bookingResult = booking);
+          // Show ride upsell suggestion after a short delay.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) showRideUpsellSheet(context, ref, booking.bookingId);
+          });
         case PaymentError(:final code, :final message):
           if (mounted) {
             _showPaymentCancelledSnackBar();

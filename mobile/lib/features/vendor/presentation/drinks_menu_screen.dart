@@ -34,7 +34,16 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
     try {
       final venues = await ref.read(vendorDashboardApiProvider).getVenues();
       if (mounted && venues.isNotEmpty) {
-        setState(() => _venueId = venues.first.venueId);
+        final venue = venues.first;
+        setState(() {
+          _venueId = venue.venueId;
+          // Load current occupancy from venue data if available
+          if (venue.maxCapacity > 0) {
+            _crowdPercent = ((venue.currentCapacity / venue.maxCapacity) * 100)
+                .round()
+                .clamp(0, 100);
+          }
+        });
       }
     } catch (_) {
       // Venue will be loaded on next attempt.
@@ -52,9 +61,12 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
           _guestlistLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _guestlistLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load guestlist: $e'), backgroundColor: AppTheme.danger),
+        );
       }
     }
   }
@@ -87,6 +99,27 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
         );
       }
     }
+  }
+
+  void _confirmDeleteDrink(String id, String name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Drink?'),
+        content: Text('Delete "$name" from your menu? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(vendorMenuProvider.notifier).deleteItem(id);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -189,6 +222,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
                         AppHaptics.light();
                         ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
                       },
+                      onDelete: () => _confirmDeleteDrink(item.id, item.name),
                     )),
                 const SizedBox(height: 24),
               ],
@@ -218,6 +252,7 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
                         AppHaptics.light();
                         ref.read(vendorMenuProvider.notifier).toggleItem(item.id);
                       },
+                      onDelete: () => _confirmDeleteDrink(item.id, item.name),
                     )),
             ],
           );
@@ -579,7 +614,12 @@ class _DrinksMenuScreenState extends ConsumerState<DrinksMenuScreen> {
             onPressed: () async {
               final name = nameController.text.trim();
               final size = int.tryParse(sizeController.text.trim()) ?? 1;
-              if (name.isEmpty) return;
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Please enter a guest name'), backgroundColor: AppTheme.warning),
+                );
+                return;
+              }
               AppHaptics.light();
               Navigator.pop(dialogContext);
               try {
@@ -668,6 +708,7 @@ class _DrinkCard extends StatelessWidget {
     required this.isAvailable,
     required this.description,
     required this.onToggle,
+    this.onDelete,
     this.isVip = false,
   });
 
@@ -677,6 +718,7 @@ class _DrinkCard extends StatelessWidget {
   final bool isAvailable;
   final String? description;
   final VoidCallback onToggle;
+  final VoidCallback? onDelete;
   final bool isVip;
 
   @override
@@ -782,6 +824,15 @@ class _DrinkCard extends StatelessWidget {
                 inactiveTrackColor: AppTheme.emerald.withValues(alpha: 0.3),
                 onChanged: (_) => onToggle(),
               ),
+              if (onDelete != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  color: AppTheme.danger,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: onDelete,
+                  tooltip: 'Delete drink',
+                ),
             ],
           ),
         ],

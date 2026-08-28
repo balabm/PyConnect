@@ -75,6 +75,7 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
     private readonly IFraudDetectionService _fraudDetection;
     private readonly IPaymentGateway _gateway;
     private readonly IPaymentRefundService _refundService;
+    private readonly OrderPricingService _pricingService;
     private readonly ILogger<CreateFoodOrderHandler> _logger;
 
     public CreateFoodOrderHandler(
@@ -84,6 +85,7 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
         IFraudDetectionService fraudDetection,
         IPaymentGateway gateway,
         IPaymentRefundService refundService,
+        OrderPricingService pricingService,
         ILogger<CreateFoodOrderHandler> logger)
     {
         _context = context;
@@ -92,6 +94,7 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
         _fraudDetection = fraudDetection;
         _gateway = gateway;
         _refundService = refundService;
+        _pricingService = pricingService;
         _logger = logger;
     }
 
@@ -203,13 +206,13 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
             if (hasPriceConflict)
             {
                 var liveSubTotal = request.Items.Sum(i => i.Quantity * liveItemPrices[i.Name]);
-                var livePricing = OrderPricingService.CalculatePricing(liveSubTotal, isProMember, DateTimeOffset.UtcNow);
+                var livePricing = _pricingService.CalculatePricing(liveSubTotal, isProMember, DateTimeOffset.UtcNow);
                 throw new CartPriceConflictException(liveItemPrices, liveSubTotal, livePricing.TotalAmount);
             }
         }
 
         var subTotal = request.Items?.Sum(i => i.Quantity * i.UnitPrice) ?? 0m;
-        var pricing = OrderPricingService.CalculatePricing(subTotal, isProMember, DateTimeOffset.UtcNow);
+        var pricing = _pricingService.CalculatePricing(subTotal, isProMember, DateTimeOffset.UtcNow);
 
         FoodOrder order;
 
@@ -218,7 +221,7 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
         if (request.TableId.HasValue)
         {
             // Dine-in: no delivery fee, no late-night bonus, no dispatch
-            var dineInTaxes = subTotal * OrderPricingService.GstRate;
+            var dineInTaxes = subTotal * _pricingService.GstRate;
             order = FoodOrder.CreateDineIn(
                 userId: userId,
                 vendorId: request.VendorId,
@@ -268,8 +271,33 @@ public sealed class CreateFoodOrderHandler : IRequestHandler<CreateFoodOrderComm
 
         try
         {
+            // Wallet payments: debit the user's wallet directly (no Razorpay needed).
+            if (request.PaymentMethod == PaymentMethod.Wallet)
+            {
+                var wallet = await _context.UserWallets
+                    .FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+
+                if (wallet is null || wallet.RealBalance < order.TotalAmount)
+                {
+                    throw new InvalidOperationException("Insufficient wallet balance for this order.");
+                }
+
+                // Debit real balance and record the transaction.
+                wallet.DebitReal(order.TotalAmount);
+
+                var walletTxn = UserWalletTransaction.Create(
+                    wallet.Id,
+                    UserWalletTransactionType.FoodOrderPayment,
+                    -order.TotalAmount,
+                    $"Food order {order.Id}",
+                    order.Id.ToString());
+
+                _context.UserWalletTransactions.Add(walletTxn);
+                paymentId = order.Id.ToString();
+                order.RecordPayment(PaymentStatus.Captured);
+            }
             // Online payments must have a valid Razorpay client-side signature.
-            if (request.PaymentMethod != PaymentMethod.Cash)
+            else if (request.PaymentMethod != PaymentMethod.Cash)
             {
                 if (string.IsNullOrWhiteSpace(request.RazorpayOrderId)
                     || string.IsNullOrWhiteSpace(request.RazorpayPaymentId)

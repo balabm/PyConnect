@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -26,7 +27,7 @@ class _SavedLocationsScreenState extends ConsumerState<SavedLocationsScreen> {
       final api = ref.read(ridesApiProvider);
       try {
         // Default to Pondicherry center for now
-        await api.addSavedLocation(label, address, 11.9356, 79.8301);
+        await api.addSavedLocation(label, address, ServiceAreaConfig.defaultCenter.latitude, ServiceAreaConfig.defaultCenter.longitude);
         ref.invalidate(savedLocationsProvider);
         if (ctx.mounted) {
           AppHaptics.success();

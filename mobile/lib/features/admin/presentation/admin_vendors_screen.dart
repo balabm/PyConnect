@@ -478,6 +478,18 @@ class _VendorActions extends ConsumerWidget {
   }
 
   Future<void> _approveVendor(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Approve Vendor?'),
+        content: Text('Approve ${vendor.name}? This will allow them to receive orders and operate on the platform.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Approve')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(adminApiProvider).approveVendor(vendor.id);

@@ -75,7 +75,8 @@ public static class DependencyInjection
         services.AddScoped<IIdempotencyService, IdempotencyService>();
 
         // SMS sender: toggle via Sms:UseMock (true = Console, false = Fast2SMS)
-        var smsUseMock = configuration.GetValue("Sms:UseMock", true);
+        // Default is false (secure) — must explicitly enable mock for dev/test.
+        var smsUseMock = configuration.GetValue("Sms:UseMock", false);
 
         // OTP service: when SMS is in mock/test mode, also enable plaintext
         // peek so the Flutter app can autofill codes during testing.
@@ -138,10 +139,11 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
 
         // Payment gateway: toggle via Payments:UseMock (true = Noop, false = Razorpay)
+        // Default is false (secure) — must explicitly enable mock for dev/test.
         services.Configure<RazorpayOptions>(configuration.GetSection(RazorpayOptions.SectionName));
         services.AddHttpClient<RazorpayGateway>();
         services.AddScoped<NoopPaymentGateway>();
-        var paymentsUseMock = configuration.GetValue("Payments:UseMock", true);
+        var paymentsUseMock = configuration.GetValue("Payments:UseMock", false);
         services.AddScoped<IPaymentGateway>(sp =>
         {
             if (paymentsUseMock)
@@ -150,9 +152,10 @@ public static class DependencyInjection
         });
 
         // Payout service: toggle via Payments:UseMockPayouts (true = Mock, false = RazorpayX)
+        // Default is false (secure) — must explicitly enable mock for dev/test.
         services.AddHttpClient<RazorpayPayoutService>();
         services.AddScoped<MockPayoutService>();
-        var payoutsUseMock = configuration.GetValue("Payments:UseMockPayouts", true);
+        var payoutsUseMock = configuration.GetValue("Payments:UseMockPayouts", false);
         services.AddScoped<PondyConnect.Application.Services.IPayoutService>(sp =>
         {
             if (payoutsUseMock)
@@ -161,8 +164,9 @@ public static class DependencyInjection
         });
 
         // Storage service: toggle via Storage:UseMock (true = Local, false = AWS S3)
+        // Default is false (secure) — must explicitly enable mock for dev/test.
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
-        var storageUseMock = configuration.GetValue("Storage:UseMock", true);
+        var storageUseMock = configuration.GetValue("Storage:UseMock", false);
         if (storageUseMock)
         {
             services.AddScoped<IStorageService, LocalFileStorageService>();

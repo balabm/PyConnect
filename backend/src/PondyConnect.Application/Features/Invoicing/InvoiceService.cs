@@ -2,6 +2,7 @@ namespace PondyConnect.Application.Features.Invoicing;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Domain.Entities;
 using System.Globalization;
@@ -20,17 +21,22 @@ public sealed class InvoiceService
     private readonly IApplicationDbContext _context;
     private readonly IStorageService _storage;
     private readonly ILogger<InvoiceService> _logger;
+    private readonly InvoiceOptions _options;
 
-    // Platform GSTIN — would be configured via environment in production
-    public const string PlatformGstin = "34ABCDE1234F1Z5";
-    public const string PlatformName = "PondyConnect Technologies Pvt. Ltd.";
-    public const string PlatformAddress = "White Town, Pondicherry 605001, India";
+    public string PlatformGstin => _options.PlatformGstin;
+    public string PlatformName => _options.PlatformName;
+    public string PlatformAddress => _options.PlatformAddress;
 
-    public InvoiceService(IApplicationDbContext context, IStorageService storage, ILogger<InvoiceService> logger)
+    public InvoiceService(
+        IApplicationDbContext context,
+        IStorageService storage,
+        ILogger<InvoiceService> logger,
+        IOptions<InvoiceOptions> options)
     {
         _context = context;
         _storage = storage;
         _logger = logger;
+        _options = options.Value;
     }
 
     /// <summary>
@@ -111,7 +117,7 @@ public sealed class InvoiceService
             entry.MarkInvoiced(invoice.Id);
 
         // Generate the PDF
-        var pdfBytes = GeneratePdf(invoice, vendor, entries);
+        var pdfBytes = GeneratePdf(invoice, vendor, entries, _options);
         var fileName = $"invoices/{invoiceMonth}/{invoiceNumber}.pdf";
 
         await using var stream = new MemoryStream(pdfBytes);
@@ -124,7 +130,7 @@ public sealed class InvoiceService
         return invoice;
     }
 
-    private static byte[] GeneratePdf(TaxInvoice invoice, Vendor vendor, List<VendorLedgerEntry> entries)
+    private static byte[] GeneratePdf(TaxInvoice invoice, Vendor vendor, List<VendorLedgerEntry> entries, InvoiceOptions options)
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -138,9 +144,9 @@ public sealed class InvoiceService
 
                 page.Header().Column(col =>
                 {
-                    col.Item().Text(PlatformName).SemiBold().FontSize(16);
-                    col.Item().Text(PlatformAddress).FontSize(9);
-                    col.Item().Text($"GSTIN: {PlatformGstin}").FontSize(9);
+                    col.Item().Text(options.PlatformName).SemiBold().FontSize(16);
+                    col.Item().Text(options.PlatformAddress).FontSize(9);
+                    col.Item().Text($"GSTIN: {options.PlatformGstin}").FontSize(9);
                     col.Item().PaddingVertical(5).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
                     col.Item().Text("TAX INVOICE").Bold().FontSize(14).FontColor(Colors.Blue.Darken2);
                     col.Item().Text($"Invoice No: {invoice.InvoiceNumber}").FontSize(10);

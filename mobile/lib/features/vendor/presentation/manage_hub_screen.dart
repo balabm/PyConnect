@@ -166,6 +166,13 @@ class ManageHubScreen extends ConsumerWidget {
         color: AppTheme.danger,
         onTap: () { AppHaptics.light(); context.push('/disputes'); },
       ),
+      _ManageTile(
+        icon: Icons.help_outline,
+        label: 'Help & Support',
+        subtitle: 'FAQs & contact support',
+        color: AppTheme.info,
+        onTap: () { AppHaptics.light(); context.push('/help'); },
+      ),
     ];
 
     // Category-specific tiles
@@ -220,7 +227,7 @@ class ManageHubScreen extends ConsumerWidget {
             label: 'Live Tables',
             subtitle: 'Cover charge tracking',
             color: AppTheme.info,
-            onTap: () { AppHaptics.light(); context.push('/bookings'); },
+            onTap: () { AppHaptics.light(); context.push('/live-tables'); },
           ),
           _ManageTile(
             icon: Icons.people,

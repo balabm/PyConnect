@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../events/data/p2p_event_api.dart';
@@ -645,8 +646,8 @@ class _CreateEventSheetState extends ConsumerState<_CreateEventSheet> {
   }
 
   // Pondicherry center — used as default coordinates for venue events.
-  static const double _defaultLat = 11.9356;
-  static const double _defaultLng = 79.8301;
+  static final double _defaultLat = ServiceAreaConfig.defaultCenter.latitude;
+  static final double _defaultLng = ServiceAreaConfig.defaultCenter.longitude;
 
   Future<void> _pickStartsAt() async {
     AppHaptics.light();

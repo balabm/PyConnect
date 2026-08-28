@@ -57,8 +57,13 @@ class _SplitPaymentScreenState extends ConsumerState<SplitPaymentScreen> {
     try {
       final pools = await ref.read(splitPaymentApiProvider).myPools();
       if (mounted) setState(() { _myPools = pools; _loadingPools = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loadingPools = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingPools = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load pools: $e'), backgroundColor: AppTheme.danger),
+        );
+      }
     }
   }
 

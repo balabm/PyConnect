@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/config/system_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/network/api_client.dart';
@@ -22,6 +23,7 @@ import '../../checkout/presentation/cart_collision_sheet.dart';
 import '../../checkout/presentation/floating_cart_pill.dart';
 import '../../checkout/presentation/slide_to_pay.dart';
 import '../../checkout/presentation/payment_success_overlay.dart';
+import '../../wallet/data/user_wallet_api.dart';
 import '../data/food_api.dart';
 import 'widgets/item_customization_sheet.dart';
 import '../../../core/widgets/menu_shimmer_grid.dart';
@@ -577,8 +579,8 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       final api = ref.read(foodApiProvider);
 
       // Use the device's current location as the delivery address
-      double deliveryLat = 11.9416; // Default: White Town, Pondicherry
-      double deliveryLng = 79.8083;
+      double deliveryLat = ServiceAreaConfig.defaultCenter.latitude; // Default: Pondicherry center
+      double deliveryLng = ServiceAreaConfig.defaultCenter.longitude;
       String address = deliveryAddress ?? 'Current Location, Pondicherry';
 
       try {
@@ -597,8 +599,14 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
         // Fall back to default Pondicherry coordinates
       }
 
-      // paymentMethod: 0 = Razorpay (online, maps to 1), 1 = Cash on Delivery (maps to 2)
-      final apiPaymentMethod = paymentMethod == 1 ? 2 : 1;
+      // paymentMethod UI values: 0 = Razorpay (online), 1 = Cash on Delivery, 2 = PY Wallet
+      // Backend PaymentMethod enum: Cash=1, Upi=2, Card=3, NetBanking=4, Wallet=5
+      // Razorpay payments are sent as Upi (2) since Razorpay handles UPI/Card/NetBanking
+      final apiPaymentMethod = switch (paymentMethod) {
+        1 => 1, // Cash on Delivery → Cash
+        2 => 5, // PY Wallet → Wallet
+        _ => 2, // Razorpay (default) → Upi
+      };
 
       final result = await api.checkout({
         'vendorId': widget.vendorId,
@@ -617,8 +625,8 @@ class _FoodScreenState extends ConsumerState<FoodScreen> {
       final foodOrderId = result['orderId'] as String?;
 
       if (mounted) {
-        if (paymentMethod == 1) {
-          // Cash on Delivery — order is confirmed, safe to clear the cart
+        if (paymentMethod == 1 || paymentMethod == 2) {
+          // Cash on Delivery or PY Wallet — order is confirmed, safe to clear the cart
           ref.read(cartProvider.notifier).clear();
           final foodOrderId = result['orderId'] as String? ?? '';
           PaymentSuccessOverlay.show(
@@ -1287,7 +1295,32 @@ class _CartSummarySheet extends ConsumerStatefulWidget {
 
 class _CartSummarySheetState extends ConsumerState<_CartSummarySheet> {
   String _deliveryAddress = 'Current Location, Pondicherry';
-  int _paymentMethod = 0; // 0 = Razorpay, 1 = Cash on Delivery
+  int _paymentMethod = 0; // 0 = Razorpay, 1 = Cash on Delivery, 2 = PY Wallet
+  double _walletBalance = -1; // -1 = not loaded yet
+  bool _walletLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWalletBalance();
+  }
+
+  Future<void> _loadWalletBalance() async {
+    final isAuthed = ref.read(authTokenProvider)?.isNotEmpty ?? false;
+    if (!isAuthed) return;
+    setState(() => _walletLoading = true);
+    try {
+      final wallet = await ref.read(userWalletApiProvider).getWallet();
+      if (mounted) {
+        setState(() {
+          _walletBalance = wallet.realBalance;
+          _walletLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _walletLoading = false);
+    }
+  }
 
   /// Whether Razorpay is active (from system config kill switches).
   /// If false, online payment options are hidden and COD is forced.
@@ -1521,6 +1554,25 @@ class _CartSummarySheetState extends ConsumerState<_CartSummarySheet> {
                     title: const Text('Razorpay (Online)'),
                     subtitle: const Text('UPI, Card, Net Banking'),
                     onChanged: (v) => setState(() => _paymentMethod = v ?? 0),
+                  ),
+                if (_walletBalance >= 0)
+                  RadioListTile<int>(
+                    value: 2,
+                    groupValue: _paymentMethod,
+                    activeColor: AppTheme.emerald,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_walletBalance >= _total
+                        ? 'PY Wallet'
+                        : 'PY Wallet (Insufficient)'),
+                    subtitle: Text(
+                      _walletLoading
+                          ? 'Loading balance...'
+                          : 'Balance: \u20B9${_walletBalance.toStringAsFixed(0)}',
+                    ),
+                    onChanged: _walletBalance >= _total
+                        ? (v) => setState(() => _paymentMethod = v ?? 2)
+                        : null,
                   ),
                 RadioListTile<int>(
                   value: 1,

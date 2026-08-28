@@ -1,35 +1,31 @@
 namespace PondyConnect.Application.Features.FoodDelivery;
 
+using Microsoft.Extensions.Options;
+
 /// <summary>
 /// Transparent pricing engine for food delivery.
-/// VendorPayout = SubTotal (100%). PlatformFee = ₹2. DeliveryFee = flat ₹40.
-/// GST = 5% on subTotal. LateNightDriverBonus = ₹30 for orders between 11 PM and 3 AM IST.
+/// VendorPayout = SubTotal (100%). PlatformFee is configurable. DeliveryFee is flat (configurable).
+/// GST rate is configurable. LateNightDriverBonus applies for orders between 11 PM and 3 AM IST.
+/// All values come from <see cref="FoodPricingOptions"/> (bound to "Pricing:Food" config section).
 /// </summary>
-public static class OrderPricingService
+public sealed class OrderPricingService
 {
-    public const decimal DeliveryFeeFlat = 40m;
-    public const decimal LateNightDriverBonus = 30m;
-    public const decimal PlatformFee = 2m;
-    public const decimal GstRate = 0.05m;
+    private readonly FoodPricingOptions _options;
 
-    /// <summary>
-    /// Prime members get free delivery only within this radius (km).
-    /// Beyond this, a distance surcharge covers the captain's long haul.
-    /// </summary>
-    public const decimal PrimeMaxRadiusKm = 5.0m;
+    public OrderPricingService(IOptions<FoodPricingOptions> options)
+    {
+        _options = options.Value;
+    }
 
-    /// <summary>
-    /// Per-km surcharge for Prime orders beyond PrimeMaxRadiusKm.
-    /// Ensures the captain is fairly compensated for the long haul.
-    /// </summary>
-    public const decimal PrimeDistanceSurchargePerKm = 10.0m;
+    public decimal DeliveryFeeFlat => _options.DeliveryFeeFlat;
+    public decimal LateNightDriverBonus => _options.LateNightDriverBonus;
+    public decimal PlatformFee => _options.PlatformFee;
+    public decimal GstRate => _options.GstRate;
+    public decimal PrimeMaxRadiusKm => _options.PrimeMaxRadiusKm;
+    public decimal PrimeDistanceSurchargePerKm => _options.PrimeDistanceSurchargePerKm;
+    public decimal PrimeMinOrderAmount => _options.PrimeMinOrderAmount;
 
-    /// <summary>
-    /// Minimum order subtotal for Prime free delivery to apply.
-    /// </summary>
-    public const decimal PrimeMinOrderAmount = 149m;
-
-    public static OrderPricing CalculatePricing(decimal subTotal, bool isProMember, DateTimeOffset orderTime)
+    public OrderPricing CalculatePricing(decimal subTotal, bool isProMember, DateTimeOffset orderTime)
     {
         return CalculatePricing(subTotal, isProMember, orderTime, distanceKm: null);
     }
@@ -39,7 +35,7 @@ public static class OrderPricingService
     /// Prime members get free delivery within PrimeMaxRadiusKm.
     /// Beyond that, they pay a per-km surcharge to compensate the captain.
     /// </summary>
-    public static OrderPricing CalculatePricing(
+    public OrderPricing CalculatePricing(
         decimal subTotal,
         bool isProMember,
         DateTimeOffset orderTime,
@@ -52,13 +48,13 @@ public static class OrderPricingService
         decimal deliveryFee;
         decimal distanceSurcharge = 0m;
 
-        if (isProMember && subTotal >= PrimeMinOrderAmount)
+        if (isProMember && subTotal >= _options.PrimeMinOrderAmount)
         {
             // Prime free delivery within radius, surcharge beyond
-            if (distanceKm.HasValue && (decimal)distanceKm.Value > PrimeMaxRadiusKm)
+            if (distanceKm.HasValue && (decimal)distanceKm.Value > _options.PrimeMaxRadiusKm)
             {
-                var extraDistance = (decimal)distanceKm.Value - PrimeMaxRadiusKm;
-                distanceSurcharge = extraDistance * PrimeDistanceSurchargePerKm;
+                var extraDistance = (decimal)distanceKm.Value - _options.PrimeMaxRadiusKm;
+                distanceSurcharge = extraDistance * _options.PrimeDistanceSurchargePerKm;
                 deliveryFee = distanceSurcharge; // Prime covers base, user pays extra distance
             }
             else
@@ -68,19 +64,19 @@ public static class OrderPricingService
         }
         else
         {
-            deliveryFee = DeliveryFeeFlat;
+            deliveryFee = _options.DeliveryFeeFlat;
         }
 
-        var driverBonus = isLateNight ? LateNightDriverBonus : 0m;
-        var taxes = subTotal * GstRate;
-        var total = subTotal + deliveryFee + driverBonus + PlatformFee + taxes;
+        var driverBonus = isLateNight ? _options.LateNightDriverBonus : 0m;
+        var taxes = subTotal * _options.GstRate;
+        var total = subTotal + deliveryFee + driverBonus + _options.PlatformFee + taxes;
 
         return new OrderPricing(
             SubTotal: subTotal,
             DeliveryFee: deliveryFee,
             LateNightDriverBonus: driverBonus,
             Taxes: taxes,
-            PlatformFee: PlatformFee,
+            PlatformFee: _options.PlatformFee,
             TotalAmount: total,
             DistanceSurcharge: distanceSurcharge);
     }
@@ -94,4 +90,3 @@ public sealed record OrderPricing(
     decimal PlatformFee,
     decimal TotalAmount,
     decimal DistanceSurcharge = 0m);
- 

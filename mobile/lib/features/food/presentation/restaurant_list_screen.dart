@@ -26,7 +26,7 @@ class RestaurantListScreen extends ConsumerStatefulWidget {
 class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
   String _searchQuery = '';
   String? _cuisineFilter;
-  bool _foodVendorsOnly = true; // true = Food Delivery, false = Quick Essentials
+  bool _foodVendorsOnly = true; // Food Delivery only (Quick Essentials module disabled)
 
   /// Vendor categories that serve food and should appear in the Food Delivery tab.
   /// Matches the backend VendorCategory enum names returned as strings in the API response.
@@ -82,48 +82,7 @@ class _RestaurantListScreenState extends ConsumerState<RestaurantListScreen> {
       ),
       body: Column(
         children: [
-          // Food Delivery / Quick Essentials segmented toggle
-          FadeSlideIn(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(
-                    value: true,
-                    icon: Icon(Icons.restaurant_outlined, size: 18),
-                    label: Text('Food Delivery'),
-                  ),
-                  ButtonSegment(
-                    value: false,
-                    icon: Icon(Icons.shopping_bag_outlined, size: 18),
-                    label: Text('Quick Essentials'),
-                  ),
-                ],
-                selected: {_foodVendorsOnly},
-                onSelectionChanged: (selection) {
-                  AppHaptics.selection();
-                  setState(() => _foodVendorsOnly = selection.first);
-                },
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return AppTheme.emerald;
-                    }
-                    return Theme.of(context).colorScheme.surfaceContainerHighest;
-                  }),
-                  foregroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return Colors.white;
-                    }
-                    return Theme.of(context).colorScheme.onSurfaceVariant;
-                  }),
-                  side: WidgetStateProperty.all(
-                    BorderSide(color: Theme.of(context).dividerColor),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // Quick Essentials module disabled — Food Delivery only
           FadeSlideIn(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),

@@ -91,6 +91,18 @@ public sealed class DispatchEngine
             return Array.Empty<Guid>();
         }
 
+        // Exclude drivers who are paused for review due to low ratings.
+        // This prevents dispatch from sending offers to drivers who need
+        // admin review before accepting new rides.
+        var pausedDriverIds = await _context.Drivers.AsNoTracking()
+            .Where(d => d.IsDispatchPaused)
+            .Select(d => d.Id)
+            .ToListAsync(cancellationToken);
+        if (pausedDriverIds.Count > 0)
+        {
+            nearby = nearby.Where(d => !pausedDriverIds.Contains(d.DriverId)).ToList();
+        }
+
         // Score and rank drivers
         var scored = nearby
             .Select(d => new
@@ -287,6 +299,17 @@ public sealed class DispatchEngine
                 radius,
                 vehicleTypeFilter: ride.VehicleType,
                 maxCount: 10);
+
+            // Exclude paused drivers (low-rating review)
+            if (nearby.Count > 0)
+            {
+                var pausedIds = await _context.Drivers.AsNoTracking()
+                    .Where(d => d.IsDispatchPaused)
+                    .Select(d => d.Id)
+                    .ToListAsync(cancellationToken);
+                if (pausedIds.Count > 0)
+                    nearby = nearby.Where(d => !pausedIds.Contains(d.DriverId)).ToList();
+            }
 
             if (nearby.Count == 0)
             {

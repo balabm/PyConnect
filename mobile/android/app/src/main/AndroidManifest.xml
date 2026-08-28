@@ -29,7 +29,7 @@
             <!-- App Links (verified deep links) for https://pyconnect.run.place.
                  Opens the app directly without the disambiguation dialog when the
                  domain ownership is verified via /.well-known/assetlinks.json.
-                 Handles shareable paths: /venue/*, /rides/*, /food/*, /activity/*. -->
+                 Handles shareable paths: /venue/*, /rides/*, /food/*, /activity/*, /split/*. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -40,6 +40,7 @@
                 <data android:pathPrefix="/rides"/>
                 <data android:pathPrefix="/food"/>
                 <data android:pathPrefix="/activity"/>
+                <data android:pathPrefix="/split"/>
             </intent-filter>
             <!-- Enables automatic App Links verification for the intent filter above. -->
             <meta-data

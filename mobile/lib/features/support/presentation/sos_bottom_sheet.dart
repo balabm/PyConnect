@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -27,12 +28,35 @@ class _SosBottomSheetState extends ConsumerState<SosBottomSheet> {
 
   Future<void> _captureGps() async {
     setState(() => _gpsStatus = 'Capturing GPS...');
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _latitude = 11.9356;
-      _longitude = 79.8301;
-      _gpsStatus = 'GPS captured';
-    });
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _gpsStatus = 'GPS disabled — tap to retry');
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() => _gpsStatus = 'Location permission denied');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _gpsStatus = 'GPS captured';
+      });
+    } catch (e) {
+      setState(() => _gpsStatus = 'GPS unavailable — tap to retry');
+    }
   }
 
   @override

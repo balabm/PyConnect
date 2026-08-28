@@ -260,12 +260,19 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                                       await ref
                                           .read(vendorAuthControllerProvider.notifier)
                                           .requestOtp(phone);
+                                      if (!context.mounted) return;
+                                      if (!ref.read(vendorAuthControllerProvider).hasError) {
+                                        context.go('/auth/otp');
+                                      }
                                     } else {
                                       await ref
                                           .read(authControllerProvider.notifier)
                                           .requestOtp(phone);
+                                      if (!context.mounted) return;
+                                      if (!ref.read(authControllerProvider).hasError) {
+                                        context.go('/auth/otp');
+                                      }
                                     }
-                                    if (context.mounted) context.go('/auth/otp');
                                   }
                                 : null,
                             child: isSending

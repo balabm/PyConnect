@@ -6,7 +6,6 @@ import 'package:pondyconnect/core/theme/theme_controller.dart';
 import 'package:pondyconnect/features/auth/application/auth_controller.dart';
 import 'package:pondyconnect/features/auth/data/auth_api.dart';
 import 'package:pondyconnect/features/bookings/data/booking_api.dart';
-import 'package:pondyconnect/features/essentials/data/essentials_api.dart';
 import 'package:pondyconnect/features/food/data/food_api.dart';
 import 'package:pondyconnect/features/public/data/public_api.dart';
 import 'package:pondyconnect/features/rides/data/rides_api.dart';
@@ -46,7 +45,6 @@ List<Override> buildOverrides({
     vendorApiProvider.overrideWith((ref) => VendorApi(ref.watch(apiClientProvider))),
     bookingApiProvider.overrideWith((ref) => BookingApi(ref.watch(apiClientProvider))),
     foodApiProvider.overrideWith((ref) => FoodDeliveryApi(ref.watch(apiClientProvider))),
-    essentialsApiProvider.overrideWith((ref) => QuickCommerceApi(ref.watch(apiClientProvider))),
     ridesApiProvider.overrideWith((ref) => RideHailingApi(ref.watch(apiClientProvider))),
     staysApiProvider.overrideWith((ref) => StaysApi(ref.watch(apiClientProvider))),
     supportApiProvider.overrideWith((ref) => SupportApi(ref.watch(apiClientProvider))),

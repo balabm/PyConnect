@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/p2p_event_api.dart';
@@ -30,8 +31,8 @@ class _CreatePartyScreenState extends ConsumerState<CreatePartyScreen> {
   DateTime? _endsAt;
   String? _startsError;
   String? _endsError;
-  double _lat = 11.9356;
-  double _lng = 79.8301;
+  double _lat = ServiceAreaConfig.defaultCenter.latitude;
+  double _lng = ServiceAreaConfig.defaultCenter.longitude;
   bool _isPaid = false;
   bool _publishing = false;
 

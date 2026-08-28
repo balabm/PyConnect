@@ -2,7 +2,9 @@ namespace PondyConnect.Api.Controllers;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PondyConnect.Api.Hubs;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Domain.Entities;
 
@@ -21,11 +23,16 @@ public sealed class SplitPaymentsController : ControllerBase
 
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IHubContext<SplitPaymentHub> _splitHub;
 
-    public SplitPaymentsController(IApplicationDbContext context, ICurrentUserService currentUser)
+    public SplitPaymentsController(
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        IHubContext<SplitPaymentHub> splitHub)
     {
         _context = context;
         _currentUser = currentUser;
+        _splitHub = splitHub;
     }
 
     // ── Create Pool ──
@@ -182,6 +189,10 @@ public sealed class SplitPaymentsController : ControllerBase
         _context.SplitPaymentContributors.Add(contributor);
         await _context.SaveChangesAsync(ct);
 
+        // Broadcast the updated pool state to the creator via SignalR
+        await _splitHub.Clients.Group($"split:{pool.DeepLinkSlug}")
+            .SendAsync("ShareClaimed", new { pool.Id, pool.ClaimedShares, pool.MaxShares, pool.PerShareAmount }, ct);
+
         var user = await _context.Users.AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId.Value, ct);
 
@@ -238,6 +249,23 @@ public sealed class SplitPaymentsController : ControllerBase
         }
 
         await _context.SaveChangesAsync(ct);
+
+        // Broadcast the payment update to the creator via SignalR
+        var poolForBroadcast = await _context.SplitPaymentPools.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (poolForBroadcast is not null)
+        {
+            await _splitHub.Clients.Group($"split:{poolForBroadcast.DeepLinkSlug}")
+                .SendAsync("SharePaid", new
+                {
+                    poolId = poolForBroadcast.Id,
+                    collectedAmount = poolForBroadcast.CollectedAmount,
+                    totalAmount = poolForBroadcast.TotalAmount,
+                    status = poolForBroadcast.Status.ToString(),
+                    contributorName = (await _context.Users.AsNoTracking()
+                        .FirstOrDefaultAsync(u => u.Id == userId.Value, ct))?.Name ?? "A friend"
+                }, ct);
+        }
 
         var user = await _context.Users.AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId.Value, ct);

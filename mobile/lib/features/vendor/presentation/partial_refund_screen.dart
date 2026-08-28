@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
@@ -161,7 +162,7 @@ class _PartialRefundScreenState extends ConsumerState<PartialRefundScreen> {
               _ResultRow(label: 'Refund Amount', value: '₹$refundAmount', color: AppTheme.danger),
               _ResultRow(label: 'New Order Total', value: '₹$newTotal', color: AppTheme.emerald),
               const SizedBox(height: 32),
-              FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
+              FilledButton(onPressed: () => context.pop(), child: const Text('Done')),
             ],
           ),
         ),

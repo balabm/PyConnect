@@ -11,6 +11,14 @@ using PondyConnect.Domain.Entities;
 /// errand (e.g. "Pick up my laundry from Auroville") and an auth-hold is
 /// placed on their card. A captain accepts, starts progress, and completes
 /// the errand with the actual cost.
+///
+/// Payment flow:
+/// 1. Create errand → backend creates a Razorpay auth-hold order (capture: false)
+/// 2. Consumer completes Razorpay checkout → frontend sends paymentId back
+/// 3. Captain completes errand with actual cost → backend captures the full
+///    auth-hold and refunds the difference (Razorpay does not support partial
+///    capture, so we capture full + refund the excess)
+/// 4. Cancel errand → backend releases the auth-hold
 /// </summary>
 [ApiController]
 [Route("api/genie")]
@@ -19,11 +27,19 @@ public sealed class GenieController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IPaymentGateway _paymentGateway;
+    private readonly ILogger<GenieController> _logger;
 
-    public GenieController(IApplicationDbContext context, ICurrentUserService currentUser)
+    public GenieController(
+        IApplicationDbContext context,
+        ICurrentUserService currentUser,
+        IPaymentGateway paymentGateway,
+        ILogger<GenieController> logger)
     {
         _context = context;
         _currentUser = currentUser;
+        _paymentGateway = paymentGateway;
+        _logger = logger;
     }
 
     // ── Consumer: Create errand ──
@@ -68,7 +84,56 @@ public sealed class GenieController : ControllerBase
         _context.GenieErrands.Add(errand);
         await _context.SaveChangesAsync(ct);
 
+        // Create a Razorpay auth-hold order (capture: false) so the consumer's
+        // card is authorized but not charged until the captain completes the errand.
+        try
+        {
+            var receipt = $"genie-{errand.Id.ToString().Substring(0, 8)}";
+            var order = await _paymentGateway.CreateOrderAsync(
+                authHold, "INR", receipt, capture: false, cancellationToken: ct);
+
+            errand.SetRazorpayOrderId(order.OrderId);
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Razorpay auth-hold for errand {ErrandId}", errand.Id);
+            // Don't fail the request — the errand is created, payment can be retried
+        }
+
         return CreatedAtAction(nameof(GetById), new { id = errand.Id }, ToDto(errand, isOwner: true));
+    }
+
+    // ── Consumer: Confirm payment after Razorpay checkout ──
+
+    /// <summary>
+    /// Confirms the Razorpay payment for an errand auth-hold.
+    /// Called by the frontend after the consumer completes Razorpay checkout.
+    /// Stores the payment ID so it can be captured when the captain completes the errand.
+    /// </summary>
+    [HttpPost("{id:guid}/confirm-payment")]
+    [ProducesResponseType(typeof(GenieErrandDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<GenieErrandDto>> ConfirmPayment(
+        Guid id, [FromBody] ConfirmGeniePaymentRequest request, CancellationToken ct)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null || userId == Guid.Empty)
+            return Unauthorized(new { Message = "User not authenticated." });
+
+        var errand = await _context.GenieErrands.FirstOrDefaultAsync(e => e.Id == id, ct);
+        if (errand is null)
+            return NotFound(new { Message = "Errand not found." });
+
+        if (errand.UserId != userId.Value)
+            return Unauthorized(new { Message = "Only the owner can confirm payment." });
+
+        errand.SetRazorpayPaymentId(request.RazorpayPaymentId);
+        await _context.SaveChangesAsync(ct);
+
+        return Ok(ToDto(errand, isOwner: true));
     }
 
     // ── Consumer: Cancel errand ──
@@ -103,8 +168,22 @@ public sealed class GenieController : ControllerBase
             return BadRequest(new { Message = ex.Message });
         }
 
+        // Release the Razorpay auth-hold if one was created
+        if (!string.IsNullOrEmpty(errand.RazorpayPaymentId))
+        {
+            try
+            {
+                await _paymentGateway.ReleasePaymentAsync(errand.RazorpayPaymentId, ct);
+                _logger.LogInformation("Released auth-hold for cancelled errand {ErrandId}", errand.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to release auth-hold for errand {ErrandId}", errand.Id);
+            }
+        }
+
         await _context.SaveChangesAsync(ct);
-        return Ok(new { Message = "Errand cancelled." });
+        return Ok(new { Message = "Errand cancelled. Any held funds will be released." });
     }
 
     // ── Consumer: List my errands ──
@@ -261,6 +340,35 @@ public sealed class GenieController : ControllerBase
             return BadRequest(new { Message = ex.Message });
         }
 
+        // Capture the auth-hold and refund the difference.
+        // Razorpay does not support partial capture, so we capture the full
+        // auth-hold amount and then refund the excess (auth-hold - actual cost).
+        var paymentId = request.RazorpayPaymentId ?? errand.RazorpayPaymentId;
+        if (!string.IsNullOrEmpty(paymentId))
+        {
+            try
+            {
+                // Capture the full auth-hold amount
+                await _paymentGateway.CapturePaymentAsync(paymentId, errand.AuthHoldAmount, ct);
+                _logger.LogInformation("Captured auth-hold of {Amount} for errand {ErrandId}", errand.AuthHoldAmount, errand.Id);
+
+                // Refund the difference between auth-hold and actual cost
+                var refundAmount = errand.AuthHoldAmount - request.ActualCost;
+                if (refundAmount > 0)
+                {
+                    await _paymentGateway.RefundAsync(
+                        paymentId, refundAmount,
+                        $"Genie errand refund — actual cost was less than auth-hold", ct);
+                    _logger.LogInformation("Refunded {Amount} excess for errand {ErrandId}", refundAmount, errand.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Payment capture/refund failed for errand {ErrandId}", errand.Id);
+                // Don't fail the completion — the errand is done, payment can be reconciled
+            }
+        }
+
         await _context.SaveChangesAsync(ct);
         return Ok(ToDto(errand, isOwner: false));
     }
@@ -303,6 +411,9 @@ public sealed record CompleteGenieErrandRequest(
     decimal ActualCost,
     string? RazorpayOrderId = null,
     string? RazorpayPaymentId = null);
+
+public sealed record ConfirmGeniePaymentRequest(
+    string RazorpayPaymentId);
 
 public sealed record GenieErrandDto(
     Guid Id,

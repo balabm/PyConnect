@@ -23,7 +23,7 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
   bool _loading = true;
   String? _error;
   Timer? _refreshTimer;
-  static const int _maxCapacity = 50;
+  int _maxCapacity = 50;
 
   @override
   void initState() {
@@ -40,12 +40,21 @@ class _CloakCapacityScreenState extends ConsumerState<CloakCapacityScreen> {
 
   Future<void> _loadData() async {
     try {
-      final bookings = await ref.read(vendorDashboardApiProvider).getBookings();
+      final api = ref.read(vendorDashboardApiProvider);
+      final results = await Future.wait([
+        api.getBookings(),
+        api.getVenues(),
+      ]);
+      final bookings = results[0] as List<BookingSummary>;
+      final venues = results[1] as List<VendorVenueSummary>;
       if (mounted) {
         setState(() {
           _stored = bookings.where((b) =>
               b.status.toLowerCase() == 'confirmed' ||
               b.status.toLowerCase() == 'inprogress').toList();
+          if (venues.isNotEmpty && venues.first.maxCapacity > 0) {
+            _maxCapacity = venues.first.maxCapacity;
+          }
           _loading = false;
           _error = null;
         });

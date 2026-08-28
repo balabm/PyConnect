@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/config/service_area_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/admin_providers.dart';
 import '../data/admin_api.dart';
@@ -185,8 +186,8 @@ class _LiveOpsMap extends StatelessWidget {
     }
 
     return FlutterMap(
-      options: const MapOptions(
-        initialCenter: LatLng(11.9356, 79.8301),
+      options: MapOptions(
+        initialCenter: ServiceAreaConfig.defaultCenter,
         initialZoom: 13,
       ),
       children: [

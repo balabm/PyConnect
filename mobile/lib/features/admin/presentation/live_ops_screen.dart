@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/config/service_area_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/admin_providers.dart';
 import '../data/admin_api.dart';
@@ -32,10 +33,10 @@ class _LiveOpsScreenState extends ConsumerState<LiveOpsScreen>
     with TickerProviderStateMixin {
   /// Pondicherry bounding box — the map is locked within these bounds.
   static final _pondyBounds = LatLngBounds(
-    const LatLng(11.88, 79.78),
-    const LatLng(11.99, 79.88),
+    ServiceAreaConfig.southWestBound,
+    ServiceAreaConfig.northEastBound,
   );
-  static const _pondyCenter = LatLng(11.9356, 79.8301);
+  static const _pondyCenter = ServiceAreaConfig.defaultCenter;
 
   final MapController _mapController = MapController();
   final AudioPlayer _audioPlayer = AudioPlayer();

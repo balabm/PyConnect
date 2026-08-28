@@ -157,4 +157,26 @@ public sealed class GenieErrand : BaseEntity
         Status = GenieErrandStatus.Cancelled;
         MarkUpdated();
     }
+
+    /// <summary>
+    /// Sets the Razorpay order ID after the auth-hold order is created.
+    /// Called by the controller after creating the Razorpay order.
+    /// </summary>
+    public void SetRazorpayOrderId(string? orderId)
+    {
+        if (!string.IsNullOrWhiteSpace(orderId))
+            RazorpayOrderId = orderId;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Sets the Razorpay payment ID after the consumer completes checkout.
+    /// Called by the frontend after Razorpay payment success.
+    /// </summary>
+    public void SetRazorpayPaymentId(string? paymentId)
+    {
+        if (!string.IsNullOrWhiteSpace(paymentId))
+            RazorpayPaymentId = paymentId;
+        MarkUpdated();
+    }
 }

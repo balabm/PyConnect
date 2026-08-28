@@ -62,6 +62,7 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
     private readonly ICurrentUserService _currentUser;
     private readonly ServiceAreaValidator _serviceArea;
     private readonly SurgeCalculator _surgeCalculator;
+    private readonly RidePricingService _pricingService;
     private readonly IRoutingService? _routingService;
     private readonly IFraudDetectionService? _fraudDetection;
     private readonly IPaymentGateway _gateway;
@@ -73,6 +74,7 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
         ICurrentUserService currentUser,
         ServiceAreaValidator serviceArea,
         SurgeCalculator surgeCalculator,
+        RidePricingService pricingService,
         IPaymentGateway gateway,
         IPaymentRefundService refundService,
         ILogger<RequestRideHandler> logger,
@@ -83,6 +85,7 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
         _currentUser = currentUser;
         _serviceArea = serviceArea;
         _surgeCalculator = surgeCalculator;
+        _pricingService = pricingService;
         _gateway = gateway;
         _refundService = refundService;
         _logger = logger;
@@ -152,7 +155,7 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
 
         var duration = validatedDurationMin > 0
             ? validatedDurationMin
-            : RidePricingService.EstimateDurationMin(validatedDistanceKm, request.VehicleType);
+            : _pricingService.EstimateDurationMin(validatedDistanceKm, request.VehicleType);
 
         // Calculate surge (skip for SOS requests — emergency rides always flat surge pricing)
         decimal surgeMultiplier = 1.0m;
@@ -162,7 +165,7 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
             (surgeMultiplier, surgeReason) = await _surgeCalculator.CalculateSurgeAsync(pickup, request.VehicleType, cancellationToken);
         }
 
-        var pricing = RidePricingService.CalculateFareWithSurge(
+        var pricing = _pricingService.CalculateFareWithSurge(
             validatedDistanceKm, duration, request.VehicleType, surgeMultiplier, surgeReason);
 
         decimal fare = pricing.Fare;
@@ -172,7 +175,7 @@ public sealed class RequestRideHandler : IRequestHandler<RequestRideCommand, Rid
 
         if (isSos)
         {
-            var sosPricing = RidePricingService.CalculateSosFare(pricing.Fare);
+            var sosPricing = _pricingService.CalculateSosFare(pricing.Fare);
             fare = sosPricing.GrossSosFare;
             sosDriverPayout = sosPricing.DriverPayout;
             platformEmergencyFee = sosPricing.PlatformEmergencyFee;
@@ -1459,6 +1462,27 @@ public sealed class RateRideHandler : IRequestHandler<RateRideCommand, Unit>
                 if (driver != null)
                 {
                     driver.UpdateRating(request.Rating);
+
+                    // Auto-pause dispatch for drivers with critically low ratings.
+                    // This prevents the driver from receiving new ride offers until
+                    // an admin reviews the situation. The driver is not deactivated —
+                    // they can still log in and see their earnings, but dispatch skips them.
+                    if (request.Rating <= 2 && driver.Rating < 3.0)
+                    {
+                        driver.PauseForReview();
+                    }
+                }
+
+                // Auto-generate a support ticket for low ratings (1-2 stars)
+                // so the admin team can review the ride and follow up.
+                if (request.Rating <= 2)
+                {
+                    var ticket = SupportTicket.Create(
+                        userId: userId.Value,
+                        priority: TicketPriority.High,
+                        source: TicketSource.InApp,
+                        issueCategory: "LowRatingFeedback");
+                    _context.SupportTickets.Add(ticket);
                 }
             }
         }

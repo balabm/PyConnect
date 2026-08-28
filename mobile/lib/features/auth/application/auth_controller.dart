@@ -90,10 +90,10 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     }
   }
 
-  /// Updates the user's display name and refreshes the in-memory session.
-  Future<void> updateProfile(String name) async {
+  /// Updates the user's display name (and optional email) and refreshes the in-memory session.
+  Future<void> updateProfile(String name, {String? email}) async {
     state = await AsyncValue.guard(() async {
-      await ref.read(authApiProvider).updateMe(name);
+      await ref.read(authApiProvider).updateMe(name, email: email);
       final current = state.valueOrNull;
       if (current == null) return null;
       return AuthSession(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/providers.dart';
@@ -158,20 +159,48 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
             ListTile(
               leading: const Icon(Icons.phone, color: AppTheme.emerald),
               title: const Text('Call Support'),
-              subtitle: const Text('+91 99999 99999'),
-              onTap: () => Navigator.pop(ctx),
+              subtitle: const Text('+91 413 223 3445'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _launchPhone(ctx);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.email, color: AppTheme.info),
               title: const Text('Email Support'),
               subtitle: const Text('support@pyconnect.run.place'),
-              onTap: () => Navigator.pop(ctx),
+              onTap: () {
+                Navigator.pop(ctx);
+                _launchEmail(ctx);
+              },
             ),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _launchPhone(BuildContext context) async {
+    final url = Uri.parse('tel:+914132233445');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open phone dialer. Please call +91-413-223-3445')),
+      );
+    }
+  }
+
+  Future<void> _launchEmail(BuildContext context) async {
+    final url = Uri.parse('mailto:support@pyconnect.run.place');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open email app. Please email support@pyconnect.run.place')),
+      );
+    }
   }
 }
 

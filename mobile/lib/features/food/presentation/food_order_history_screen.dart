@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/animations/haptic.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
+import '../../../core/theme/app_theme.dart';
 
 final foodOrdersProvider = FutureProvider<List<dynamic>>((ref) async {
   final api = ref.watch(foodApiProvider);
@@ -58,6 +59,9 @@ class _OrderCard extends StatelessWidget {
     final status = order['status'] as String? ?? 'Unknown';
     final totalAmount = order['totalAmount'] ?? 0;
     final orderId = order['orderId'] as String? ?? order['id'] as String? ?? '';
+    final vendorId = order['vendorId'] as String? ?? '';
+    final vendorName = order['vendorName'] as String? ?? 'Restaurant';
+    final isDelivered = status.toLowerCase() == 'delivered';
 
     return AppCard(
       margin: EdgeInsets.zero,
@@ -65,29 +69,53 @@ class _OrderCard extends StatelessWidget {
         AppHaptics.light();
         context.push('/food/orders/$orderId');
       },
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: _statusVariant(status).foreground.withValues(alpha: 0.15),
-            child: Icon(_statusIcon(status), color: _statusVariant(status).foreground),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Order #${orderId.substring(0, 8).toUpperCase()}'),
-                Text(
-                  '${order['vendorName'] ?? 'Restaurant'} · $status',
-                  style: TextStyle(color: _statusVariant(status).foreground),
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: _statusVariant(status).foreground.withValues(alpha: 0.15),
+                child: Icon(_statusIcon(status), color: _statusVariant(status).foreground),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Order #${orderId.substring(0, 8).toUpperCase()}'),
+                    Text(
+                      '$vendorName · $status',
+                      style: TextStyle(color: _statusVariant(status).foreground),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              Text(
+                '\u20B9$totalAmount',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          if (isDelivered && vendorId.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  AppHaptics.light();
+                  context.push('/food/vendor/$vendorId?name=${Uri.encodeComponent(vendorName)}');
+                },
+                icon: const Icon(Icons.replay, size: 18),
+                label: const Text('Reorder', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.emerald,
+                  side: BorderSide(color: AppTheme.emerald.withValues(alpha: 0.3)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
             ),
-          ),
-          Text(
-            '\u20B9$totalAmount',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          ],
         ],
       ),
     );

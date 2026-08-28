@@ -146,6 +146,35 @@ class ProfileScreen extends ConsumerWidget {
 
                 // --- History section ---
                 if (session?.isAuthenticated == true) ...[
+                  _SectionHeader(title: 'Rewards & Perks'),
+                  const SizedBox(height: 8),
+                  FadeSlideIn(
+                    child: _HistoryLink(
+                      icon: Icons.card_giftcard,
+                      title: 'Invite Friends',
+                      subtitle: 'Give \u20B950, get \u20B950',
+                      onTap: () {
+                        AppHaptics.light();
+                        context.push('/referral');
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 80),
+                    child: _HistoryLink(
+                      icon: Icons.workspace_premium,
+                      title: session?.isProMember == true ? 'PY Prime Active' : 'Subscribe to PY Prime',
+                      subtitle: session?.isProMember == true
+                          ? 'Free delivery, ride discounts & more'
+                          : 'Unlock free delivery & ride discounts',
+                      onTap: () {
+                        AppHaptics.light();
+                        context.push('/prime');
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   _SectionHeader(title: 'Your Activity'),
                   const SizedBox(height: 8),
                   FadeSlideIn(
@@ -159,18 +188,19 @@ class ProfileScreen extends ConsumerWidget {
                       },
                     ),
                   ),
-                  FadeSlideIn(
-                    delay: const Duration(milliseconds: 80),
-                    child: _HistoryLink(
-                      icon: Icons.shopping_bag,
-                      title: 'Essentials Orders',
-                      subtitle: 'View your essentials order history',
-                      onTap: () {
-                        AppHaptics.light();
-                        context.push('/essentials/orders');
-                      },
-                    ),
-                  ),
+                  // Essentials Orders link disabled — module disabled
+                  // FadeSlideIn(
+                  //   delay: const Duration(milliseconds: 80),
+                  //   child: _HistoryLink(
+                  //     icon: Icons.shopping_bag,
+                  //     title: 'Essentials Orders',
+                  //     subtitle: 'View your essentials order history',
+                  //     onTap: () {
+                  //       AppHaptics.light();
+                  //       context.push('/essentials/orders');
+                  //     },
+                  //   ),
+                  // ),
                   FadeSlideIn(
                     delay: const Duration(milliseconds: 160),
                     child: _HistoryLink(
@@ -206,6 +236,54 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () {
                         AppHaptics.light();
                         context.push('/change-phone');
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  FadeSlideIn(
+                    child: _HistoryLink(
+                      icon: Icons.notifications_outlined,
+                      title: 'Notifications',
+                      subtitle: 'Recent orders, rides & updates',
+                      onTap: () {
+                        AppHaptics.light();
+                        context.push('/notifications');
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  FadeSlideIn(
+                    child: _HistoryLink(
+                      icon: Icons.support_agent,
+                      title: 'Live Chat Support',
+                      subtitle: 'Chat with our AI assistant',
+                      onTap: () {
+                        AppHaptics.light();
+                        context.push('/support-chat');
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  FadeSlideIn(
+                    child: _HistoryLink(
+                      icon: Icons.help_outline,
+                      title: 'Help & FAQ',
+                      subtitle: 'Answers to common questions',
+                      onTap: () {
+                        AppHaptics.light();
+                        context.push('/help');
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  FadeSlideIn(
+                    child: _HistoryLink(
+                      icon: Icons.location_on_outlined,
+                      title: 'Delivery Addresses',
+                      subtitle: 'Manage home, work & other addresses',
+                      onTap: () {
+                        AppHaptics.light();
+                        context.push('/addresses');
                       },
                     ),
                   ),

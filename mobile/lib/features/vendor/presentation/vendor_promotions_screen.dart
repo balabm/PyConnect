@@ -134,6 +134,13 @@ class _CreatePromotionFormState extends State<_CreatePromotionForm> {
       );
       return;
     }
+    final discount = double.tryParse(_discountController.text.trim());
+    if (discount == null || discount <= 0 || discount > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Discount must be between 1 and 100'), backgroundColor: AppTheme.warning),
+      );
+      return;
+    }
 
     setState(() => _submitting = true);
     try {
@@ -405,6 +412,20 @@ class _CreateFlashPromoFormState extends State<_CreateFlashPromoForm> {
     if (_discountController.text.isEmpty || _durationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Discount and duration are required')),
+      );
+      return;
+    }
+    final discount = double.tryParse(_discountController.text.trim());
+    if (discount == null || discount <= 0 || discount > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Discount must be between 1 and 100'), backgroundColor: AppTheme.warning),
+      );
+      return;
+    }
+    final duration = int.tryParse(_durationController.text.trim());
+    if (duration == null || duration < 5 || duration > 480) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Duration must be between 5 and 480 minutes (8 hours)'), backgroundColor: AppTheme.warning),
       );
       return;
     }

@@ -2,6 +2,7 @@ namespace PondyConnect.Application.Features.Ledger;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PondyConnect.Application.Common.Interfaces;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
@@ -23,14 +24,15 @@ public sealed class LedgerService
 {
     private readonly IApplicationDbContext _context;
     private readonly ILogger<LedgerService> _logger;
+    private readonly TaxOptions _tax;
 
-    // TDS rate under section 194O (e-commerce operator): 0.1% for FY 2024-25
-    public const decimal TdsRate = 0.001m;
+    public decimal TdsRate => _tax.TdsRate;
 
-    public LedgerService(IApplicationDbContext context, ILogger<LedgerService> logger)
+    public LedgerService(IApplicationDbContext context, ILogger<LedgerService> logger, IOptions<TaxOptions> taxOptions)
     {
         _context = context;
         _logger = logger;
+        _tax = taxOptions.Value;
     }
 
     /// <summary>
@@ -129,7 +131,7 @@ public sealed class LedgerService
 
         if (platformFee > 0)
         {
-            var gstOnFee = Math.Round(platformFee * 0.18m, 2, MidpointRounding.AwayFromZero);
+            var gstOnFee = Math.Round(platformFee * _tax.PlatformGstRate, 2, MidpointRounding.AwayFromZero);
             var netFee = platformFee - gstOnFee;
 
             entries.Add(LedgerEntry.Create(

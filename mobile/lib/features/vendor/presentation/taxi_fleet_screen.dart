@@ -83,7 +83,7 @@ class _TaxiFleetScreenState extends ConsumerState<TaxiFleetScreen> {
                       if (_activeRides.isEmpty)
                         _buildEmpty()
                       else
-                        ..._activeRides.map((b) => _TaxiCard(booking: b)),
+                        ..._activeRides.map((b) => _TaxiCard(booking: b, onChanged: _loadData)),
                     ],
                   ),
                 ),
@@ -177,8 +177,9 @@ class _StatTile extends StatelessWidget {
 }
 
 class _TaxiCard extends ConsumerWidget {
-  const _TaxiCard({required this.booking});
+  const _TaxiCard({required this.booking, this.onChanged});
   final BookingSummary booking;
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -317,6 +318,12 @@ class _TaxiCard extends ConsumerWidget {
           FilledButton(
             style: FilledButton.styleFrom(),
             onPressed: () async {
+              if (driverController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Driver name is required'), backgroundColor: AppTheme.warning),
+                );
+                return;
+              }
               try {
                 await ref.read(vendorDashboardApiProvider).assignTransitDriver(
                   booking.bookingId,
@@ -324,6 +331,7 @@ class _TaxiCard extends ConsumerWidget {
                   vehiclePlate: plateController.text.trim(),
                 );
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
+                onChanged?.call();
               } catch (e) {
                 if (dialogContext.mounted) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(

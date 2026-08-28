@@ -16,9 +16,9 @@ import 'widgets/priority_ping_toggle.dart';
 /// Dark slate vendor dashboard with animated stat cards, live orders,
 /// and priority ping toggle.
 class VendorDashboardScreen extends ConsumerStatefulWidget {
-  const VendorDashboardScreen({super.key, this.venueId = '00000000-0000-0000-0000-000000000001'});
+  const VendorDashboardScreen({super.key, this.venueId});
 
-  final String venueId;
+  final String? venueId;
 
   @override
   ConsumerState<VendorDashboardScreen> createState() => _VendorDashboardScreenState();
@@ -32,10 +32,12 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
   bool _loading = true;
   String? _error;
   Timer? _refreshTimer;
+  String? _resolvedVenueId;
 
   @override
   void initState() {
     super.initState();
+    _resolvedVenueId = widget.venueId;
     _loadData();
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _loadData());
   }
@@ -51,6 +53,13 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
       final api = ref.read(vendorDashboardApiProvider);
       final dashboard = await api.getDashboard();
       final bookings = await api.getBookings();
+      // Resolve venue ID if not provided
+      if (_resolvedVenueId == null) {
+        try {
+          final venues = await api.getVenues();
+          if (venues.isNotEmpty) _resolvedVenueId = venues.first.venueId;
+        } catch (_) {}
+      }
       if (mounted) {
         setState(() {
           _dashboard = dashboard;
@@ -188,7 +197,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
             const SizedBox(height: 16),
             // Priority ping
             PriorityPingToggle(
-              venueId: widget.venueId,
+              venueId: _resolvedVenueId ?? '',
               api: ref.read(vendorDashboardApiProvider),
               isActive: _priorityActive,
               onActivated: _onPriorityActivated,

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -343,7 +344,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     try {
       final api = ref.read(ridesApiProvider);
       final loc = _driverLocation;
-      await api.triggerSos(widget.rideId, loc?.latitude ?? 11.9356, loc?.longitude ?? 79.8301);
+      await api.triggerSos(widget.rideId, loc?.latitude ?? ServiceAreaConfig.defaultCenter.latitude, loc?.longitude ?? ServiceAreaConfig.defaultCenter.longitude);
       if (mounted) {
         setState(() => _sosActive = true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -462,10 +463,10 @@ class _TrackingBody extends StatelessWidget {
     final isCancelled = status.toLowerCase() == 'cancelled';
     final canCancel = !isCompleted && !isCancelled && status.toLowerCase() != 'enroute';
 
-    final pickupLat = (ride['pickupLat'] as num?)?.toDouble() ?? 11.9356;
-    final pickupLng = (ride['pickupLng'] as num?)?.toDouble() ?? 79.8301;
-    final dropoffLat = (ride['dropoffLat'] as num?)?.toDouble() ?? 11.9370;
-    final dropoffLng = (ride['dropoffLng'] as num?)?.toDouble() ?? 79.8338;
+    final pickupLat = (ride['pickupLat'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultCenter.latitude;
+    final pickupLng = (ride['pickupLng'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultCenter.longitude;
+    final dropoffLat = (ride['dropoffLat'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultDropoff.latitude;
+    final dropoffLng = (ride['dropoffLng'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultDropoff.longitude;
 
     return Stack(
       children: [

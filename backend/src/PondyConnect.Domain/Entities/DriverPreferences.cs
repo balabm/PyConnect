@@ -38,7 +38,7 @@ public sealed class DriverPreferences : BaseEntity
     public bool AcceptRides { get; private set; } = true;
     public bool AcceptIntercity { get; private set; } = true;
     public bool AcceptLuggageTransport { get; private set; } = true;
-    public bool AcceptEssentials { get; private set; } = true;
+    public bool AcceptEssentials { get; private set; } // Quick Essentials module disabled — defaults to false
 
     private DriverPreferences() { }
 
@@ -52,7 +52,7 @@ public sealed class DriverPreferences : BaseEntity
             AcceptRides = true,
             AcceptIntercity = true,
             AcceptLuggageTransport = true,
-            AcceptEssentials = true,
+            // AcceptEssentials defaults to false — Quick Essentials module disabled
         };
     }
 

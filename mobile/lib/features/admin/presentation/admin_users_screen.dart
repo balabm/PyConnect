@@ -99,6 +99,25 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
   Future<void> _toggleActive(AdminUser user) async {
     final next = !user.isActive;
+    // Confirm before deactivating (destructive — locks user out)
+    if (!next) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Deactivate User?'),
+          content: Text('Deactivate ${user.name}? They will be locked out of the app until reactivated.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AdminColors.danger),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Deactivate'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
     try {
       await ref
           .read(adminApiProvider)

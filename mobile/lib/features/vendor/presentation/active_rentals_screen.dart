@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
@@ -249,6 +250,23 @@ class _RentalCard extends StatelessWidget {
           const SizedBox(height: 14),
           // Countdown timer section
           _buildCountdown(context, countdown, color),
+          const SizedBox(height: 12),
+          // Complete return action
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () {
+                AppHaptics.light();
+                context.push('/rental-return', extra: booking.bookingId);
+              },
+              icon: const Icon(Icons.assignment_turned_in, size: 18),
+              label: const Text('Complete Return'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.emerald,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
         ],
       ),
     );

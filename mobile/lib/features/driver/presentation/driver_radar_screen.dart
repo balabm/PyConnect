@@ -232,11 +232,15 @@ class _DriverRadarScreenState extends ConsumerState<DriverRadarScreen>
   void _showNavigateSnackbar(BuildContext context, Map<String, dynamic> zone) {
     AppHaptics.medium();
     final area = _readString(zone, 'areaName');
+    final lat = zone['latitude'] ?? zone['lat'];
+    final lng = zone['longitude'] ?? zone['lng'];
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Navigating to $area… (map integration coming soon)'),
+        content: Text(lat != null && lng != null
+            ? 'Head to $area ($lat, $lng) for higher demand'
+            : 'Head to $area for higher demand'),
         backgroundColor: AppTheme.emerald,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
       ),
     );
   }

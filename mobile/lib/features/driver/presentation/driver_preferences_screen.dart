@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/driver_providers.dart';
 
-/// Known Pondicherry area names mapped to approximate [latitude, longitude].
-const _knownAreas = <String, List<double>>{
-  'Auroville': [11.962, 79.833],
-  'White Town': [11.931, 79.835],
-  'Rock Beach': [11.938, 79.845],
-  'City Center': [11.9356, 79.8301],
-  'Lawspet': [11.941, 79.808],
-  'Oulgaret': [11.949, 79.803],
-};
+/// Known Pondicherry area names mapped to approximate coordinates.
+/// Sourced from [ServiceAreaConfig.knownAreas].
 
 /// Shift Preferences screen for the Driver (Captain) app.
 ///
@@ -46,7 +41,6 @@ class _DriverPreferencesScreenState
   bool _acceptRides = true;
   bool _acceptIntercity = false;
   bool _acceptLuggageTransport = false;
-  bool _acceptEssentials = false;
 
   @override
   void initState() {
@@ -82,7 +76,6 @@ class _DriverPreferencesScreenState
         _acceptIntercity = prefs['acceptIntercity'] as bool? ?? false;
         _acceptLuggageTransport =
             prefs['acceptLuggageTransport'] as bool? ?? false;
-        _acceptEssentials = prefs['acceptEssentials'] as bool? ?? false;
         if (_destinationLabel != null) {
           _destinationController.text = _destinationLabel!;
         }
@@ -108,8 +101,8 @@ class _DriverPreferencesScreenState
     setState(() => _isSaving = true);
     try {
       final coords = _lookupCoordinates(label);
-      final latitude = coords[0];
-      final longitude = coords[1];
+      final latitude = coords.latitude;
+      final longitude = coords.longitude;
 
       final api = ref.read(driverApiProvider);
       await api.setDestination(latitude, longitude, label);
@@ -124,7 +117,7 @@ class _DriverPreferencesScreenState
         _isSaving = false;
       });
 
-      final matched = _knownAreas.containsKey(label);
+      final matched = ServiceAreaConfig.knownAreas.containsKey(label);
       _showSnackbar(
         matched
             ? 'Destination set: $label'
@@ -168,7 +161,6 @@ class _DriverPreferencesScreenState
     required bool? rides,
     required bool? intercity,
     required bool? luggage,
-    required bool? essentials,
     required bool newValue,
   }) async {
     AppHaptics.light();
@@ -180,7 +172,6 @@ class _DriverPreferencesScreenState
         rides: rides,
         intercity: intercity,
         luggage: luggage,
-        essentials: essentials,
       );
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -194,19 +185,19 @@ class _DriverPreferencesScreenState
   }
 
   /// Looks up coordinates for a label, falling back to City Center.
-  List<double> _lookupCoordinates(String label) {
-    final exact = _knownAreas[label];
+  LatLng _lookupCoordinates(String label) {
+    final exact = ServiceAreaConfig.knownAreas[label];
     if (exact != null) return exact;
 
     // Case-insensitive match
-    for (final entry in _knownAreas.entries) {
+    for (final entry in ServiceAreaConfig.knownAreas.entries) {
       if (entry.key.toLowerCase() == label.toLowerCase()) {
         return entry.value;
       }
     }
 
     // Default to City Center
-    return _knownAreas['City Center']!;
+    return ServiceAreaConfig.knownAreas['City Center']!;
   }
 
   void _showSnackbar(String message) {
@@ -433,7 +424,6 @@ class _DriverPreferencesScreenState
                   rides: null,
                   intercity: null,
                   luggage: null,
-                  essentials: null,
                   newValue: value,
                 );
               },
@@ -451,7 +441,6 @@ class _DriverPreferencesScreenState
                   rides: value,
                   intercity: null,
                   luggage: null,
-                  essentials: null,
                   newValue: value,
                 );
               },
@@ -469,7 +458,6 @@ class _DriverPreferencesScreenState
                   rides: null,
                   intercity: value,
                   luggage: null,
-                  essentials: null,
                   newValue: value,
                 );
               },
@@ -487,29 +475,11 @@ class _DriverPreferencesScreenState
                   rides: null,
                   intercity: null,
                   luggage: value,
-                  essentials: null,
                   newValue: value,
                 );
               },
             ),
-            SwitchListTile(
-              secondary: Icon(Icons.shopping_bag_outlined, color: AppTheme.danger),
-              title: const Text('Essentials'),
-              value: _acceptEssentials,
-              activeColor: AppTheme.emerald,
-              onChanged: (value) {
-                setState(() => _acceptEssentials = value);
-                _toggleServiceType(
-                  name: 'Essentials',
-                  foodDelivery: null,
-                  rides: null,
-                  intercity: null,
-                  luggage: null,
-                  essentials: value,
-                  newValue: value,
-                );
-              },
-            ),
+            // Quick Essentials module disabled — toggle removed
           ],
         ),
       ),

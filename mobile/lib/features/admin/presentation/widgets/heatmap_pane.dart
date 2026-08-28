@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../../core/config/service_area_config.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../application/admin_providers.dart';
 
@@ -20,7 +21,7 @@ class _HeatmapPaneState extends ConsumerState<HeatmapPane> {
   late final MapController _mapController;
 
   // Pondicherry center
-  static const _pondyCenter = LatLng(11.9356, 79.8301);
+  static const _pondyCenter = ServiceAreaConfig.defaultCenter;
 
   // CartoDB Dark Matter — pitch black, muted greys, no noise.
   static const _darkTiles =

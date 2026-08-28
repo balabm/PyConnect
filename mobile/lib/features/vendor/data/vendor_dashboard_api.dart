@@ -362,6 +362,10 @@ class VendorDashboardApi {
     await _api.post('/api/vendor/menu/$id/toggle');
   }
 
+  Future<void> deleteMenuItem(String id) async {
+    await _api.delete('/api/vendor/menu/$id');
+  }
+
   // ── Promotions & Flash Sales ──
 
   Future<List<VendorPromotionModel>> getPromotions() async {

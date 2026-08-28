@@ -16,10 +16,13 @@ using PondyConnect.Domain.ValueObjects;
 
 public sealed class OrderPricingServiceTests
 {
+    private readonly OrderPricingService _pricing = new(
+        Microsoft.Extensions.Options.Options.Create(new FoodPricingOptions()));
+
     [Fact]
     public void CalculatePricing_NormalOrder_HasDeliveryFeeAndPlatformFee()
     {
-        var pricing = OrderPricingService.CalculatePricing(
+        var pricing = _pricing.CalculatePricing(
             subTotal: 300m, isProMember: false,
             orderTime: new DateTimeOffset(2026, 1, 15, 10, 0, 0, TimeSpan.Zero));
 
@@ -34,7 +37,7 @@ public sealed class OrderPricingServiceTests
     [Fact]
     public void CalculatePricing_ProMember_HasZeroDeliveryFee()
     {
-        var pricing = OrderPricingService.CalculatePricing(
+        var pricing = _pricing.CalculatePricing(
             subTotal: 300m, isProMember: true,
             orderTime: new DateTimeOffset(2026, 1, 15, 10, 0, 0, TimeSpan.Zero));
 
@@ -47,7 +50,7 @@ public sealed class OrderPricingServiceTests
     public void CalculatePricing_LateNight_HasDriverBonus()
     {
         // 11 PM IST = 17:30 UTC → hour = 17:30 + 5:30 = 23
-        var pricing = OrderPricingService.CalculatePricing(
+        var pricing = _pricing.CalculatePricing(
             subTotal: 300m, isProMember: false,
             orderTime: new DateTimeOffset(2026, 1, 15, 17, 30, 0, TimeSpan.Zero));
 
@@ -60,7 +63,7 @@ public sealed class OrderPricingServiceTests
     public void CalculatePricing_NonLateNight_HasZeroDriverBonus()
     {
         // 2 PM IST = 08:30 UTC → hour = 14
-        var pricing = OrderPricingService.CalculatePricing(
+        var pricing = _pricing.CalculatePricing(
             subTotal: 300m, isProMember: false,
             orderTime: new DateTimeOffset(2026, 1, 15, 8, 30, 0, TimeSpan.Zero));
 
@@ -70,10 +73,13 @@ public sealed class OrderPricingServiceTests
 
 public sealed class RidePricingServiceTests
 {
+    private readonly RidePricingService _pricing = new(
+        Microsoft.Extensions.Options.Options.Create(new RidePricingOptions()));
+
     [Fact]
     public void CalculateFare_Bike_UsesBasePlusDistancePlusTime()
     {
-        var pricing = RidePricingService.CalculateFare(5.0, VehicleType.Bike);
+        var pricing = _pricing.CalculateFare(5.0, VehicleType.Bike);
 
         // Base=15, Distance=5×8=40, Time=12min×1=12, Subtotal=67, Surge=1.0
         pricing.Fare.Should().Be(67m);
@@ -89,7 +95,7 @@ public sealed class RidePricingServiceTests
     [Fact]
     public void CalculateFare_Auto_UsesBasePlusDistancePlusTime()
     {
-        var pricing = RidePricingService.CalculateFare(5.0, VehicleType.Auto);
+        var pricing = _pricing.CalculateFare(5.0, VehicleType.Auto);
 
         // Base=25, Distance=5×12=60, Time=17min×1.5=25.5→26, Subtotal=111
         pricing.Fare.Should().Be(111m);
@@ -99,7 +105,7 @@ public sealed class RidePricingServiceTests
     [Fact]
     public void CalculateFare_Car_UsesBasePlusDistancePlusTime()
     {
-        var pricing = RidePricingService.CalculateFare(5.0, VehicleType.Car);
+        var pricing = _pricing.CalculateFare(5.0, VehicleType.Car);
 
         // Base=40, Distance=5×15=75, Time=14min×2=28, Subtotal=143
         pricing.Fare.Should().Be(143m);
@@ -109,7 +115,7 @@ public sealed class RidePricingServiceTests
     [Fact]
     public void CalculateFare_WithSurge_CapsAt1Point5x()
     {
-        var pricing = RidePricingService.CalculateFareWithSurge(5.0, 12, VehicleType.Bike, 3.0m, "High demand");
+        var pricing = _pricing.CalculateFareWithSurge(5.0, 12, VehicleType.Bike, 3.0m, "High demand");
 
         // Subtotal=67, Surge capped at 1.5x → 67×1.5=100.5→101
         pricing.Fare.Should().Be(101m);
@@ -120,7 +126,7 @@ public sealed class RidePricingServiceTests
     [Fact]
     public void CalculateFare_BelowMinimumFare_EnforcesMinimum()
     {
-        var pricing = RidePricingService.CalculateFare(0.5, VehicleType.Bike);
+        var pricing = _pricing.CalculateFare(0.5, VehicleType.Bike);
 
         // Base=15, Distance=0.5×8=4, Time=2min×1=2, Subtotal=21 < MinFare=30
         pricing.Fare.Should().Be(30m);
@@ -129,7 +135,7 @@ public sealed class RidePricingServiceTests
     [Fact]
     public void EstimateDurationMin_Bike_Uses25KmhSpeed()
     {
-        var duration = RidePricingService.EstimateDurationMin(5.0, VehicleType.Bike);
+        var duration = _pricing.EstimateDurationMin(5.0, VehicleType.Bike);
 
         // 5km / 25kmh * 60 = 12
         duration.Should().Be(12);
@@ -138,7 +144,7 @@ public sealed class RidePricingServiceTests
     [Fact]
     public void CalculateSosFare_WithBaseFare100_ReturnsCorrectSplit()
     {
-        var sos = RidePricingService.CalculateSosFare(100m);
+        var sos = _pricing.CalculateSosFare(100m);
 
         sos.GrossSosFare.Should().Be(250m);
         sos.DriverPayout.Should().Be(220m);

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/map_tile_config.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -19,7 +20,7 @@ class LocationPickerScreen extends ConsumerStatefulWidget {
 
 class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
   final MapController _mapController = MapController();
-  LatLng _pin = const LatLng(11.9356, 79.8301);
+  LatLng _pin = ServiceAreaConfig.defaultCenter;
   bool _showFallback = true;
   bool _loading = true;
 

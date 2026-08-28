@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/animations/haptic.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/driver_providers.dart';
 
@@ -165,13 +166,8 @@ class _DriverPendingVerificationScreenState
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () {
-                  // Contact support
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('For verification issues, call +91-XXXX-XXXXXX'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                  AppHaptics.light();
+                  context.push('/help');
                 },
                 child: Text(
                   'Need help? Contact support',

@@ -75,10 +75,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       final api = ref.read(apiClientProvider);
 
-      // Save the user's name before completing onboarding.
+      // Save the user's name and email before completing onboarding.
       final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      // Validate email format if provided
+      if (email.isNotEmpty && !RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$').hasMatch(email)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enter a valid email address'), backgroundColor: AppTheme.danger),
+          );
+          setState(() => _isSubmitting = false);
+        }
+        return;
+      }
       if (name.isNotEmpty) {
-        await ref.read(authControllerProvider.notifier).updateProfile(name);
+        await ref.read(authControllerProvider.notifier).updateProfile(name, email: email);
       }
 
       // Save dietary preference

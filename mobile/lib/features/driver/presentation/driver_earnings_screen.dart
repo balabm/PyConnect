@@ -934,6 +934,15 @@ class _WithdrawalSheetState extends State<_WithdrawalSheet> {
             'Remaining balance: \u20B9${remaining.toStringAsFixed(2)}',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
           ),
+          if (!isValid && amount > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              amount < 100
+                  ? 'Minimum withdrawal is \u20B9100'
+                  : 'Amount exceeds available balance',
+              style: TextStyle(color: AppTheme.danger, fontSize: 12),
+            ),
+          ],
           const SizedBox(height: 24),
           Row(
             children: [

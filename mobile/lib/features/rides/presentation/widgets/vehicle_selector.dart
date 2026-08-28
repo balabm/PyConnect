@@ -11,6 +11,7 @@ class VehicleSelector extends StatelessWidget {
     required this.fares,
     required this.onSelected,
     this.etas,
+    this.descriptions,
   });
 
   /// List of (name, icon, perKm, base, minFare, etaMin, capacity, hasAC) tuples.
@@ -19,6 +20,9 @@ class VehicleSelector extends StatelessWidget {
   final List<double> fares;
   final List<int>? etas;
   final ValueChanged<int> onSelected;
+
+  /// Optional short description for each vehicle (e.g. "Quick & affordable").
+  final List<String>? descriptions;
 
   @override
   Widget build(BuildContext context) {
@@ -100,6 +104,18 @@ class VehicleSelector extends StatelessWidget {
                             : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
+                    if (descriptions != null && i < descriptions!.length) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        descriptions![i],
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                     const SizedBox(height: 2),
                     Text(
                       '\u20B9${fare.toInt()}',

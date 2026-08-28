@@ -12,9 +12,10 @@ import '../features/auth/presentation/change_phone_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/bookings/presentation/booking_screen.dart';
 import '../features/tickets/presentation/ticket_screen.dart';
-import '../features/essentials/presentation/essentials_order_history_screen.dart';
-import '../features/essentials/presentation/essentials_screen.dart';
-import '../features/essentials/presentation/essentials_store_view.dart';
+// Essentials module disabled
+// import '../features/essentials/presentation/essentials_order_history_screen.dart';
+// import '../features/essentials/presentation/essentials_screen.dart';
+// import '../features/essentials/presentation/essentials_store_view.dart';
 import '../features/experiences/presentation/experiences_screen.dart';
 import '../features/events/presentation/party_builder_screen.dart';
 import '../features/events/presentation/create_party_screen.dart';
@@ -24,6 +25,7 @@ import '../features/events/presentation/host_scanner_screen.dart';
 import '../features/events/presentation/attendees_screen.dart';
 import '../features/genie/presentation/genie_screen.dart';
 import '../features/split_payments/presentation/split_payment_screen.dart';
+import '../features/split_payments/presentation/split_payment_join_screen.dart';
 import '../features/food/presentation/food_order_detail_screen.dart';
 import '../features/food/presentation/food_order_history_screen.dart';
 import '../features/food/presentation/food_screen.dart';
@@ -39,6 +41,7 @@ import '../features/rides/presentation/emergency_contacts_screen.dart';
 import '../features/rides/presentation/trip_share_screen.dart';
 import '../features/stays/presentation/homestay_detail_screen.dart';
 import '../features/support/presentation/help_screen.dart';
+import '../features/support/presentation/support_chat_screen.dart';
 import '../features/venues/data/venue_api.dart';
 import '../features/venues/presentation/venue_detail_screen.dart';
 import '../features/venues/presentation/venue_list_screen.dart';
@@ -53,6 +56,10 @@ import '../features/party_services/presentation/party_services_browse_screen.dar
 import '../features/party_services/presentation/party_service_detail_screen.dart';
 import '../features/party_services/presentation/my_party_bookings_screen.dart';
 import '../features/party_services/data/party_services_api.dart';
+import '../features/referral/presentation/referral_screen.dart';
+import '../features/subscription/presentation/prime_screen.dart';
+import '../features/dine_in/presentation/dine_in_screen.dart';
+import '../features/notifications/presentation/notifications_screen.dart';
 import '../shell/home_shell.dart';
 import '../core/config/app_flavor.dart';
 import '../core/providers.dart';
@@ -298,20 +305,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          GoRoute(
-            path: 'essentials',
-            builder: (_, _) => const EssentialsScreen(),
-            routes: [
-              GoRoute(
-                path: 'store',
-                builder: (_, _) => const EssentialsStoreView(),
-              ),
-              GoRoute(
-                path: 'orders',
-                builder: (_, _) => const EssentialsOrderHistoryScreen(),
-              ),
-            ],
-          ),
+          // Essentials module disabled — routes commented out
+          // GoRoute(
+          //   path: 'essentials',
+          //   builder: (_, _) => const EssentialsScreen(),
+          //   routes: [
+          //     GoRoute(
+          //       path: 'store',
+          //       builder: (_, _) => const EssentialsStoreView(),
+          //     ),
+          //     GoRoute(
+          //       path: 'orders',
+          //       builder: (_, _) => const EssentialsOrderHistoryScreen(),
+          //     ),
+          //   ],
+          // ),
           GoRoute(
             path: 'rides',
             builder: (_, _) => const HomeShell(),
@@ -423,6 +431,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               venueId: state.pathParameters['id']!,
             ),
           ),
+          // Deep-link alias for split payment join: https://pyconnect.run.place/split/:slug
+          GoRoute(
+            path: 'split/:slug',
+            builder: (_, state) => SplitPaymentJoinScreen(
+              slug: state.pathParameters['slug']!,
+            ),
+          ),
           // Deep-link alias for shared restaurant URLs: https://pyconnect.run.place/restaurant/:id
           GoRoute(
             path: 'restaurant/:id',
@@ -441,6 +456,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'help',
             builder: (_, _) => const HelpScreen(),
+          ),
+          GoRoute(
+            path: 'referral',
+            builder: (_, _) => const ReferralScreen(),
+          ),
+          GoRoute(
+            path: 'prime',
+            builder: (_, _) => const PrimeScreen(),
+          ),
+          GoRoute(
+            path: 'dine-in',
+            builder: (_, _) => const DineInScreen(),
+          ),
+          GoRoute(
+            path: 'notifications',
+            builder: (_, _) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: 'support-chat',
+            builder: (_, _) => const SupportChatScreen(),
+            routes: [
+              GoRoute(
+                path: ':ticketId',
+                builder: (_, state) => SupportChatScreen(
+                  ticketId: state.pathParameters['ticketId'],
+                ),
+              ),
+            ],
           ),
         ],
       ),

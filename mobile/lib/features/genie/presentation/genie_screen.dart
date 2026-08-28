@@ -54,7 +54,12 @@ class _GenieScreenState extends ConsumerState<GenieScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _loadingErrands = false);
+      if (mounted) {
+        setState(() => _loadingErrands = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load errands: $e'), backgroundColor: AppTheme.danger),
+        );
+      }
     }
   }
 

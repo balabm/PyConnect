@@ -124,14 +124,12 @@ class DriverApi {
     bool? rides,
     bool? intercity,
     bool? luggage,
-    bool? essentials,
   }) async {
     await _api.put('/api/driver/preferences/service-toggles', data: {
       if (foodDelivery != null) 'foodDelivery': foodDelivery,
       if (rides != null) 'rides': rides,
       if (intercity != null) 'intercity': intercity,
       if (luggage != null) 'luggage': luggage,
-      if (essentials != null) 'essentials': essentials,
     });
   }
 

@@ -142,6 +142,83 @@ public sealed class UserWalletController : ControllerBase
     }
 
     /// <summary>
+    /// Transfers funds from the authenticated user's real balance to another
+    /// user's wallet by phone number. Creates a debit transaction on the
+    /// sender's wallet and a credit transaction on the recipient's wallet
+    /// atomically.
+    /// </summary>
+    [HttpPost("transfer")]
+    [ProducesResponseType(typeof(UserWalletDetail), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserWalletDetail>> Transfer(
+        [FromBody] UserTransferRequest request, CancellationToken ct)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null || userId == Guid.Empty)
+            return Unauthorized(new { Message = "User not authenticated." });
+
+        if (string.IsNullOrWhiteSpace(request.RecipientPhone))
+            return BadRequest(new { Message = "Recipient phone is required." });
+
+        if (request.Amount <= 0)
+            return BadRequest(new { Message = "Amount must be greater than zero." });
+
+        var senderWallet = await _dbContext.UserWallets
+            .FirstOrDefaultAsync(w => w.UserId == userId, ct);
+
+        if (senderWallet is null || senderWallet.RealBalance < request.Amount)
+            return BadRequest(new { Message = "Insufficient real balance for transfer." });
+
+        var recipientUser = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Phone == request.RecipientPhone, ct);
+
+        if (recipientUser is null)
+            return NotFound(new { Message = "No user found with that phone number." });
+
+        if (recipientUser.Id == userId.Value)
+            return BadRequest(new { Message = "Cannot transfer to your own wallet." });
+
+        var recipientWallet = await _dbContext.UserWallets
+            .FirstOrDefaultAsync(w => w.UserId == recipientUser.Id, ct);
+
+        if (recipientWallet is null)
+        {
+            recipientWallet = UserWallet.Create(recipientUser.Id);
+            _dbContext.UserWallets.Add(recipientWallet);
+        }
+
+        senderWallet.DebitReal(request.Amount);
+        recipientWallet.CreditReal(request.Amount);
+
+        var senderTx = UserWalletTransaction.Create(
+            walletId: senderWallet.Id,
+            type: UserWalletTransactionType.TransferSent,
+            amount: -request.Amount,
+            description: $"P2P transfer to {request.RecipientPhone}",
+            referenceId: recipientUser.Id.ToString());
+        _dbContext.UserWalletTransactions.Add(senderTx);
+
+        var recipientTx = UserWalletTransaction.Create(
+            walletId: recipientWallet.Id,
+            type: UserWalletTransactionType.TransferReceived,
+            amount: request.Amount,
+            description: $"P2P transfer from {_currentUser.Phone ?? "user"}",
+            referenceId: userId.Value.ToString());
+        _dbContext.UserWalletTransactions.Add(recipientTx);
+
+        await _dbContext.SaveChangesAsync(ct);
+
+        return Ok(new UserWalletDetail(
+            PromoBalance: senderWallet.PromoBalance,
+            RealBalance: senderWallet.RealBalance,
+            PyCoins: senderWallet.PyCoins,
+            TotalBalance: senderWallet.PromoBalance + senderWallet.RealBalance));
+    }
+
+    /// <summary>
     /// Returns the user's recent wallet transactions (ledger entries).
     /// </summary>
     [HttpGet("transactions")]
@@ -197,6 +274,8 @@ public sealed record UserConfirmTopUpRequest(
     string RazorpayOrderId,
     string RazorpayPaymentId,
     string Signature);
+
+public sealed record UserTransferRequest(string RecipientPhone, decimal Amount);
 
 public sealed record UserWalletTransactionResponse(
     Guid Id,

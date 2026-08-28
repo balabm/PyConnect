@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
@@ -64,13 +65,15 @@ class RazorpayPaymentService {
 
   /// Returns true when `USE_MOCK_PAYMENTS=true` is set in the .env file
   /// OR when no Razorpay key ID was provided via --dart-define.
-  /// In both cases we bypass the real Razorpay SDK and simulate payment.
+  /// In release/production builds, mock payments are NEVER enabled —
+  /// a missing key is a configuration error, not a reason to fake payment.
   bool get useMockPayments {
+    if (kReleaseMode) return false;
     try {
       return dotenv.maybeGet('USE_MOCK_PAYMENTS')?.toLowerCase() == 'true' ||
           _razorpayKeyId.isEmpty;
     } catch (_) {
-      // dotenv not loaded (release build without .env) — use mock if no key
+      // dotenv not loaded — use mock if no key (debug only)
       return _razorpayKeyId.isEmpty;
     }
   }
@@ -204,10 +207,17 @@ class RazorpayPaymentService {
       if (!_isInitialized) init();
       _razorpay!.open(options);
     } catch (e) {
-      // Any SDK initialization failure (NotInitializedError, missing
-      // native plugin, platform issues) falls back to mock payment so
-      // the user is never blocked during the testing phase.
-      _completer!.complete(_simulateMockPaymentSync(orderId, (amount * 100).round()));
+      // In release/production mode, SDK failure is a real error — never
+      // fall back to mock payment or users could "pay" without paying.
+      // In debug mode, fall back to mock so dev/testing isn't blocked.
+      if (kReleaseMode) {
+        _completer!.complete(PaymentError(
+          code: -1,
+          message: 'Payment SDK unavailable: $e',
+        ));
+      } else {
+        _completer!.complete(_simulateMockPaymentSync(orderId, (amount * 100).round()));
+      }
     }
 
     return _completer!.future;

@@ -2,4 +2,7 @@
     <!-- Consumer app: foreground location only for ride pickup/dropoff -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Notifications: ride status updates, order updates, booking confirmations -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
 </manifest>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/vendor_providers.dart';
 import '../data/vendor_dashboard_api.dart';
@@ -20,8 +21,8 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
   final _phoneController = TextEditingController();
   final _openingTimeController = TextEditingController();
   final _closingTimeController = TextEditingController();
-  final _latController = TextEditingController(text: '11.9356');
-  final _lngController = TextEditingController(text: '79.8301');
+  final _latController = TextEditingController(text: ServiceAreaConfig.defaultCenter.latitude.toString());
+  final _lngController = TextEditingController(text: ServiceAreaConfig.defaultCenter.longitude.toString());
   final _capacityController = TextEditingController(text: '50');
   bool _saving = false;
   bool _initialized = false;
@@ -126,9 +127,9 @@ class _VendorVenueScreenState extends ConsumerState<VendorVenueScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildDarkField('Latitude', _latController, '11.9356', keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
+              Expanded(child: _buildDarkField('Latitude', _latController, ServiceAreaConfig.defaultCenter.latitude.toString(), keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
               const SizedBox(width: 12),
-              Expanded(child: _buildDarkField('Longitude', _lngController, '79.8301', keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
+              Expanded(child: _buildDarkField('Longitude', _lngController, ServiceAreaConfig.defaultCenter.longitude.toString(), keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
             ],
           ),
           const SizedBox(height: 12),

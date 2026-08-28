@@ -46,6 +46,13 @@ public sealed class Driver : BaseEntity
 
     public Guid? CurrentRideId { get; private set; }
 
+    /// <summary>
+    /// When true, the dispatch engine skips this driver for new ride offers.
+    /// Set automatically when the driver receives a critically low rating (≤2 stars
+    /// and overall rating &lt; 3.0). An admin must review and resume the driver.
+    /// </summary>
+    public bool IsDispatchPaused { get; private set; }
+
     public DateTimeOffset? LastLocationAt { get; private set; }
 
     public string? AadhaarUrl { get; private set; }
@@ -233,6 +240,29 @@ public sealed class Driver : BaseEntity
 
         TotalRatings++;
         Rating = ((Rating * (TotalRatings - 1)) + newRating) / TotalRatings;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Temporarily pauses dispatch for this driver. The driver will not receive
+    /// new ride offers until an admin calls <see cref="ResumeFromReview"/>.
+    /// Called automatically when a rider submits a rating of ≤2 stars and the
+    /// driver's overall rating drops below 3.0.
+    /// </summary>
+    public void PauseForReview()
+    {
+        IsDispatchPaused = true;
+        IsOnline = false;
+        MarkUpdated();
+    }
+
+    /// <summary>
+    /// Resumes dispatch for a paused driver. Called by an admin after reviewing
+    /// the low-rating feedback.
+    /// </summary>
+    public void ResumeFromReview()
+    {
+        IsDispatchPaused = false;
         MarkUpdated();
     }
 

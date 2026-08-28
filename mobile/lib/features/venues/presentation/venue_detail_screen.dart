@@ -467,27 +467,9 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     child: _InfoTile(icon: Icons.checkroom, text: _dressCodeFor(venue.category)),
                   ),
                   const SizedBox(height: 28),
-                  // Menu Highlights
-                  FadeSlideIn(
-                    delay: const Duration(milliseconds: 570),
-                    child: const SectionHeader(icon: Icons.restaurant_menu, title: 'Menu Highlights'),
-                  ),
-                  const SizedBox(height: 10),
-                  FadeSlideIn(
-                    delay: const Duration(milliseconds: 580),
-                    child: SizedBox(
-                      height: 100,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _menuHighlightsFor(venue.category).length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final item = _menuHighlightsFor(venue.category)[index];
-                          return _MenuHighlightCard(name: item);
-                        },
-                      ),
-                    ),
-                  ),
+                  // Menu Highlights — removed hardcoded fake menu items.
+                  // The real menu is available via the "View Menu" button
+                  // which navigates to the linked vendor's menu screen.
                   const SizedBox(height: 24),
                   // Interactive location map
                   FadeSlideIn(
@@ -705,22 +687,11 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     return 'Casual';
   }
 
-  List<String> _menuHighlightsFor(String category) {
-    final c = category.toLowerCase();
-    if (['pub', 'bar', 'club', 'nightlife', 'lounge'].contains(c)) {
-      return const ['Cocktails', 'Beer Tower', 'Mocktails', 'Tapas', 'Shots'];
-    }
-    if (['restaurant'].contains(c)) {
-      return const ['Chef Special', 'Biryani', 'Pasta', 'Pizza', 'Desserts'];
-    }
-    if (['cafe'].contains(c)) {
-      return const ['Cold Brew', 'Cappuccino', 'Croissant', 'Cheesecake', 'Sandwich'];
-    }
-    if (['pizzeria'].contains(c)) {
-      return const ['Margherita', 'Pepperoni', 'Calzone', 'Garlic Bread', 'Tiramisu'];
-    }
-    return const ['Popular', 'Specials', 'Drinks', 'Desserts'];
-  }
+  // Menu highlights are now sourced from the backend vendor menu API.
+  // The hardcoded category-based fallback was removed to avoid showing
+  // fake menu items that don't reflect the actual venue offerings.
+  // If the venue has a linked vendor, the user can browse the real menu
+  // via the "View Menu" button which navigates to the vendor's menu screen.
 }
 
 class _InfoTile extends StatelessWidget {

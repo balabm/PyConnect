@@ -28,6 +28,7 @@ import '../features/vendor/presentation/staff_management_screen.dart';
 import '../features/vendor/presentation/vendor_finance_screen.dart';
 import '../features/vendor/presentation/vendor_disputes_screen.dart';
 import '../features/vendor/presentation/vendor_reviews_screen.dart';
+import '../features/vendor/presentation/vendor_help_screen.dart';
 import '../features/vendor/data/equipment_api.dart';
 import '../features/vendor/presentation/vendor_registration_screen.dart';
 import '../features/vendor/presentation/printer_settings_screen.dart';
@@ -216,6 +217,10 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
             builder: (_, _) => const VendorReviewsScreen(),
           ),
           GoRoute(
+            path: 'help',
+            builder: (_, _) => const VendorHelpScreen(),
+          ),
+          GoRoute(
             path: 'printer-settings',
             builder: (_, _) => const PrinterSettingsScreen(),
           ),
@@ -239,12 +244,12 @@ final partnerRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'rental-return',
-            builder: (_, _) => const RentalReturnScreen(),
+            builder: (context, state) => RentalReturnScreen(rentalId: state.extra as String?),
           ),
           // ── Taxi Operator operational screens ──
           GoRoute(
             path: 'assign-driver',
-            builder: (_, _) => const AssignDriverScreen(),
+            builder: (_, state) => AssignDriverScreen(tripId: state.extra as String?),
           ),
           // ── Food vendor operational screens ──
           GoRoute(

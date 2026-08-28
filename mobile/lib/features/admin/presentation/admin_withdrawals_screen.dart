@@ -105,6 +105,18 @@ class _AdminWithdrawalsScreenState
   }
 
   Future<void> _approve(AdminWithdrawalRequest w) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Approve Withdrawal?'),
+        content: Text('Approve \u20B9${w.amount.toStringAsFixed(0)} withdrawal for ${w.driverName}? This will transfer funds to their account.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Approve')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     AppHaptics.success();
     try {
       await ref.read(adminApiProvider).approveWithdrawal(w.id);
@@ -127,6 +139,22 @@ class _AdminWithdrawalsScreenState
   }
 
   Future<void> _reject(AdminWithdrawalRequest w) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reject Withdrawal?'),
+        content: Text('Reject \u20B9${w.amount.toStringAsFixed(0)} withdrawal request from ${w.driverName}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     AppHaptics.warning();
     try {
       await ref.read(adminApiProvider).rejectWithdrawal(w.id);

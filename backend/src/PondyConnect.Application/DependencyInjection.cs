@@ -2,6 +2,7 @@ namespace PondyConnect.Application;
 
 using System.Reflection;
 using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PondyConnect.Application.Common.Behaviours;
 using PondyConnect.Application.Features.Bookings;
@@ -14,7 +15,7 @@ using PondyConnect.Application.Features.Telemetry;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration? configuration = null)
     {
         var assembly = Assembly.GetExecutingAssembly();
 
@@ -29,7 +30,13 @@ public static class DependencyInjection
 
         services.AddScoped<IBookingEngineService, BookingEngineService>();
         services.AddScoped<ISettlementCalculationService, SettlementCalculationService>();
+
+        // LLM service: MockLlmService is the only implementation available.
+        // It is registered unconditionally but clearly documented as a
+        // placeholder. When a real LLM provider is integrated, gate this
+        // behind a configuration flag (e.g. "Llm:Provider": "OpenAI").
         services.AddScoped<ILlmService, MockLlmService>();
+
         services.AddScoped<UserContextService>();
         services.AddScoped<MessageReceiverService>();
 

@@ -250,10 +250,22 @@ class _AddContactDialogState extends State<_AddContactDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         FilledButton(
           onPressed: _saving ? null : () async {
-            if (_nameController.text.isEmpty || _phoneController.text.isEmpty) return;
+            final phone = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+            if (_nameController.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please enter a name'), backgroundColor: AppTheme.warning),
+              );
+              return;
+            }
+            if (phone.length != 10) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please enter a valid 10-digit phone number'), backgroundColor: AppTheme.warning),
+              );
+              return;
+            }
             AppHaptics.medium();
             setState(() => _saving = true);
-            await widget.onSave(_nameController.text, _phoneController.text, _relationship);
+            await widget.onSave(_nameController.text.trim(), phone, _relationship);
           },
           child: _saving ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
         ),

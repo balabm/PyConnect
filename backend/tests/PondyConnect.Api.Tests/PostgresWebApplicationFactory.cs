@@ -108,7 +108,8 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await db.Database.MigrateAsync();
-        var initializer = new DataInitializer(db);
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var initializer = new DataInitializer(db, configuration);
         await initializer.InitializeAsync();
     }
 

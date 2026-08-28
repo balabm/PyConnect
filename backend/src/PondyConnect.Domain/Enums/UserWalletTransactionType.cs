@@ -31,4 +31,10 @@ public enum UserWalletTransactionType
 
     /// <summary>Cashback earned from an order.</summary>
     Cashback = 8,
+
+    /// <summary>P2P wallet transfer sent to another user.</summary>
+    TransferSent = 9,
+
+    /// <summary>P2P wallet transfer received from another user.</summary>
+    TransferReceived = 10,
 }

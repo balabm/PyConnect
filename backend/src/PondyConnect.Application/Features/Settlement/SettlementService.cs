@@ -115,7 +115,7 @@ public sealed class SettlementService
     private async Task ProcessSingleVendorPayoutAsync(Vendor vendor, CancellationToken ct)
     {
         var payoutAmount = vendor.WalletBalance;
-        var tdsAmount = Math.Round(payoutAmount * LedgerService.TdsRate, 2, MidpointRounding.AwayFromZero);
+        var tdsAmount = Math.Round(payoutAmount * _ledgerService.TdsRate, 2, MidpointRounding.AwayFromZero);
         var netAmount = payoutAmount - tdsAmount;
 
         // Create payout request record

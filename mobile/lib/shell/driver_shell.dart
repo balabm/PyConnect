@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 
 import '../core/device/location_security.dart';
 import '../core/animations/haptic.dart';
@@ -36,6 +37,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
   bool _isStartingLocation = false;
   StreamSubscription? _rideOfferSub;
   StreamSubscription? _foodOfferSub;
+  StreamSubscription? _bgLocationSub;
   int _consecutiveGpsFailures = 0;
 
   /// Whether a mock/fake GPS app has been detected. When true, the driver
@@ -251,6 +253,7 @@ class _DriverShellState extends ConsumerState<DriverShell> {
     _locationTimer?.cancel();
     _rideOfferSub?.cancel();
     _foodOfferSub?.cancel();
+    _bgLocationSub?.cancel();
     KeepAwakeService.disable();
     super.dispose();
   }
@@ -468,6 +471,31 @@ class _DriverShellState extends ConsumerState<DriverShell> {
 
     // Start the background service for persistent tracking
     BackgroundLocationService.instance.start();
+
+    // Listen for location updates from the background service isolate.
+    // When the driver app is backgrounded, the foreground service continues
+    // collecting GPS and sends it here via service.invoke('locationUpdate').
+    // We forward each update to the backend so consumers can track the driver
+    // in real-time even when the driver's phone is locked.
+    _bgLocationSub?.cancel();
+    final bgService = FlutterBackgroundService();
+    _bgLocationSub = bgService.on('locationUpdate').listen((event) {
+      if (event == null) return;
+      final lat = (event['lat'] as num?)?.toDouble();
+      final lng = (event['lng'] as num?)?.toDouble();
+      final heading = (event['heading'] as num?)?.toDouble();
+      if (lat == null || lng == null) return;
+
+      // Forward to backend via HTTP API (works even if SignalR is disconnected)
+      ref.read(driverApiProvider).updateLocation(lat, lng).catchError((_) {
+        // Network error — silently drop, the foreground timer will retry
+      });
+
+      // Also try SignalR for real-time consumer tracking (lower latency)
+      ref.read(driverSignalRProvider).updateLocation(lat, lng, heading: heading).catchError((_) {
+        // SignalR not connected — HTTP update above is sufficient
+      });
+    });
 
     _locationTimer?.cancel();
     _locationTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {

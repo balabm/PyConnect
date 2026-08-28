@@ -60,6 +60,18 @@ class _AdminDriversScreenState extends ConsumerState<AdminDriversScreen> {
   void _resetPage() => _page = 1;
 
   Future<void> _approve(AdminDriver d) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Approve Driver?'),
+        content: Text('Approve ${d.name}? This will allow them to go online and accept rides.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Approve')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       final res = await ref.read(adminApiProvider).approveDriver(d.id);
       if (!mounted) return;

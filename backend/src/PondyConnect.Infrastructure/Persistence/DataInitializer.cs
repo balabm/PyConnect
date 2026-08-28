@@ -1,6 +1,7 @@
 namespace PondyConnect.Infrastructure.Persistence;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using PondyConnect.Application.Features.Bookings;
 using PondyConnect.Domain.Entities;
 using PondyConnect.Domain.Enums;
@@ -8,15 +9,24 @@ using PondyConnect.Domain.ValueObjects;
 
 /// <summary>
 /// Applies pending migrations and seeds a small demo dataset so the
-/// Nightlife & Dining module (Phase 2) has venues to surface immediately.
+/// Nightlife &amp; Dining module (Phase 2) has venues to surface immediately.
+///
+/// Demo data (venues, drivers, vendors, etc.) is only seeded when
+/// <c>SeedDemoData</c> is <c>true</c> in configuration. In production,
+/// only the admin user and Fuoco Pizzeria (if explicitly enabled) are seeded.
+/// All other data must come from real vendor/driver onboarding.
 /// </summary>
 public sealed class DataInitializer
 {
     private readonly ApplicationDbContext _context;
+    private readonly IConfiguration _configuration;
+    private readonly bool _seedDemoData;
 
-    public DataInitializer(ApplicationDbContext context)
+    public DataInitializer(ApplicationDbContext context, IConfiguration configuration)
     {
         _context = context;
+        _configuration = configuration;
+        _seedDemoData = configuration.GetValue<bool>("SeedDemoData", defaultValue: false);
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
@@ -26,6 +36,15 @@ public sealed class DataInitializer
         else
             await _context.Database.EnsureCreatedAsync(cancellationToken);
 
+        // Always seed the admin user so the system is manageable on first boot.
+        await SeedAdminUserAsync(cancellationToken);
+
+        // Demo data (venues, vendors, drivers, menus, etc.) is only seeded
+        // in development/staging. In production, all data comes from real
+        // vendor/driver onboarding via the Partner and Driver apps.
+        if (!_seedDemoData)
+            return;
+
         // The Fuoco venue is always seeded below, so an "any venue exists" check
         // can never guard the demo dataset. Use the flagship nightlife venue as the
         // idempotency marker instead so consumer amenities seed exactly once.
@@ -34,11 +53,11 @@ public sealed class DataInitializer
             await SeedDemoDatasetAsync(cancellationToken);
         }
 
-        await SeedAdminUserAsync(cancellationToken);
         await SeedFuocoPizzeriaAsync(cancellationToken);
         await SeedMenuItemsAsync(cancellationToken);
         await SeedRestaurantsAsync(cancellationToken);
-        await SeedProductsAsync(cancellationToken);
+        // Quick Essentials module disabled — product seeding removed
+        // await SeedProductsAsync(cancellationToken);
         await SeedDriversAsync(cancellationToken);
         await SeedFlashPromosAsync(cancellationToken);
         await SeedTestPassesAsync(cancellationToken);
@@ -54,7 +73,15 @@ public sealed class DataInitializer
         if (await _context.Users.AnyAsync(u => u.Role == UserRole.Admin, cancellationToken))
             return;
 
-        var admin = User.Create("Admin", "9000000000", UserRole.Admin);
+        // Admin phone comes from configuration so the auto-seeded admin
+        // is not a well-known public number. If no phone is configured,
+        // skip auto-seeding — the operator must create the first admin
+        // through a secure bootstrap process or migration.
+        var adminPhone = _configuration.GetValue<string>("Admin:BootstrapPhone");
+        if (string.IsNullOrWhiteSpace(adminPhone))
+            return;
+
+        var admin = User.Create("Admin", adminPhone, UserRole.Admin);
         admin.AcceptLiabilityWaiver();
         _context.Users.Add(admin);
         await _context.SaveChangesAsync(cancellationToken);

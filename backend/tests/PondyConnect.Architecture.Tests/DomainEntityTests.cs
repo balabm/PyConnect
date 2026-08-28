@@ -749,6 +749,7 @@ public sealed class DriverRideLifecycleTests
     {
         var driver = CreateDefaultDriver();
         driver.Approve();
+        driver.UploadKyc("https://example.com/aadhaar.pdf", "https://example.com/dl.pdf", "https://example.com/rc.pdf", "test@upi");
         driver.GoOnline();
         driver.StartRide(Guid.NewGuid());
 
@@ -1421,6 +1422,8 @@ public sealed class DriverEntityTests
     public void GoOnline_GoOffline_TogglesIsOnline()
     {
         var driver = Driver.Create(Guid.NewGuid(), "Ravi", "9000000200", VehicleType.Bike);
+        driver.Approve();
+        driver.UploadKyc("https://example.com/aadhaar.pdf", "https://example.com/dl.pdf", "https://example.com/rc.pdf", "test@upi");
         driver.GoOnline();
         driver.IsOnline.Should().BeTrue();
 

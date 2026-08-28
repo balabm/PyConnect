@@ -131,8 +131,20 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
           ),
         );
       }
-    } catch (_) {
-      if (mounted) setState(() => _toggling = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _toggling = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to update status: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: AppTheme.danger,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/animations/haptic.dart';
 import '../../../core/animations/staggered_animations.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -295,26 +296,50 @@ class _VenueListScreenState extends ConsumerState<VenueListScreen> {
             data: (venues) {
               final filtered = _filterVenues(venues);
               if (filtered.isEmpty) {
-                return const SliverFillRemaining(
+                return SliverFillRemaining(
                   child: EmptyStateView(
                     icon: Icons.search_off,
                     title: 'No venues found',
                     subtitle: 'Try a different search or category.',
+                    actionLabel: 'Clear filters',
+                    onAction: () {
+                      AppHaptics.light();
+                      setState(() {
+                        _searchQuery = '';
+                        _categoryFilter = null;
+                      });
+                    },
                   ),
                 );
               }
               return SliverPadding(
                 padding: const EdgeInsets.all(16),
                 sliver: SliverList.separated(
-                  itemCount: filtered.length,
+                  itemCount: filtered.length + 1,
                   separatorBuilder: (_, _) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) => FadeSlideIn(
-                    delay: Duration(milliseconds: index * 60),
-                    child: _VenueCard(
-                      venue: filtered[index],
-                      fallbackImage: _fallbackImageFor(filtered[index].category),
-                    ),
-                  ),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '${filtered.length} venue${filtered.length == 1 ? '' : 's'} found',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      );
+                    }
+                    final venueIndex = index - 1;
+                    return FadeSlideIn(
+                      delay: Duration(milliseconds: venueIndex * 60),
+                      child: _VenueCard(
+                        venue: filtered[venueIndex],
+                        fallbackImage: _fallbackImageFor(filtered[venueIndex].category),
+                      ),
+                    );
+                  },
                 ),
               );
             },
@@ -573,11 +598,11 @@ class _VenueCard extends StatelessWidget {
 }
 
 /// Haversine distance (km) from the Pondicherry service-area center
-/// (11.9356, 79.8301) to the given coordinates. Used as a fallback when
+/// to the given coordinates. Used as a fallback when
 /// the user's exact GPS position is not available.
 double _distanceFromCenter(double lat, double lng) {
-  const centerLat = 11.9356;
-  const centerLng = 79.8301;
+  final centerLat = ServiceAreaConfig.defaultCenter.latitude;
+  final centerLng = ServiceAreaConfig.defaultCenter.longitude;
   const r = 6371.0; // Earth radius in km
   final dLat = _toRad(lat - centerLat);
   final dLng = _toRad(lng - centerLng);

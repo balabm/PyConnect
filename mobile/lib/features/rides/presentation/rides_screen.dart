@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/osrm_routing_service.dart';
 import '../../../core/providers.dart';
@@ -82,7 +83,7 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
 
   static const _paymentMethods = ['Cash', 'UPI', 'Card'];
 
-  final LatLng _defaultCenter = LatLng(11.9356, 79.8301);
+  final LatLng _defaultCenter = ServiceAreaConfig.defaultCenter;
 
   @override
   void initState() {
@@ -503,6 +504,11 @@ class _RideHailingScreenState extends ConsumerState<RideHailingScreen>
                                                   _vehicles.length, (i) {
                                                 return _estimateEta(i);
                                               }),
+                                              descriptions: const [
+                                                'Quick & affordable',
+                                                'Best for short trips',
+                                                'Comfort for 4',
+                                              ],
                                               onSelected: (i) => setState(
                                                   () => _selectedVehicle = i),
                                             ),

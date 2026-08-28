@@ -102,7 +102,10 @@ class _BagIntakeScreenState extends ConsumerState<BagIntakeScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
                 const SizedBox(height: 32),
-                FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
+                FilledButton(onPressed: () {
+                  ref.invalidate(vendorBookingsProvider);
+                  Navigator.of(context).pop();
+                }, child: const Text('Done')),
               ],
             ),
           ),

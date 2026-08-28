@@ -66,6 +66,39 @@ class DriverProfileScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/preferences'),
                 ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.security_outlined),
+                  title: const Text('Safety Settings'),
+                  subtitle: const Text('SOS & emergency contacts'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    AppHaptics.light();
+                    context.push('/safety-settings');
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.help_outline),
+                  title: const Text('Help & Support'),
+                  subtitle: const Text('FAQs, contact support'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    AppHaptics.light();
+                    context.push('/help');
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.school_outlined),
+                  title: const Text('Tutorial'),
+                  subtitle: const Text('Learn how to use the app'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    AppHaptics.light();
+                    context.push('/tutorial');
+                  },
+                ),
               ],
             ),
           ),

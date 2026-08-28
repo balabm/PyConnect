@@ -103,7 +103,25 @@ class _StaysScreenState extends ConsumerState<StaysScreen> {
               subtitle: 'Try different dates or guest count.',
             );
           }
-          return _HomestayListView(homestays: filtered);
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${filtered.length} stay${filtered.length == 1 ? '' : 's'} available',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(child: _HomestayListView(homestays: filtered)),
+            ],
+          );
         },
       );
     }

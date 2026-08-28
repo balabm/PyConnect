@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/map_tile_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/address_provider.dart';
@@ -47,7 +48,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen> {
     super.initState();
     _center = widget.initialLocation ??
         ref.read(currentLocationProvider)?.toLatLng() ??
-        const LatLng(11.9356, 79.8301);
+        ServiceAreaConfig.defaultCenter;
   }
 
   @override

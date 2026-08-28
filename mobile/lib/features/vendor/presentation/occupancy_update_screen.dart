@@ -24,11 +24,31 @@ class _OccupancyUpdateScreenState extends ConsumerState<OccupancyUpdateScreen> {
   int _percentage = 50;
   bool _submitting = false;
   bool _success = false;
+  bool _loadingVenue = true;
 
   @override
   void initState() {
     super.initState();
-    if (widget.venueId != null) _venueIdController.text = widget.venueId!;
+    if (widget.venueId != null) {
+      _venueIdController.text = widget.venueId!;
+      _loadingVenue = false;
+    } else {
+      _autoLoadVenueId();
+    }
+  }
+
+  Future<void> _autoLoadVenueId() async {
+    try {
+      final api = ref.read(vendorDashboardApiProvider);
+      final venues = await api.getVenues();
+      if (mounted && venues.isNotEmpty) {
+        _venueIdController.text = venues.first.venueId;
+      }
+    } catch (_) {
+      // User can manually enter venue ID if auto-load fails
+    } finally {
+      if (mounted) setState(() => _loadingVenue = false);
+    }
   }
 
   @override

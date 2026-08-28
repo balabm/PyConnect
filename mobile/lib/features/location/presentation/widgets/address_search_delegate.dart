@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../../core/config/service_area_config.dart';
+
 const String _kGooglePlacesApiKey = String.fromEnvironment(
   'GOOGLE_PLACES_API_KEY',
   defaultValue: '',
@@ -125,7 +127,7 @@ class _SuggestionsListState extends State<_SuggestionsList> {
           'key': _kGooglePlacesApiKey,
           'components': 'country:in',
           'language': 'en',
-          'location': '11.9356,79.8301',
+          'location': '${ServiceAreaConfig.defaultCenter.latitude},${ServiceAreaConfig.defaultCenter.longitude}',
           'radius': 50000,
         },
       );

@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/animations/haptic.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/design/design.dart';
 import '../../../core/network/offline_mutation_queue.dart';
 import '../../../core/services/geofence_service.dart';
@@ -217,7 +218,7 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
               ),
             );
           }
-        } catch (_) {
+        } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
           }
@@ -363,7 +364,7 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
               ),
             );
           }
-        } catch (_) {
+        } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
           }
@@ -417,7 +418,7 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
               ),
             );
           }
-        } catch (_) {
+        } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
           }
@@ -602,7 +603,7 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
             // Optimistically navigate back — the cancellation will sync later.
             Navigator.pop(context);
           }
-        } catch (_) {
+        } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cancel failed: $e')));
           }
@@ -742,10 +743,10 @@ class _DriverRideScreenState extends ConsumerState<DriverRideScreen> {
     final vehicleType = _ride!['vehicleType'] as String? ?? 'Bike';
     final paymentMethod = _ride!['paymentMethod'] as String? ?? 'Cash';
 
-    final pickupLat = (_ride!['pickupLat'] as num?)?.toDouble() ?? 11.9356;
-    final pickupLng = (_ride!['pickupLng'] as num?)?.toDouble() ?? 79.8301;
-    final dropoffLat = (_ride!['dropoffLat'] as num?)?.toDouble() ?? 11.9370;
-    final dropoffLng = (_ride!['dropoffLng'] as num?)?.toDouble() ?? 79.8338;
+    final pickupLat = (_ride!['pickupLat'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultCenter.latitude;
+    final pickupLng = (_ride!['pickupLng'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultCenter.longitude;
+    final dropoffLat = (_ride!['dropoffLat'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultDropoff.latitude;
+    final dropoffLng = (_ride!['dropoffLng'] as num?)?.toDouble() ?? ServiceAreaConfig.defaultDropoff.longitude;
 
     final isDriverAssigned = status.toLowerCase() == 'driverassigned';
     final isArrived = status.toLowerCase() == 'arrivedatpickup';

@@ -85,7 +85,10 @@ class VendorMenuNotifier extends StateNotifier<AsyncValue<List<MenuItemModel>>> 
                 imageUrl: item.imageUrl,
                 isLateNight: item.isLateNight,
                 isVeg: item.isVeg,
+                isVegan: item.isVegan,
+                containsNuts: item.containsNuts,
                 prepTimeMinutes: item.prepTimeMinutes,
+                packagingFee: item.packagingFee,
               ) : item)
           .toList(),
     );
@@ -117,7 +120,7 @@ class VendorMenuNotifier extends StateNotifier<AsyncValue<List<MenuItemModel>>> 
     state = AsyncValue.data(current.where((item) => item.id != id).toList());
     try {
       final api = _ref.read(vendorDashboardApiProvider);
-      await api.toggleMenuItem(id);
+      await api.deleteMenuItem(id);
     } catch (e, st) {
       // Revert on failure
       state = AsyncValue.data([...current, original]);

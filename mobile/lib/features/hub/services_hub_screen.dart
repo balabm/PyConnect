@@ -28,6 +28,12 @@ class ServicesHubScreen extends ConsumerWidget {
       route: '/rides/saved-locations',
     ),
     _HubService(
+      icon: Icons.location_on_outlined,
+      title: 'Delivery Addresses',
+      subtitle: 'Manage home, work & other addresses',
+      route: '/addresses',
+    ),
+    _HubService(
       icon: Icons.restaurant_outlined,
       title: 'Dietary Preferences',
       subtitle: 'No Preference, Veg, Non-Veg, Vegan',
@@ -52,11 +58,42 @@ class ServicesHubScreen extends ConsumerWidget {
       route: '/help',
     ),
     _HubService(
-      icon: Icons.shopping_bag_outlined,
-      title: 'Quick Essentials',
-      subtitle: 'Essentials & daily needs',
-      route: '/essentials',
+      icon: Icons.chat_bubble_outline,
+      title: 'Live Chat',
+      subtitle: 'Chat with our support team',
+      route: '/support-chat',
     ),
+    _HubService(
+      icon: Icons.card_giftcard_outlined,
+      title: 'Invite Friends',
+      subtitle: 'Give \u20B950, get \u20B950',
+      route: '/referral',
+    ),
+    _HubService(
+      icon: Icons.workspace_premium_outlined,
+      title: 'PY Prime',
+      subtitle: 'Free delivery, ride discounts & more',
+      route: '/prime',
+    ),
+    _HubService(
+      icon: Icons.qr_code_scanner,
+      title: 'Dine In',
+      subtitle: 'Scan table QR to order & pay',
+      route: '/dine-in',
+    ),
+    _HubService(
+      icon: Icons.notifications_outlined,
+      title: 'Notifications',
+      subtitle: 'Recent orders, rides & updates',
+      route: '/notifications',
+    ),
+    // Quick Essentials module disabled — will be re-enabled when backend vendor catalog is ready.
+    // _HubService(
+    //   icon: Icons.shopping_bag_outlined,
+    //   title: 'Quick Essentials',
+    //   subtitle: 'Essentials & daily needs',
+    //   route: '/essentials',
+    // ),
     _HubService(
       icon: Icons.auto_awesome,
       title: 'Genie Errand Service',
@@ -253,9 +290,7 @@ class ServicesHubScreen extends ConsumerWidget {
                 } else if (service.route == '__signout__') {
                   _confirmSignOut(context, ref);
                 } else if (service.route.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Support chat is coming soon.')),
-                  );
+                  context.push('/support-chat');
                 } else {
                   context.push(service.route);
                 }

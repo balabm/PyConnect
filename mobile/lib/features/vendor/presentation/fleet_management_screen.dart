@@ -60,7 +60,9 @@ class _FleetManagementScreenState extends ConsumerState<FleetManagementScreen> {
     try {
       final fleet = await ref.read(vendorDashboardApiProvider).getScooterFleet();
       if (mounted) setState(() => _fleet = fleet);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to load fleet: $e');
+    }
   }
 
   @override

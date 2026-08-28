@@ -135,16 +135,24 @@ class _EquipmentInventoryScreenState
     );
 
     if (result == true) {
+      if (nameCtrl.text.trim().isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Item name is required'), backgroundColor: AppTheme.danger),
+          );
+        }
+        return;
+      }
       try {
         final newItem =
             await ref.read(equipmentApiProvider).createItem(
-                  name: nameCtrl.text,
+                  name: nameCtrl.text.trim(),
                   dailyRentalPrice:
                       double.tryParse(priceCtrl.text) ?? 0,
                   securityDepositAmount:
                       double.tryParse(depositCtrl.text) ?? 0,
                   totalUnits: int.tryParse(unitsCtrl.text) ?? 1,
-                  category: categoryCtrl.text,
+                  category: categoryCtrl.text.trim().isEmpty ? 'Misc' : categoryCtrl.text.trim(),
                 );
         if (mounted) {
           setState(() => _items = [..._items, newItem]);

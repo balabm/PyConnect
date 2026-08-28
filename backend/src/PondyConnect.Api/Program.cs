@@ -17,6 +17,7 @@ using PondyConnect.Application.Features.Notifications;
 using PondyConnect.Application.Features.Payments;
 using PondyConnect.Application.Features.Dispatch;
 using PondyConnect.Application.Features.RideHailing;
+using PondyConnect.Application.Features.Ledger;
 using PondyConnect.Application.Features.Telemetry;
 using PondyConnect.Application.Features.Wallet;
 using PondyConnect.Application.Features.Vendor;
@@ -43,6 +44,11 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<PondyConnect.Application.Common.Interfaces.ICurrentUserService, CurrentUserService>();
 
 builder.Services.Configure<ServiceAreaOptions>(builder.Configuration.GetSection("ServiceArea"));
+builder.Services.Configure<RidePricingOptions>(builder.Configuration.GetSection("Pricing:Ride"));
+builder.Services.Configure<FoodPricingOptions>(builder.Configuration.GetSection("Pricing:Food"));
+builder.Services.Configure<TaxOptions>(builder.Configuration.GetSection("Pricing:Tax"));
+builder.Services.AddScoped<RidePricingService>();
+builder.Services.AddScoped<OrderPricingService>();
 builder.Services.AddScoped<ServiceAreaValidator>();
 builder.Services.AddSingleton<DriverLocationStore>();
 builder.Services.AddSingleton<PondyConnect.Application.Common.Interfaces.IDriverLocationCache>(sp => sp.GetRequiredService<DriverLocationStore>());
@@ -78,8 +84,11 @@ builder.Services.AddHostedService<PondyConnect.Application.Services.Subscription
 builder.Services.AddHostedService<PondyConnect.Application.Services.RiskScoringWorker>();
 builder.Services.AddHostedService<PondyConnect.Api.Services.DriverSimulationWorker>();
 builder.Services.AddHostedService<PondyConnect.Api.Services.DemandPredictionService>();
+builder.Services.AddHostedService<PondyConnect.Api.Services.LocationBroadcastWorker>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Rental.RentalDepositService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Referral.ReferralService>();
+builder.Services.Configure<PondyConnect.Application.Features.Invoicing.InvoiceOptions>(
+    builder.Configuration.GetSection(PondyConnect.Application.Features.Invoicing.InvoiceOptions.SectionName));
 builder.Services.AddScoped<PondyConnect.Application.Features.Invoicing.InvoiceService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Ledger.LedgerService>();
 builder.Services.AddScoped<PondyConnect.Application.Features.Settlement.SettlementService>();
@@ -372,6 +381,7 @@ app.MapHub<DriverHub>("/hubs/driver");
 app.MapHub<RideHub>("/hubs/ride");
 app.MapHub<AdminHub>("/hubs/admin");
 app.MapHub<VendorHub>("/hubs/vendor");
+app.MapHub<SplitPaymentHub>("/hubs/split-payment");
 
 // Apply migrations + seed known venues on startup. In production, a migration
 // failure is fatal — the container should crash and restart rather than serving
